@@ -12,6 +12,8 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
+    console.log("Using backend URL:", process.env.REACT_APP_API_URL);
+
   e.preventDefault();
 
   if (!email || !password) {
