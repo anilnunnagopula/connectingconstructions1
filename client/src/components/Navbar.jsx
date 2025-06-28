@@ -14,6 +14,10 @@ const Navbar = () => {
   // const isLoggedIn = localStorage.getItem("userRole");
   const user = JSON.parse(localStorage.getItem("user"));
   const isLoggedIn = !!user;
+  const userRole = user?.role;
+  console.log("User:", user);
+  console.log("Role:", userRole);
+
 
 
   const handleLogout = () => {
@@ -45,9 +49,32 @@ const Navbar = () => {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-6 relative">
-          <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-300">
-            Home
-          </Link>
+          {!isLoggedIn && (
+            <Link
+              to="/home"
+              className="hover:text-blue-600 dark:hover:text-blue-300"
+            >
+              Home
+            </Link>
+          )}
+
+          {isLoggedIn && userRole === "customer" && (
+            <Link
+              to="/customer-dashboard"
+              className="hover:text-blue-600 dark:hover:text-blue-300"
+            >
+              Home
+            </Link>
+          )}
+
+          {isLoggedIn && userRole === "supplier" && (
+            <Link
+              to="/supplier-dashboard"
+              className="hover:text-blue-600 dark:hover:text-blue-300"
+            >
+              Home
+            </Link>
+          )}
 
           {/* Hover Categories Dropdown */}
           <div
