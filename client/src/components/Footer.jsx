@@ -25,15 +25,17 @@ const Footer = () => {
   if (hiddenRoutes.includes(pathname)) return null;
 
   return (
-    <footer className="bg-blue-950 text-gray-300 pt-12 pb-6 px-6 border-t border-blue-800 mt-20">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10">
+    <footer className="bg-blue-950 text-gray-300 pt-3 pb-3 px-4 border-t border-blue-800 mt-10">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-15">
         {/* 🧱 Brand Overview */}
         <div>
           <h2 className="text-2xl font-bold text-white mb-3">
             ConnectingConstructions
           </h2>
           <p className="text-sm leading-6">
-            The Amazon for Builders — your all-in-one construction ecosystem.
+            The Amazon for Builders 
+            <br />
+            — your all-in-one construction ecosystem.
           </p>
           <div className="flex gap-4 mt-4">
             <a href="#" className="text-white text-lg hover:text-gray-300">
@@ -47,8 +49,8 @@ const Footer = () => {
 
         {/* 📌 Quick Navigation */}
         <div>
-          <h3 className="text-lg font-semibold text-white mb-4">Quick Links</h3>
-          <ul className="space-y-2 text-sm">
+          <h3 className="text-lg font-semibold text-white mb-4 ml-12">Quick Links</h3>
+          <ul className="space-y-2 text-sm ml-10">
             <li>
               <Link to="/" className="hover:text-white">
                 🏠 Home

@@ -121,26 +121,8 @@ const CustomerDashboard = () => {
         What are you building today? Explore materials and services tailored for
         you.
       </p>
-
-      {/* 📊 Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-        {stats.map((stat, idx) => (
-          <StatCard
-            key={idx}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-          />
-        ))}
-      </div>
-
-      {/* 🧾 Recent Orders */}
-      <div className="mb-10">
-        <RecentOrders orders={recentOrders} />
-      </div>
-
       {/* 🔗 Quick Links */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         {cards.map((card, index) => (
           <div
             key={index}
@@ -153,6 +135,26 @@ const CustomerDashboard = () => {
             <p className="text-gray-600 dark:text-gray-400">{card.desc}</p>
           </div>
         ))}
+      </div>
+      <hr />
+
+      {/* 📊 Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10 mt-10">
+        {stats.map((stat, idx) => (
+          <StatCard
+            key={idx}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+          />
+        ))}
+      </div>
+
+      <hr />
+
+      {/* 🧾 Recent Orders */}
+      <div className="mb-10 mt-10">
+        <RecentOrders orders={recentOrders} />
       </div>
 
       {/* 🛒 Start Shopping */}
