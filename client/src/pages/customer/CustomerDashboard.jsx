@@ -93,12 +93,12 @@ const CustomerDashboard = () => {
     {
       title: "❤️ Saved Items",
       desc: "Access your wishlist anytime.",
-      link: "#",
+      link: "/saved-tems",
     },
     {
       title: "📞 Help & Support",
       desc: "We’re here if you need anything.",
-      link: "#",
+      link: "/support",
     },
     {
       title: "🔔 Notifications",

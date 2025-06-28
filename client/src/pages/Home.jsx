@@ -26,7 +26,7 @@ const Home = () => {
           <p className="text-xl md:text-2xl font-light mb-6">
             Connecting the Core and the Code
           </p>
-          <div className="flex gap-4">
+          {/* <div className="flex gap-4">
             <a
               href="/register"
               className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-md font-semibold"
@@ -39,7 +39,7 @@ const Home = () => {
             >
               Login
             </a>
-          </div>
+          </div> */}
         </div>
       </div>
 
