@@ -49,7 +49,7 @@ const Materials = () => {
               to={`/category/${encodeURIComponent(item)}`}
               className="bg-white dark:bg-gray-800 shadow-md hover:shadow-xl p-2 rounded-lg transition cursor-pointer flex flex-col"
             >
-              <div className="h-50 mb-2 overflow-hidden rounded-md">
+              <div className="h-45 mb-2 overflow-hidden rounded-md">
                 <img
                   src={`${
                     process.env.PUBLIC_URL
