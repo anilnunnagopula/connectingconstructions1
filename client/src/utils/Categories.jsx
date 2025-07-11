@@ -34,7 +34,7 @@ const categories = [
   "Contractors",
   "Ground Improvement Works",
   "DPC Works",
-  "GIT Works",
+  // "GIT Works",
   "Roads & Pavements",
   "Morrum (Red sand)",
   "Dismantal",
