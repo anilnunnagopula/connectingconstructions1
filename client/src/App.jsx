@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Contact from "./pages/Contact";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyOtp from "./pages/VerifyOTP";
@@ -56,6 +57,7 @@ function App() {
                   <Route path="/verify-otp" element={<VerifyOtp />} />
                   <Route path="/materials" element={<Materials />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
 
                   <Route path="/supplier/products" element={<MyProducts />} />
                   <Route

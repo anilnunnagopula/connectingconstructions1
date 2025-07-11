@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import categories from "../utils/Categories";
 import { useNavigate } from "react-router-dom";
-
+import Materials from "./Materials";
 const Home = () => {
   const [showMobilePopup, setShowMobilePopup] = useState(false);
   const navigate = useNavigate();
@@ -58,8 +58,10 @@ const Home = () => {
       </div>
 
       {/* 🔹 Category Showcase */}
-      <div className="py-10 px-6 bg-gray-100 min-h-screen">
-        <h2 className="text-3xl font-bold text-center mb-10">
+      <Materials/>
+
+      {/* <div className="py-10 px-6 bg-gray-100 dark:bg-gray-900 min-h-screen">
+        <h2 className="text-3xl font-bold text-center mb-6 dark:text-white">
           Explore Categories
         </h2>
 
@@ -68,7 +70,7 @@ const Home = () => {
             <div
               key={idx}
               onClick={() => handleCategoryClick(item)}
-              className="bg-white shadow-md p-4 rounded-lg text-center hover:scale-105 transition duration-300 cursor-pointer"
+              className="bg-white dark:bg-gray-800 shadow-md p-4 rounded-lg text-center hover:scale-105 transition duration-300 cursor-pointer"
             >
               <div className="w-full h-48 overflow-hidden rounded-md mb-3">
                 <img
@@ -79,11 +81,13 @@ const Home = () => {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <h3 className="font-semibold text-lg">{item}</h3>
+              <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100">
+                {item}
+              </h3>
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

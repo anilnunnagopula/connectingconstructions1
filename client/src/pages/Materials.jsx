@@ -6,18 +6,21 @@ import { useCart } from "../context/CartContext";
 const Materials = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
+  // 👇 Check login using localStorage instead of context
+  const user = JSON.parse(localStorage.getItem("user"));
+
   const filteredCategories = categories.filter((item) =>
     item.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="pt-4 pb-4 px-6 min-h-screen bg-gray-100 dark:bg-gray-900 transition-all duration-300">
-      <h2 className="text-xl md:text-3xl font-bold text-center mb-6 text-gray-800 dark:text-white">
+    <div className="pt-4 pb-2 px-6 min-h-screen bg-gray-100 dark:bg-gray-900 transition-all duration-300">
+      <h2 className="text-xl md:text-3xl font-bold text-center mb-4 text-gray-800 dark:text-white">
         🏗️ Explore Construction Categories
       </h2>
 
       {/* 🔍 Search Bar */}
-      <div className="flex justify-center mb-10 relative max-w-md mx-auto">
+      <div className="flex justify-center mb-5 relative max-w-md mx-auto">
         <span className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-300 animate-pulse">
           🔍
         </span>
@@ -36,7 +39,8 @@ const Materials = () => {
             ❌
           </button>
         )}
-      </div> 
+      </div>
+
       {/* 📦 Material Cards */}
       {filteredCategories.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -44,9 +48,9 @@ const Materials = () => {
             <Link
               key={idx}
               to={`/category/${encodeURIComponent(item)}`}
-              className="bg-white dark:bg-gray-800 shadow-md hover:shadow-xl p-6 rounded-lg transition cursor-pointer flex flex-col"
+              className="bg-white dark:bg-gray-800 shadow-md hover:shadow-xl p-2 rounded-lg transition cursor-pointer flex flex-col"
             >
-              <div className="h-40 mb-4 overflow-hidden rounded-md">
+              <div className="h-40 mb-2 overflow-hidden rounded-md">
                 <img
                   src={`${
                     process.env.PUBLIC_URL
@@ -61,9 +65,12 @@ const Materials = () => {
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
                 {item}
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-300">
-                Tap to explore under {item}.
-              </p>
+              {/* ✅ Show this line only if logged in */}
+              {user && (
+                <p className="text-sm text-gray-500 dark:text-gray-300 pb-0">
+                  Tap to explore under {item}.
+                </p>
+              )}
             </Link>
           ))}
         </div>

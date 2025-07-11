@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import categories from "../../utils/Categories";
-import ProductDescriptionGenerator from "../../ai/ProductDescriptionGenerator";
 
 const containerStyle = {
   width: "100%",
@@ -141,20 +140,21 @@ const AddProduct = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-lg mt-10">
+    <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-md rounded-lg mt-10 transition-all">
       <h2 className="text-2xl font-bold mb-4">📦 Add New Product</h2>
 
       <form
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-2 gap-6"
       >
+        {/* Input fields */}
         <div>
           <label className="block font-semibold mb-1">Product Name</label>
           <input
             name="name"
             value={product.name}
             onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             required
           />
         </div>
@@ -165,7 +165,7 @@ const AddProduct = () => {
             name="category"
             value={product.category}
             onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             required
           >
             <option value="">-- Select Category --</option>
@@ -184,7 +184,7 @@ const AddProduct = () => {
             name="price"
             value={product.price}
             onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             required
           />
         </div>
@@ -196,7 +196,7 @@ const AddProduct = () => {
             name="quantity"
             value={product.quantity}
             onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             required
           />
         </div>
@@ -212,7 +212,7 @@ const AddProduct = () => {
                 availability: e.target.value === "Available",
               }))
             }
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
           >
             <option>Available</option>
             <option>Currently Not Available</option>
@@ -227,7 +227,7 @@ const AddProduct = () => {
             onChange={(e) =>
               setProduct((prev) => ({ ...prev, locationText: e.target.value }))
             }
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             placeholder="Click map or use current location"
             required
           />
@@ -256,7 +256,7 @@ const AddProduct = () => {
             name="mobile"
             value={product.contact.mobile}
             onChange={handleContactChange}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             required
           />
         </div>
@@ -268,7 +268,7 @@ const AddProduct = () => {
             type="email"
             value={product.contact.email}
             onChange={handleContactChange}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             required
           />
         </div>
@@ -279,7 +279,7 @@ const AddProduct = () => {
             name="address"
             value={product.contact.address}
             onChange={handleContactChange}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             rows="3"
             required
           />

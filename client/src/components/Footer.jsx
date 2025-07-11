@@ -29,15 +29,14 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-15">
         {/* 🧱 Brand Overview */}
         <div>
-          <h2 className="text-2xl font-bold text-white mb-3">
+          <h2 className="text-l font-bold text-white mb-2">
             ConnectingConstructions
           </h2>
           <p className="text-sm leading-6">
-            The Amazon for Builders 
-            <br />
-            — your all-in-one construction ecosystem.
+            The Amazon for Builders
+            <br />— your all-in-one construction ecosystem.
           </p>
-          <div className="flex gap-4 mt-4">
+          <div className="flex gap-4 mt-2">
             <a href="#" className="text-white text-lg hover:text-gray-300">
               <FaGooglePlay />
             </a>
@@ -49,8 +48,10 @@ const Footer = () => {
 
         {/* 📌 Quick Navigation */}
         <div>
-          <h3 className="text-lg font-semibold text-white mb-4 ml-12">Quick Links</h3>
-          <ul className="space-y-2 text-sm ml-10">
+          <h3 className="text-lg font-semibold text-white mb-2 ">
+            Quick Links
+          </h3>
+          <ul className="space-y-2 text-sm ">
             <li>
               <Link to="/" className="hover:text-white">
                 🏠 Home
@@ -81,7 +82,7 @@ const Footer = () => {
 
         {/* 📦 Categories (Top 5 Only) */}
         <div>
-          <h3 className="text-lg font-semibold text-white mb-4">
+          <h3 className="text-lg font-semibold text-white mb-2">
             Top Categories
           </h3>
           <ul className="space-y-2 text-sm">
@@ -115,33 +116,59 @@ const Footer = () => {
 
         {/* 📞 Contact + Social */}
         <div>
-          <h3 className="text-lg font-semibold text-white mb-4">
+          <h3 className="text-lg font-semibold text-white mb-2">
             Get in Touch
           </h3>
-          <p className="text-sm mb-3">
-            📍 Hyderabad, India
-            <br />
-            📧{" "}
+          <div className="space-y-2 text-sm mb-4">
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=CVR+College+Road,+Mangalpally,+Hyderabad,+Telangana"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block hover:text-blue-300 transition duration-200"
+            >
+              📍 CVR College Road, Hyderabad
+            </a>
             <a
               href="mailto:anilnunnagopula15@gmail.com"
-              className="hover:text-white"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block hover:text-blue-400 transition duration-200"
             >
-              anilnunnagopula15@gmail.com
+              📧 anilnunnagopula15@gmail.com
             </a>
-            <br />
-            📞 +91-9398828248
-          </p>
-          <div className="flex gap-3 text-lg mt-2">
-            <a href="#" className="hover:text-blue-300">
+            <p className="hover:text-blue-400 transition duration-200">
+              📞 +91-9398828248
+            </p>
+          </div>
+
+          {/* Social Media Glow Squad */}
+          <div className="flex gap-4 text-lg">
+            <a
+              href="#"
+              className="hover:text-blue-500 hover:scale-110 transform transition duration-200"
+            >
               <FaFacebookF />
             </a>
-            <a href="#" className="hover:text-pink-400">
+            <a
+              href="https://www.instagram.com/rowdy_darling_____/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-pink-400 hover:scale-110 transform transition duration-200"
+            >
               <FaInstagram />
             </a>
-            <a href="#" className="hover:text-blue-400">
+            <a
+              href="#"
+              className="hover:text-sky-400 hover:scale-110 transform transition duration-200"
+            >
               <FaTwitter />
             </a>
-            <a href="#" className="hover:text-blue-500">
+            <a
+              href="https://www.linkedin.com/in/anil-nunnagopula15112004/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-blue-400 hover:scale-110 transform transition duration-200"
+            >
               <FaLinkedin />
             </a>
           </div>
@@ -152,7 +179,9 @@ const Footer = () => {
       <div className="mt-10 border-t border-blue-800 pt-6 text-sm text-center text-gray-400">
         <p>
           &copy; {new Date().getFullYear()}{" "}
-          <span className="text-white font-semibold">ConnectingConstructions</span>
+          <span className="text-white font-semibold">
+            ConnectingConstructions
+          </span>
           . All rights reserved.
         </p>
         <div className="mt-2 flex flex-wrap justify-center gap-4">

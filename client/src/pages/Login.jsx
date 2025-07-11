@@ -79,9 +79,9 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center px-4">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6 text-blue-600 dark:text-white">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center px-4 ">
+      <div className="bg-white dark:bg-gray-800 px-6 py-2 rounded-lg shadow-md w-full max-w-md m-6">
+        <h2 className="text-2xl font-bold text-center mb-2 text-blue-600 dark:text-white">
           {role === "customer" ? "Customer Login" : "Supplier Login"}
         </h2>
 
@@ -178,6 +178,15 @@ const Login = () => {
           >
             Login as {role}
           </button>
+          <p className="text-center text-sm mt-3 text-gray-600 dark:text-gray-300">
+            Don’t have an account?{" "}
+            <Link
+              to="/register"
+              className="text-blue-600 hover:underline font-medium"
+            >
+              Register here
+            </Link>
+          </p>
         </form>
       </div>
     </div>
