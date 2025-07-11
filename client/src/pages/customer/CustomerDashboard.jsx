@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../../components/StatCard";
 import RecentOrders from "../../components/RecentOrders";
-import { ShoppingBag, Heart, History, Headset } from "lucide-react"; 
+import { ShoppingBag, Heart, History, Headset } from "lucide-react";
 
 // ✅ Safe localStorage parse
 function getUserSafely() {
@@ -114,13 +114,15 @@ const CustomerDashboard = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-10 px-4">
-      <h1 className="text-3xl md:text-3xl font-bold mb-2  text-gray-900 dark:text-white">
+      {/* 💬 Welcome Message */}
+      <h1 className="text-3xl md:text-3xl font-bold mb-2 text-gray-900 dark:text-white">
         👋 Welcome {user?.name || "Customer"}!
       </h1>
       <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
         What are you building today? Explore materials and services tailored for
         you.
       </p>
+
       {/* 🔗 Quick Links */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         {cards.map((card, index) => (
@@ -136,7 +138,8 @@ const CustomerDashboard = () => {
           </div>
         ))}
       </div>
-      <hr />
+
+      <hr className="border-gray-300 dark:border-gray-700" />
 
       {/* 📊 Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10 mt-10">
@@ -150,7 +153,7 @@ const CustomerDashboard = () => {
         ))}
       </div>
 
-      <hr />
+      <hr className="border-gray-300 dark:border-gray-700" />
 
       {/* 🧾 Recent Orders */}
       <div className="mb-10 mt-10">
@@ -161,7 +164,7 @@ const CustomerDashboard = () => {
       <div className="mt-10 text-center">
         <button
           onClick={() => navigate("/materials")}
-          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition"
         >
           🛒 Start Shopping Now
         </button>

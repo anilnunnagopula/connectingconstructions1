@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import categories from "../utils/Categories";
-import { useCart } from "../context/CartContext";
+import categories from "../utils/Categories"; 
 
 const Materials = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,7 +66,7 @@ const Materials = () => {
               </h3>
               {/* ✅ Show this line only if logged in */}
               {user && (
-                <p className="text-sm text-gray-500 dark:text-gray-300 pb-0">
+                <p className="text-sm text-gray-500 dark:text-gray-300">
                   Tap to explore under {item}.
                 </p>
               )}
