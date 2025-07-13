@@ -1,14 +1,19 @@
 // server/routes/supplierRoutes.js
 const express = require("express");
 const router = express.Router();
-const { addProduct } = require("../controllers/productController"); // Import the controller
+const {
+  addProduct,
+  getProductById,
+  updateProduct,
+} = require("../controllers/productController"); // Import new functions
 
-// In a real application, you would add authentication and authorization middleware here
-// For example:
-// const { protect, authorize } = require('../middleware/authMiddleware');
-// router.post('/products', protect, authorize('supplier'), addProduct);
-
-// For now, we'll keep it simple for testing to ensure the route works
+// Route to add a new product
 router.post("/products", addProduct);
+
+// New: Route to get a single product by ID
+router.get("/products/:id", getProductById); // :id is a URL parameter
+
+// New: Route to update a product by ID
+router.put("/products/:id", updateProduct); // :id is a URL parameter
 
 module.exports = router;

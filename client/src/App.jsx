@@ -1,5 +1,28 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+} from "react-router-dom";
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  signInAnonymously,
+  signInWithCustomToken,
+  onAuthStateChanged,
+} from "firebase/auth";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  onSnapshot,
+  collection,
+} from "firebase/firestore";
+
+// Import your pages and components
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -19,8 +42,7 @@ import Footer from "./components/Footer";
 import Materials from "./pages/Materials";
 import MyProducts from "./pages/supplier/MyProducts";
 import AddProduct from "./pages/supplier/AddProduct";
-import EditProduct from "./pages/supplier/EditProduct";
-import { LoadScript } from "@react-google-maps/api";
+import EditProduct from "./pages/supplier/EditProduct"; // Make sure this import is present
 import CategoryPage from "./pages/CategoryPage";
 import Chatbot from "./components/Chatbot";
 import ScrollToTop from "./components/ScrollToTop";
@@ -30,16 +52,28 @@ import MyOrders from "./pages/customer/MyOrders";
 import Cart from "./pages/customer/Cart";
 import Checkout from "./pages/customer/Checkout";
 
-// ✅ Import your context provider
+// Import your context providers
 import { DarkModeProvider } from "./context/DarkModeContext";
 import { CartProvider } from "./context/CartContext";
+
+// It's generally better to define LoadScript once at the top level
+// and let child components use useJsApiLoader without passing libraries,
+// but if you have multiple LoadScript instances, ensure their `id` is unique.
+// For simplicity, we'll keep the LoadScript here as per your original structure.
+import { LoadScript } from "@react-google-maps/api";
 
 function App() {
   return (
     <CartProvider>
       <DarkModeProvider>
+        {/* LoadScript should ideally be higher up or used with useJsApiLoader in components */}
         <LoadScript
           googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
+          // Libraries should be specified here if LoadScript is used globally,
+          // or in each useJsApiLoader call if LoadScript is not global.
+          // For now, assuming individual components handle their libraries.
+          // If you face "Loader must not be called again with different options" again,
+          // consider moving all libraries here: libraries={["places", "maps", "marker"]}
         >
           <Router>
             <div className="flex flex-col min-h-screen">
@@ -48,7 +82,7 @@ function App() {
 
               <div className="flex-grow">
                 <Routes>
-                  {/* ✅ Public Routes */}
+                  {/* Public Routes */}
                   <Route path="/" element={<Home />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
@@ -58,19 +92,23 @@ function App() {
                   <Route path="/materials" element={<Materials />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
-
+                  {/* Supplier Public-ish Routes (can be accessed without ProtectedRoute if desired, but often linked from dashboard) */}
                   <Route path="/supplier/products" element={<MyProducts />} />
                   <Route
                     path="/supplier/add-product"
                     element={<AddProduct />}
                   />
-                  <Route path="/supplier/edit/:id" element={<EditProduct />} />
+                  {/* Corrected EditProduct route path for consistency */}
+                  <Route
+                    path="/supplier/edit-product/:id"
+                    element={<EditProduct />}
+                  />{" "}
+                  {/* <--- CORRECTED PATH */}
                   <Route
                     path="/category/:category"
                     element={<CategoryPage />}
                   />
-
-                  {/* ✅ Customer Routes (Protected) */}
+                  {/* Customer Routes (Protected) */}
                   <Route
                     path="/customer-dashboard"
                     element={
@@ -119,8 +157,7 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
-
-                  {/* ✅ General Protected Routes */}
+                  {/* General Protected Routes */}
                   <Route
                     path="/dashboard"
                     element={
@@ -145,8 +182,7 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
-
-                  {/* ✅ Fallback */}
+                  {/* Fallback */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </div>
