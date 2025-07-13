@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import categories from "../../utils/Categories"; // Ensure this path is correct
 
 // Define libraries outside the component to prevent re-creation on re-renders
-const googleMapsLibraries = ["places", "maps"]; // Static constant
+const googleMapsLibraries = ["places", "maps"];
 
 const containerStyle = {
   width: "100%",
@@ -22,6 +22,7 @@ const AddProduct = () => {
   const [product, setProduct] = useState({
     name: "",
     category: "",
+    description: "", // Added description field
     price: "",
     quantity: "",
     availability: true,
@@ -36,6 +37,7 @@ const AddProduct = () => {
     imageUrlPreview: null,
   });
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false); // New state for AI generation loading
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
 
@@ -43,7 +45,7 @@ const AddProduct = () => {
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
-    libraries: googleMapsLibraries, // <--- MODIFIED: Using the static constant here
+    libraries: googleMapsLibraries,
   });
 
   const handleChange = (e) => {
@@ -88,6 +90,8 @@ const AddProduct = () => {
 
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {
+      setMessage("Fetching current location...");
+      setMessageType("info"); // New message type for informational messages
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           const { latitude, longitude } = pos.coords;
@@ -99,6 +103,8 @@ const AddProduct = () => {
                 4
               )}, Lng: ${longitude.toFixed(4)}`,
             }));
+            setMessage("Location fetched successfully!");
+            setMessageType("success");
           } else {
             setMessage("Could not fetch valid coordinates.");
             setMessageType("error");
@@ -126,6 +132,8 @@ const AddProduct = () => {
       latLng: { lat, lng },
       locationText: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
     }));
+    setMessage("Location updated from map click!");
+    setMessageType("success");
   };
 
   useEffect(() => {
@@ -138,6 +146,71 @@ const AddProduct = () => {
     }
   }, [message]);
 
+  // Function to generate description using AI
+  const handleGenerateDescription = async () => {
+    setAiLoading(true);
+    setMessage("");
+    setMessageType("");
+
+    if (!product.name && !product.category) {
+      setMessage(
+        "Please enter a Product Name or select a Category to generate a description."
+      );
+      setMessageType("error");
+      setAiLoading(false);
+      return;
+    }
+
+    const prompt = `Generate a concise and appealing product description for a construction material.
+    Product Name: ${product.name || "N/A"}
+    Category: ${product.category || "N/A"}
+    Key features/keywords: ${
+      product.description || ""
+    } (Use this if available, otherwise ignore)
+    
+    Keep it under 100 words.`;
+
+    try {
+      let chatHistory = [];
+      chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+      const payload = { contents: chatHistory };
+      const apiKey = ""; // API key is automatically provided by Canvas runtime
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      console.log("AI generation raw result:", result); // <--- ADDED THIS FOR DEBUGGING
+
+      if (
+        result.candidates &&
+        result.candidates.length > 0 &&
+        result.candidates[0].content &&
+        result.candidates[0].content.parts &&
+        result.candidates[0].content.parts.length > 0
+      ) {
+        const generatedText = result.candidates[0].content.parts[0].text;
+        setProduct((prev) => ({ ...prev, description: generatedText }));
+        setMessage("Description generated successfully!");
+        setMessageType("success");
+      } else {
+        setMessage("Failed to generate description. Please try again.");
+        setMessageType("error");
+        console.error("AI generation response structure unexpected:", result);
+      }
+    } catch (err) {
+      console.error("AI generation error:", err);
+      setMessage("Error generating description. Please try again later.");
+      setMessageType("error");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -147,6 +220,7 @@ const AddProduct = () => {
     if (
       !product.name ||
       !product.category ||
+      !product.description || // Added description to validation
       !product.price ||
       !product.quantity ||
       !product.locationText ||
@@ -183,6 +257,7 @@ const AddProduct = () => {
       supplierId: supplierId,
       name: product.name,
       category: product.category,
+      description: product.description, // Added description to productData
       price: parseFloat(product.price),
       quantity: parseInt(product.quantity, 10),
       availability: product.availability,
@@ -199,7 +274,7 @@ const AddProduct = () => {
       const apiUrl =
         typeof process !== "undefined" && process.env.REACT_APP_API_URL
           ? `${process.env.REACT_APP_API_URL}/api/supplier/products`
-          : "/api/supplier/products";
+          : "http://localhost:5000/api/supplier/products"; // Fallback for demonstration, explicitly setting to 5000
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -217,9 +292,11 @@ const AddProduct = () => {
 
       setMessage("Product added successfully!");
       setMessageType("success");
+      // Clear form after successful submission
       setProduct({
         name: "",
         category: "",
+        description: "",
         price: "",
         quantity: "",
         availability: true,
@@ -265,6 +342,8 @@ const AddProduct = () => {
           className={`mb-4 p-3 rounded-md text-center ${
             messageType === "success"
               ? "bg-green-100 text-green-700"
+              : messageType === "info" // Added info message type for styling
+              ? "bg-blue-100 text-blue-700"
               : "bg-red-100 text-red-700"
           }`}
         >
@@ -315,13 +394,70 @@ const AddProduct = () => {
           </select>
         </div>
 
+        {/* Product Description - EXACT MATCH */}
+        <div className="md:col-span-2">
+          <div className="flex justify-between items-center mb-2">
+            {" "}
+            {/* Adjusted margin-bottom */}
+            <label className="block font-semibold text-gray-700 dark:text-gray-300">
+              Product Description
+            </label>
+            <button
+              type="button"
+              onClick={handleGenerateDescription}
+              // Styling to match the "Use AI to Generate" link
+              className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium flex items-center gap-1"
+              title="Auto-Generate with AI"
+              disabled={aiLoading}
+            >
+              {aiLoading ? (
+                <svg
+                  className="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              ) : (
+                <>
+                  <span className="text-lg">⚙️</span> Use AI to Generate{" "}
+                  {/* Changed emoji to match reference */}
+                </>
+              )}
+            </button>
+          </div>
+          <textarea
+            name="description"
+            value={product.description}
+            onChange={handleChange}
+            className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+            rows="4"
+            placeholder="Leave empty and let AI generate if needed 🤖"
+            required
+          ></textarea>
+        </div>
+
         <div>
           <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
             Price (₹)
           </label>
           <input
-            type="number"
+            type="text"
             name="price"
+            placeholder="eg: 350/bag 1000 for each cement bag"
             value={product.price}
             onChange={handleChange}
             className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
@@ -334,8 +470,9 @@ const AddProduct = () => {
             Quantity Available
           </label>
           <input
-            type="number"
+            type="text"
             name="quantity"
+            placeholder="eg: 500 cement bags available"
             value={product.quantity}
             onChange={handleChange}
             className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
@@ -363,16 +500,30 @@ const AddProduct = () => {
           </select>
         </div>
 
-        {/* Location Details */}
+        {/* Location Details - EXACT MATCH */}
         <div className="md:col-span-2 mt-4">
-          <h3 className="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-semibold mb-1 border-b pb-1 border-gray-200 dark:border-gray-700">
             Location Details
           </h3>
         </div>
         <div className="md:col-span-2">
-          <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-            Manual Location Text
-          </label>
+          <div className="flex justify-between items-center mb-2">
+            {" "}
+            {/* Adjusted margin-bottom */}
+            <label className="block font-semibold text-gray-700 dark:text-gray-300">
+              Enter Location
+            </label>
+            <button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              // Styling to match the "Use Current Location" link
+              className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium flex items-center gap-1"
+              title="Use Current Location"
+            >
+              <span className="text-lg">📍</span> Use Current Location{" "}
+              {/* Changed emoji to match reference */}
+            </button>
+          </div>
           <input
             name="locationText"
             value={product.locationText}
@@ -380,16 +531,9 @@ const AddProduct = () => {
               setProduct((prev) => ({ ...prev, locationText: e.target.value }))
             }
             className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-            placeholder="e.g., Shop No. 123, Main Road, Hyderabad"
+            placeholder="e.g. Mangalpally, Hyderabad"
             required
           />
-          <button
-            type="button"
-            onClick={handleUseCurrentLocation}
-            className="mt-3 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors duration-200 flex items-center gap-2"
-          >
-            📍 Use Current Location
-          </button>
         </div>
 
         {isLoaded && (
@@ -408,6 +552,7 @@ const AddProduct = () => {
                 fullscreenControl: false,
               }}
             >
+              {/* Using standard Marker component */}
               {product.latLng && <Marker position={product.latLng} />}
             </GoogleMap>
             {product.latLng && (
