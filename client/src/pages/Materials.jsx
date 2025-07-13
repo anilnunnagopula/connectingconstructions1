@@ -1,11 +1,9 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import categories from "../utils/Categories"; 
+import categories from "../utils/Categories";
 
 const Materials = () => {
   const [searchTerm, setSearchTerm] = useState("");
-
-  // 👇 Check login using localStorage instead of context
   const user = JSON.parse(localStorage.getItem("user"));
 
   const filteredCategories = categories.filter((item) =>
@@ -13,13 +11,13 @@ const Materials = () => {
   );
 
   return (
-    <div className="pt-4 pb-2 px-6 min-h-screen bg-gray-100 dark:bg-gray-900 transition-all duration-300">
-      <h2 className="text-xl md:text-3xl font-bold text-center mb-4 text-gray-800 dark:text-white">
+    <div className="pt-4 pb-10 px-6 min-h-screen bg-gray-100 dark:bg-gray-900 transition-all duration-300">
+      <h2 className="text-xl md:text-3xl font-extrabold text-center mb-6 text-gray-800 dark:text-white tracking-wide">
         🏗️ Explore Construction Categories
       </h2>
 
       {/* 🔍 Search Bar */}
-      <div className="flex justify-center mb-5 relative max-w-md mx-auto">
+      <div className="flex justify-center mb-10 relative max-w-md mx-auto">
         <span className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-300 animate-pulse">
           🔍
         </span>
@@ -47,9 +45,13 @@ const Materials = () => {
             <Link
               key={idx}
               to={`/category/${encodeURIComponent(item)}`}
-              className="bg-white dark:bg-gray-800 shadow-md hover:shadow-xl p-2 rounded-lg transition cursor-pointer flex flex-col"
+              className="bg-white dark:bg-gray-800 shadow-lg hover:shadow-2xl transition-all duration-300 px-6 pt-6 pb-1 rounded-xl cursor-pointer flex flex-col group"
             >
-              <div className="h-45 mb-2 overflow-hidden rounded-md">
+              <div
+                className={`h-40 overflow-hidden rounded-md border border-black dark:border-white transition-transform duration-300 group-hover:scale-[1.02] ${
+                  user ? "mb-2" : "mb-2"
+                }`}
+              >
                 <img
                   src={`${
                     process.env.PUBLIC_URL
@@ -61,20 +63,24 @@ const Materials = () => {
                   className="w-full h-full object-cover rounded"
                 />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+              <h3
+                className={`text-lg font-bold text-gray-800 dark:text-white tracking-wide ${
+                  user ? "mb-0" : "mb-0"
+                }`}
+              >
                 {item}
               </h3>
-              {/* ✅ Show this line only if logged in */}
+
               {user && (
-                <p className="text-sm text-gray-500 dark:text-gray-300">
-                  Tap to explore under {item}.
+                <p className=" text-xs text-gray-500 dark:text-gray-400 italic mb-2 truncate">
+                  Tap to explore products under {item}
                 </p>
               )}
             </Link>
           ))}
         </div>
       ) : (
-        <div className="text-center text-red-500 text-4xl mt-10">
+        <div className="text-center text-red-500 text-3xl mt-10 font-semibold">
           😕 Oops! No materials found.
         </div>
       )}

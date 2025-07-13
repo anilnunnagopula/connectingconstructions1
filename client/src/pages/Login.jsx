@@ -2,188 +2,167 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 const Login = () => {
-  const [role, setRole] = useState("customer"); // or "supplier"
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    role: "customer",
+    email: "",
+    password: "",
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
-      setError("All fields are required.");
+    if (!formData.email || !formData.password) {
+      setError("All fields are required");
       return;
     }
 
-    // ✅ Test credentials shortcut
+    // Test credentials
     if (
-      (role === "customer" &&
-        email === "customer@gmail.com" &&
-        password === "customer") ||
-      (role === "supplier" &&
-        email === "supplier@gmail.com" &&
-        password === "supplier")
+      (formData.role === "customer" &&
+        formData.email === "customer@gmail.com" &&
+        formData.password === "customer") ||
+      (formData.role === "supplier" &&
+        formData.email === "supplier@gmail.com" &&
+        formData.password === "supplier")
     ) {
-      alert(`Logged in as ${role} (Test Mode ✅)`);
       localStorage.setItem(
         "user",
-        JSON.stringify({ name: email.split("@")[0], email, role })
+        JSON.stringify({
+          name: formData.email.split("@")[0],
+          email: formData.email,
+          role: formData.role,
+        })
       );
-      if (role === "customer") navigate("/customer-dashboard");
-      else navigate("/supplier-dashboard");
+      navigate(`/${formData.role}-dashboard`);
       return;
     }
 
-    // 🌐 Real API call
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/api/auth/login`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password, role }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
         }
       );
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Login failed");
 
-      if (!response.ok) {
-        setError(data.error || "Login failed.");
-      } else {
-        alert(`Logged in as ${data.role}`);
-        const userData = {
-          name: data.name || email.split("@")[0],
-          email,
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          name: data.name || formData.email.split("@")[0],
+          email: formData.email,
           role: data.role,
-        };
-
-        localStorage.setItem("user", JSON.stringify(userData));
-
-        if (data.role === "customer") {
-          navigate("/customer-dashboard");
-        } else if (data.role === "supplier") {
-          navigate("/supplier-dashboard");
-        } else {
-          navigate("/dashboard");
-        }
-      }
+        })
+      );
+      navigate(`/${data.role}-dashboard`);
     } catch (err) {
-      setError("Something went wrong. Try again.");
+      setError(err.message || "Login failed. Please try again.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center px-4 ">
-      <div className="bg-white dark:bg-gray-800 px-6 py-2 rounded-lg shadow-md w-full max-w-md m-6">
-        <h2 className="text-2xl font-bold text-center mb-2 text-blue-600 dark:text-white">
-          {role === "customer" ? "Customer Login" : "Supplier Login"}
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
+        <h2 className="text-2xl font-bold text-center mb-6 dark:text-white">
+          {formData.role === "customer" ? "Customer Login" : "Supplier Login"}
         </h2>
 
-        {/* Toggle Buttons */}
         <div className="flex justify-center gap-4 mb-6">
-          <button
-            onClick={() => setRole("customer")}
-            className={`px-4 py-2 rounded-md ${
-              role === "customer"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white"
-            }`}
-          >
-            Customer
-          </button>
-          <button
-            onClick={() => setRole("supplier")}
-            className={`px-4 py-2 rounded-md ${
-              role === "supplier"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white"
-            }`}
-          >
-            Supplier
-          </button>
+          {["customer", "supplier"].map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setFormData((prev) => ({ ...prev, role: r }))}
+              className={`px-4 py-2 rounded-md capitalize ${
+                formData.role === r
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white"
+              }`}
+            >
+              {r}
+            </button>
+          ))}
         </div>
 
-        {/* 🎯 Test Credentials Box */}
-        <div className="mb-4 text-sm text-gray-600 dark:text-gray-300 bg-yellow-100 dark:bg-yellow-800 p-3 rounded">
-          <p className="font-semibold mb-1">🧪 Test Login</p>
-          <p>
-            👤 <strong>Customer:</strong> customer@gmail.com | password:
-            customer
-          </p>
-          <p>
-            🏭 <strong>Supplier:</strong> supplier@gmail.com | password:
-            supplier
-          </p>
+        <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-800 rounded text-sm">
+          <p className="font-semibold mb-1">Test Credentials</p>
+          <p>👤 Customer: customer@gmail.com | password: customer</p>
+          <p>🏭 Supplier: supplier@gmail.com | password: supplier</p>
         </div>
 
-        {/* Error Msg */}
         {error && (
-          <p className="text-red-500 text-sm text-center mb-4">{error}</p>
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+            {error}
+          </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium mb-1 dark:text-gray-300">
               Email
             </label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-black dark:text-white"
-              placeholder="Enter your email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium mb-1 dark:text-gray-300">
               Password
             </label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-black dark:text-white"
-                placeholder="Enter your password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white"
                 required
               />
-              <span
+              <button
+                type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-gray-500 cursor-pointer text-sm"
+                className="absolute right-2 top-2 text-gray-500 dark:text-gray-300"
               >
                 {showPassword ? "🙈" : "👁️"}
-              </span>
+              </button>
             </div>
-            <p className="text-sm mt-2 text-right">
-              <Link
-                to="/forgot-password"
-                className="text-blue-600 hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </p>
+            <Link
+              to="/forgot-password"
+              className="text-sm text-blue-600 hover:underline block text-right mt-1"
+            >
+              Forgot password?
+            </Link>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md"
           >
-            Login as {role}
+            Login as {formData.role}
           </button>
-          <p className="text-center text-sm mt-3 text-gray-600 dark:text-gray-300">
-            Don’t have an account?{" "}
-            <Link
-              to="/register"
-              className="text-blue-600 hover:underline font-medium"
-            >
+
+          <p className="text-center text-sm mt-4 dark:text-gray-300">
+            Don't have an account?{" "}
+            <Link to="/register" className="text-blue-600 hover:underline">
               Register here
             </Link>
           </p>

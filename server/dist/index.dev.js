@@ -1,0 +1,49 @@
+"use strict";
+
+// index.js
+require("dotenv").config();
+
+var express = require("express");
+
+var cors = require("cors");
+
+var mongoose = require("mongoose");
+
+var authRoutes = require("./routes/auth"); // Your existing auth routes
+
+
+var supplierRoutes = require("./routes/supplierRoutes"); // <--- ADD THIS LINE
+
+
+var app = express(); // Connect to MongoDB
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000
+}).then(function () {
+  return console.log("✅ MongoDB connected");
+})["catch"](function (err) {
+  return console.error("❌ MongoDB connection error:", err);
+}); // Middleware
+
+app.use(cors({
+  origin: "http://localhost:3000",
+  // Ensure this matches your frontend URL
+  credentials: true
+}));
+app.use(express.json()); // Essential for parsing JSON request bodies
+// Routes
+
+app.use("/api/auth", authRoutes);
+app.use("/api/supplier", supplierRoutes); // <--- ADD THIS LINE: Use the new supplier routes
+// Basic route for testing server
+
+app.get("/", function (req, res) {
+  res.send("API is running...");
+}); // Start server
+
+var PORT = process.env.PORT || 5000;
+app.listen(PORT, function () {
+  console.log("\uD83D\uDE80 Server running on port ".concat(PORT));
+});

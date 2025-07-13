@@ -1,158 +1,180 @@
-// const sendEmail = require("../utils/sendEmail");
 const User = require("../models/User");
+const sendEmail = require("../utils/sendEmail");
 
-// REGISTER USER
+// Helper function for validation
+const validateInput = (data, fields) => {
+  for (const field of fields) {
+    if (!data[field]) {
+      throw new Error(`${field} is required`);
+    }
+  }
+};
+
+// Register User
+// Register User
 const registerUser = async (req, res) => {
   try {
-    // console.log("⚡ Register API hit"); // Add this
-    const { role, email, password } = req.body;
+    console.log("Incoming registration request:", req.body); // Debug log
 
-    if (!role || !email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
+    // FIX: Include 'name' in the destructuring
+    const { role, email, password, name } = req.body;
+    if (!role || !email || !password || !name) { // Also add name to this check
+      return res.status(400).json({ error: "All fields required" });
     }
 
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(400).json({ error: "Email already registered" });
+    console.log("Checking for existing user...");
+    const existingUser = await User.findOne({ email })
+      .maxTimeMS(10000) // Specific timeout for this query
+      .exec();
+
+    if (existingUser) {
+      return res.status(400).json({ error: "Email already exists" });
     }
 
-    // ✅ No hashing for now (we'll add bcrypt later)
-    const newUser = new User({ role, email, password });
+    console.log("Creating new user...");
+    // FIX: Pass 'name' to the User constructor
+    const newUser = new User({ role, email, password, name });
     await newUser.save();
 
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({ message: "Registration successful" });
   } catch (err) {
-    console.error("❌ Register Error:", err.message);
-    res
-      .status(500)
-      .json({ error: "Something went wrong", details: err.message });
+    console.error("Registration error:", err);
+    res.status(500).json({
+      error: "Registration failed",
+      details: err.message,
+    });
   }
 };
 
-// LOGIN USER
+// Login User
+// Login User
 const loginUser = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    console.log("Incoming login request:", req.body); // Log the entire request body
+    // Assuming validateInput ensures email, password, role are present
+    // If validateInput is not robust, you might want to add explicit checks here
+    // e.g., if (!req.body.email || !req.body.password || !req.body.role) { ... }
 
-    if (!email || !password || !role) {
-      return res.status(400).json({ error: "All fields are required" });
-    }
+    const { email, password, role } = req.body; // Destructure for clarity
 
-    // Match both email and role
+    console.log(`Attempting to find user with email: '${email}' and role: '${role}'`);
     const user = await User.findOne({ email, role });
 
-    if (!user || user.password !== password) {
-      return res.status(401).json({ error: "Invalid credentials" });
+    if (!user) {
+      console.log("Login attempt: User not found for provided email/role combination.");
+      throw new Error("Invalid credentials");
     }
 
-    res.status(200).json({ message: "Login successful", role: user.role });
+    console.log(`Login attempt: User found. Stored password: '${user.password}', Provided password: '${password}'`);
+
+    // IMPORTANT: Since you are not hashing passwords, this direct comparison works.
+    // In a real application, you MUST hash passwords (e.g., with bcrypt)
+    // and use a comparison function like bcrypt.compare().
+    if (user.password !== password) {
+      console.log("Login attempt: Password mismatch.");
+      throw new Error("Invalid credentials");
+    }
+
+    console.log(`Login successful for user: ${user.email} (${user.role})`);
+
+    res.json({
+      message: "Login successful",
+      role: user.role,
+      name: user.name,
+    });
   } catch (err) {
-    console.error("❌ Login Error:", err.message);
-    res
-      .status(500)
-      .json({ error: "Something went wrong", details: err.message });
+    console.error("Login error:", err); // Log the full error object for debugging
+    res.status(401).json({ error: err.message });
   }
 };
 
-// SEND OTP
-const sendEmail = require("../utils/sendEmail"); // 👈 import it
+// Send OTP
 const sendOtp = async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: "Email is required" });
+    validateInput(req.body, ["email"]);
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) throw new Error("User not found");
 
-    // Prevent frequent resends (1 per minute)
-    if (
-      user.otp?.expiresAt &&
-      user.otp.expiresAt > new Date(Date.now() - 60 * 1000)
-    ) {
-      return res
-        .status(429)
-        .json({ error: "Please wait before requesting again." });
+    // Prevent frequent OTP requests
+    if (user.otp?.expiresAt > Date.now() - 60000) {
+      throw new Error("Please wait before requesting another OTP");
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
+    const expiresAt = Date.now() + 300000; // 5 minutes
 
-    // Save OTP to DB
-    user.otp = { code: otp, expiresAt };
+    user.otp = { code: otp, expiresAt: new Date(expiresAt) };
     await user.save();
 
     await sendEmail(
-      email,
-      "Your OTP for Password Reset",
-      `Your OTP is: ${otp}`
+      req.body.email,
+      "Your Password Reset OTP",
+      `Your OTP code is: ${otp}`
     );
 
-    res.status(200).json({ message: "OTP sent to your email" });
+    res.json({ message: "OTP sent successfully" });
   } catch (err) {
-    console.error("❌ OTP Error:", err.message);
-    res.status(500).json({ error: "Something went wrong" });
+    res.status(400).json({ error: err.message });
   }
 };
 
-
+// Verify OTP
 const verifyOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
-    if (!email || !otp)
-      return res.status(400).json({ error: "All fields required" });
+    validateInput(req.body, ["email", "otp"]);
 
-    const user = await User.findOne({ email });
-    if (!user || !user.otp || user.otp.code !== otp)
-      return res.status(400).json({ error: "Invalid OTP" });
+    const user = await User.findOne({ email: req.body.email });
+    if (!user?.otp) throw new Error("Invalid OTP");
 
-    if (user.otp.expiresAt < new Date()) {
-      return res.status(400).json({ error: "OTP expired" });
+    if (user.otp.code !== req.body.otp) {
+      throw new Error("Invalid OTP code");
     }
 
-    // Optional: clear OTP after verification
+    if (user.otp.expiresAt < new Date()) {
+      throw new Error("OTP expired");
+    }
+
+    // Clear OTP after verification
     user.otp = undefined;
     await user.save();
 
-    res.status(200).json({ message: "OTP verified successfully" });
+    res.json({ message: "OTP verified successfully" });
   } catch (err) {
-    console.error("❌ Verify OTP Error:", err.message);
-    res.status(500).json({ error: "Something went wrong" });
+    res.status(400).json({ error: err.message });
   }
 };
+
+// Reset Password
 const resetPassword = async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
-    console.log("BODY:", req.body);
+    validateInput(req.body, ["email", "otp", "newPassword"]);
 
-    if (!email || !otp || !newPassword) {
-      return res.status(400).json({ error: "All fields are required" });
-    }
+    const user = await User.findOne({ email: req.body.email });
+    if (!user?.otp) throw new Error("Invalid request");
 
-    const user = await User.findOne({ email });
-    if (!user || !user.otp) {
-      return res.status(404).json({ error: "User or OTP not found" });
-    }
-
-    // Check OTP match and expiry
-    if (user.otp.code !== otp) {
-      return res.status(400).json({ error: "Invalid OTP" });
+    if (user.otp.code !== req.body.otp) {
+      throw new Error("Invalid OTP");
     }
 
     if (user.otp.expiresAt < new Date()) {
-      return res.status(400).json({ error: "OTP expired" });
+      throw new Error("OTP expired");
     }
 
-    // Set new password
-    user.password = newPassword;
+    user.password = req.body.newPassword;
     user.otp = undefined;
     await user.save();
 
-    res.status(200).json({ message: "Password reset successful" });
+    res.json({ message: "Password reset successful" });
   } catch (err) {
-    console.error("❌ Reset Password Error:", err.message);
-    res.status(500).json({ error: "Something went wrong" });
+    res.status(400).json({ error: err.message });
   }
 };
 
-
-module.exports = { registerUser, loginUser, sendOtp,verifyOtp,resetPassword, };
+module.exports = {
+  registerUser,
+  loginUser,
+  sendOtp,
+  verifyOtp,
+  resetPassword,
+};
