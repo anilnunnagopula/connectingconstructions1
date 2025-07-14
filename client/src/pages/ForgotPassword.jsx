@@ -17,17 +17,16 @@ const ForgotPassword = () => {
     }
 
     try {
-      // const response = await fetch("http://localhost:5000/api/auth/send-otp", {
-        const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/api/auth/send-otp`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ email }),
-          }
-        );
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/api/auth/send-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
 
       const data = await response.json();
 
@@ -35,9 +34,9 @@ const ForgotPassword = () => {
         setError(data.error || "Failed to send OTP.");
       } else {
         setMessage("OTP sent successfully! Please check your email.");
-        localStorage.setItem("resetEmail", email); // Store email temporarily
+        // Pass the email using navigate's state
         setTimeout(() => {
-          navigate("/reset-password");
+          navigate("/reset-password", { state: { email } });
         }, 1500);
       }
     } catch (err) {

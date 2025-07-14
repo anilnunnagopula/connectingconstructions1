@@ -11,16 +11,34 @@ const Register = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [passwordMatchError, setPasswordMatchError] = useState(""); // New state for password mismatch
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear password mismatch error when typing
+    if (name === "password" || name === "confirmPassword") {
+      setPasswordMatchError("");
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(""); // Clear previous server errors
+    setPasswordMatchError(""); // Clear previous password errors
+
+    // Client-side validation: Password and Confirm Password Match
+    if (formData.password !== formData.confirmPassword) {
+      setPasswordMatchError("Passwords do not match.");
+      return; // Stop submission if passwords don't match
+    }
+
+    // Client-side validation: Password length (optional, but good practice)
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
 
     try {
       const response = await fetch(
@@ -31,24 +49,28 @@ const Register = () => {
           body: JSON.stringify({
             role: formData.role,
             email: formData.email,
-            password: formData.password,
+            password: formData.password, // Send the password
             name: formData.name,
           }),
         }
-      ); 
-      const data = await response.json();
+      );
+
+      const data = await response.json(); // Always parse JSON for error details
 
       if (!response.ok) {
-        throw new Error(data.error || "Registration failed");
+        // If response.ok is false, it's an HTTP error (e.g., 400, 500)
+        // The backend sends { error: "Email already exists" } or similar
+        throw new Error(data.error || "Registration failed. Please try again.");
       }
 
-      navigate("/login");
+      // If response.ok is true (e.g., 201 Created)
+      navigate("/login"); // Navigate on successful registration
     } catch (err) {
-      console.error("Registration error:", err);
+      console.error("Registration submission error:", err); // Log the full error
       setError(
         err.message.includes("timed out")
           ? "Database connection timed out. Please try again."
-          : err.message
+          : err.message // Display the backend's error message (e.g., "Email already exists")
       );
     }
   };
@@ -79,9 +101,14 @@ const Register = () => {
           ))}
         </div>
 
-        {error && (
+        {error && ( // Display server-side errors (like "Email already exists")
           <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
             {error}
+          </div>
+        )}
+        {passwordMatchError && ( // Display client-side password mismatch error
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+            {passwordMatchError}
           </div>
         )}
 
@@ -126,7 +153,7 @@ const Register = () => {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white"
                 required
-                minLength="6"
+                minLength="6" // HTML5 minLength attribute for basic client-side validation
               />
               <button
                 type="button"

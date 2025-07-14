@@ -21,7 +21,7 @@ const CustomerDashboard = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white transition-colors duration-300">
         <h2 className="text-2xl font-bold mb-4 text-red-600">
           ⚠️ Please Login
         </h2>
@@ -113,64 +113,67 @@ const CustomerDashboard = () => {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-4">
-      {/* 💬 Welcome Message */}
-      <h1 className="text-3xl md:text-3xl font-bold mb-2 text-gray-900 dark:text-white">
-        👋 Welcome {user?.name || "Customer"}!
-      </h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
-        What are you building today? Explore materials and services tailored for
-        you.
-      </p>
+    <div className="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-white transition-colors duration-300">
+      <div className="max-w-6xl mx-auto py-10 px-4">
+        {/* 💬 Welcome Message */}
+        <h1 className="text-3xl md:text-3xl font-bold mb-2 text-gray-900 dark:text-white">
+          👋 Welcome {user?.name || "Customer"}!
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
+          What are you building today? Explore materials and services tailored
+          for you.
+        </p>
 
-      {/* 🔗 Quick Links */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {cards.map((card, index) => (
-          <div
-            key={index}
-            onClick={() => card.link !== "#" && navigate(card.link)}
-            className="bg-white dark:bg-gray-800 shadow-xl hover:shadow-2xl transition p-6 rounded-lg cursor-pointer"
+        {/* 🔗 Quick Links */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {cards.map((card, index) => (
+            <div
+              key={index}
+              onClick={() => card.link !== "#" && navigate(card.link)}
+              className="bg-white dark:bg-gray-800 shadow-xl hover:shadow-2xl transition p-6 rounded-lg cursor-pointer"
+            >
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+                {card.title}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">{card.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <hr className="border-gray-300 dark:border-gray-700" />
+
+        {/* 📊 Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10 mt-10">
+          {stats.map((stat, idx) => (
+            <StatCard
+              key={idx}
+              title={stat.title}
+              value={stat.value}
+              icon={stat.icon}
+            />
+          ))}
+        </div>
+
+        <hr className="border-gray-300 dark:border-gray-700" />
+
+        {/* 🧾 Recent Orders */}
+        <div className="mb-10 mt-10">
+          <RecentOrders orders={recentOrders} />
+        </div>
+
+        {/* 🛒 Start Shopping */}
+        <div className="mt-10 text-center">
+          <button
+            onClick={() => navigate("/materials")}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition"
           >
-            <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
-              {card.title}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">{card.desc}</p>
-          </div>
-        ))}
-      </div>
-
-      <hr className="border-gray-300 dark:border-gray-700" />
-
-      {/* 📊 Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10 mt-10">
-        {stats.map((stat, idx) => (
-          <StatCard
-            key={idx}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-          />
-        ))}
-      </div>
-
-      <hr className="border-gray-300 dark:border-gray-700" />
-
-      {/* 🧾 Recent Orders */}
-      <div className="mb-10 mt-10">
-        <RecentOrders orders={recentOrders} />
-      </div>
-
-      {/* 🛒 Start Shopping */}
-      <div className="mt-10 text-center">
-        <button
-          onClick={() => navigate("/materials")}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition"
-        >
-          🛒 Start Shopping Now
-        </button>
+            🛒 Start Shopping Now
+          </button>
+        </div>
       </div>
     </div>
   );
 };
 
 export default CustomerDashboard;
+
