@@ -32,8 +32,13 @@ app.use(cors({
   // Ensure this matches your frontend URL
   credentials: true
 }));
-app.use(express.json()); // Essential for parsing JSON request bodies
-// Routes
+app.use(express.json({
+  limit: "10mb"
+}));
+app.use(express.urlencoded({
+  extended: true,
+  limit: "10mb"
+})); // Routes
 
 app.use("/api/auth", authRoutes);
 app.use("/api/supplier", supplierRoutes); // <--- ADD THIS LINE: Use the new supplier routes

@@ -37,19 +37,21 @@ const AddProduct = () => {
     imageFile: null,
     imageUrlPreview: null,
   });
-  const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("");
-  const [showKeywordsInput, setShowKeywordsInput] = useState(false); // New state for conditional rendering
+  const [loading, setLoading] = useState(false); // For form submission
+  const [aiLoading, setAiLoading] = useState(false); // For AI description generation
+  const [message, setMessage] = useState(""); // User feedback message
+  const [messageType, setMessageType] = useState(""); // Type of message (success, error, info)
+  const [showKeywordsInput, setShowKeywordsInput] = useState(false); // State for conditional rendering of keywords input
 
-  // Load Google Maps API (ensure REACT_APP_Maps_API_KEY is set in your .env)
+  // Load Google Maps API (ensure REACT_APP_GOOGLE_MAPS_API_KEY is set in your .env)
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
-    googleMapsApiKey: process.env.REACT_APP_Maps_API_KEY,
+    // Corrected API key variable name to match your .env setup
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
     libraries: googleMapsLibraries,
   });
 
+  // Handles changes for all basic product fields
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProduct((prev) => ({
@@ -58,6 +60,7 @@ const AddProduct = () => {
     }));
   };
 
+  // Handles changes for nested contact fields
   const handleContactChange = (e) => {
     const { name, value } = e.target;
     setProduct((prev) => ({
@@ -69,6 +72,7 @@ const AddProduct = () => {
     }));
   };
 
+  // Handles image file selection and creates a preview URL
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -90,6 +94,7 @@ const AddProduct = () => {
     }
   };
 
+  // Uses browser's geolocation to set product location
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {
       setMessage("Fetching current location...");
@@ -126,6 +131,7 @@ const AddProduct = () => {
     }
   };
 
+  // Updates product location based on map clicks
   const handleMapClick = (e) => {
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
@@ -138,6 +144,7 @@ const AddProduct = () => {
     setMessageType("success");
   };
 
+  // Clears messages after a timeout
   useEffect(() => {
     if (message) {
       const timer = setTimeout(() => {
@@ -148,13 +155,14 @@ const AddProduct = () => {
     }
   }, [message]);
 
-  // Function to generate description using AI
+  // Function to generate product description using Gemini AI
   const handleGenerateDescription = async () => {
     setShowKeywordsInput(true); // Show the keywords input when this button is clicked
-    setAiLoading(true);
-    setMessage("");
+    setAiLoading(true); // Set AI loading state
+    setMessage(""); // Clear previous messages
     setMessageType("");
 
+    // Validate input for AI generation
     if (!product.name && !product.category && !product.userKeywords) {
       setMessage(
         "Please enter a Product Name, select a Category, or provide Keywords to generate a description."
@@ -164,7 +172,7 @@ const AddProduct = () => {
       return;
     }
 
-    // Construct a more specific and dynamic prompt
+    // Construct a more specific and dynamic prompt for Gemini
     let prompt = `Generate a concise and appealing product description for a construction material.`;
 
     if (product.name) {
@@ -184,7 +192,8 @@ const AddProduct = () => {
       chatHistory.push({ role: "user", parts: [{ text: prompt }] });
       const payload = { contents: chatHistory };
 
-      const apiKey = process.env.REACT_APP_GEMINI_API_KEY; // Assuming you've fixed this
+      // Gemini API key from environment variables
+      const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
       console.log("Sending prompt to Gemini AI:", prompt);
@@ -236,16 +245,18 @@ const AddProduct = () => {
       );
       setMessageType("error");
     } finally {
-      setAiLoading(false);
+      setAiLoading(false); // Reset AI loading state
     }
   };
 
+  // Handles the form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage("");
+    setLoading(true); // Set form loading state
+    setMessage(""); // Clear previous messages
     setMessageType("");
 
+    // Basic form validation
     if (
       !product.name ||
       !product.category ||
@@ -269,6 +280,8 @@ const AddProduct = () => {
       if (storedUser) {
         const user = JSON.parse(storedUser);
         supplierId = user.email; // Using email as placeholder ID
+        // TODO: For production, consider using Firebase Authentication's user.uid
+        // or a backend-managed session ID for supplierId for better security.
       }
     } catch (error) {
       console.error("Error parsing user from localStorage:", error);
@@ -278,10 +291,11 @@ const AddProduct = () => {
       setMessage("Supplier not logged in. Please log in to add products.");
       setMessageType("error");
       setLoading(false);
-      navigate("/login");
+      navigate("/login"); // Redirect to login if no supplier ID
       return;
     }
 
+    // Prepare product data for submission
     const productData = {
       supplierId: supplierId,
       name: product.name,
@@ -296,14 +310,15 @@ const AddProduct = () => {
         lng: product.latLng ? product.latLng.lng : null,
       },
       contact: product.contact,
-      imageUrl: product.imageUrlPreview,
+      imageUrl: product.imageUrlPreview, // This will be a base64 string if imageFile is used
     };
 
     try {
+      // API URL for your backend (adjust as per your setup)
       const apiUrl =
         typeof process !== "undefined" && process.env.REACT_APP_API_URL
           ? `${process.env.REACT_APP_API_URL}/api/supplier/products`
-          : "http://localhost:5000/api/supplier/products"; // Fallback for demonstration, explicitly setting to 5000
+          : "http://localhost:5000/api/supplier/products"; // Fallback for demonstration
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -344,18 +359,19 @@ const AddProduct = () => {
       );
       setMessageType("error");
     } finally {
-      setLoading(false);
+      setLoading(false); // Reset form loading state
     }
   };
 
+  // Display error if Google Maps API fails to load
   if (loadError) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4 font-sans">
         <div className="bg-red-100 text-red-700 p-4 rounded-md shadow-md">
           Error loading Google Maps: {loadError.message}
           <p>
-            Please ensure your `REACT_APP_Maps_API_KEY` is correct and has the
-            necessary APIs enabled (Maps JavaScript API, Geocoding API).
+            Please ensure your `REACT_APP_GOOGLE_MAPS_API_KEY` is correct and
+            has the necessary APIs enabled (Maps JavaScript API, Geocoding API).
           </p>
         </div>
       </div>
@@ -368,6 +384,7 @@ const AddProduct = () => {
         📦 Add New Product
       </h2>
 
+      {/* Message display for success/error/info */}
       {message && (
         <div
           className={`mb-4 p-3 rounded-md text-center ${
