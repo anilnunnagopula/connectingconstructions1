@@ -42,7 +42,7 @@ const Home = () => {
 
       {/* 🔹 Hero Section */}
       <div
-        className="w-full h-[90vh] bg-cover bg-center relative"
+        className="w-full h-[95vh] bg-cover bg-center relative"
         style={{
           backgroundImage: `url(${process.env.PUBLIC_URL}/building.jpg)`,
         }}

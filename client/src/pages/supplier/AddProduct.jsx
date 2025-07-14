@@ -22,7 +22,8 @@ const AddProduct = () => {
   const [product, setProduct] = useState({
     name: "",
     category: "",
-    description: "", // Added description field
+    description: "",
+    userKeywords: "",
     price: "",
     quantity: "",
     availability: true,
@@ -37,14 +38,15 @@ const AddProduct = () => {
     imageUrlPreview: null,
   });
   const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false); // New state for AI generation loading
+  const [aiLoading, setAiLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [showKeywordsInput, setShowKeywordsInput] = useState(false); // New state for conditional rendering
 
-  // Load Google Maps API (ensure REACT_APP_GOOGLE_MAPS_API_KEY is set in your .env)
+  // Load Google Maps API (ensure REACT_APP_Maps_API_KEY is set in your .env)
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: process.env.REACT_APP_Maps_API_KEY,
     libraries: googleMapsLibraries,
   });
 
@@ -91,7 +93,7 @@ const AddProduct = () => {
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {
       setMessage("Fetching current location...");
-      setMessageType("info"); // New message type for informational messages
+      setMessageType("info");
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           const { latitude, longitude } = pos.coords;
@@ -148,34 +150,44 @@ const AddProduct = () => {
 
   // Function to generate description using AI
   const handleGenerateDescription = async () => {
+    setShowKeywordsInput(true); // Show the keywords input when this button is clicked
     setAiLoading(true);
     setMessage("");
     setMessageType("");
 
-    if (!product.name && !product.category) {
+    if (!product.name && !product.category && !product.userKeywords) {
       setMessage(
-        "Please enter a Product Name or select a Category to generate a description."
+        "Please enter a Product Name, select a Category, or provide Keywords to generate a description."
       );
       setMessageType("error");
       setAiLoading(false);
       return;
     }
 
-    const prompt = `Generate a concise and appealing product description for a construction material.
-    Product Name: ${product.name || "N/A"}
-    Category: ${product.category || "N/A"}
-    Key features/keywords: ${
-      product.description || ""
-    } (Use this if available, otherwise ignore)
-    
-    Keep it under 100 words.`;
+    // Construct a more specific and dynamic prompt
+    let prompt = `Generate a concise and appealing product description for a construction material.`;
+
+    if (product.name) {
+      prompt += `\nProduct Name: ${product.name}`;
+    }
+    if (product.category) {
+      prompt += `\nCategory: ${product.category}`;
+    }
+    if (product.userKeywords) {
+      prompt += `\nKey Features/Keywords: ${product.userKeywords}`;
+    }
+
+    prompt += `\n\nEnsure the description is engaging, highlights benefits, and directly incorporates the provided keywords/features. Keep it under 100 words.`;
 
     try {
       let chatHistory = [];
       chatHistory.push({ role: "user", parts: [{ text: prompt }] });
       const payload = { contents: chatHistory };
-      const apiKey = ""; // API key is automatically provided by Canvas runtime
+
+      const apiKey = process.env.REACT_APP_GEMINI_API_KEY; // Assuming you've fixed this
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+      console.log("Sending prompt to Gemini AI:", prompt);
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -184,27 +196,44 @@ const AddProduct = () => {
       });
 
       const result = await response.json();
-      console.log("AI generation raw result:", result); // <--- ADDED THIS FOR DEBUGGING
+      console.log("AI generation raw result:", result);
 
-      if (
-        result.candidates &&
-        result.candidates.length > 0 &&
-        result.candidates[0].content &&
-        result.candidates[0].content.parts &&
-        result.candidates[0].content.parts.length > 0
-      ) {
-        const generatedText = result.candidates[0].content.parts[0].text;
-        setProduct((prev) => ({ ...prev, description: generatedText }));
-        setMessage("Description generated successfully!");
-        setMessageType("success");
+      if (response.ok) {
+        if (
+          result.candidates &&
+          result.candidates.length > 0 &&
+          result.candidates[0].content &&
+          result.candidates[0].content.parts &&
+          result.candidates[0].content.parts.length > 0
+        ) {
+          const generatedText = result.candidates[0].content.parts[0].text;
+          setProduct((prev) => ({ ...prev, description: generatedText }));
+          setMessage("Description generated successfully!");
+          setMessageType("success");
+        } else {
+          setMessage(
+            "AI could not generate a suitable description. Please try modifying your input or try again."
+          );
+          setMessageType("error");
+          console.error(
+            "AI generation response structure unexpected or empty content:",
+            result
+          );
+        }
       } else {
-        setMessage("Failed to generate description. Please try again.");
+        const errorMessage =
+          result.error && result.error.message
+            ? result.error.message
+            : "Unknown error from AI API.";
+        setMessage(`Failed to generate description: ${errorMessage}`);
         setMessageType("error");
-        console.error("AI generation response structure unexpected:", result);
+        console.error("AI API HTTP error:", response.status, result);
       }
     } catch (err) {
-      console.error("AI generation error:", err);
-      setMessage("Error generating description. Please try again later.");
+      console.error("AI generation network/fetch error:", err);
+      setMessage(
+        "Error connecting to AI service. Please check network or try again later."
+      );
       setMessageType("error");
     } finally {
       setAiLoading(false);
@@ -220,7 +249,7 @@ const AddProduct = () => {
     if (
       !product.name ||
       !product.category ||
-      !product.description || // Added description to validation
+      !product.description ||
       !product.price ||
       !product.quantity ||
       !product.locationText ||
@@ -257,7 +286,7 @@ const AddProduct = () => {
       supplierId: supplierId,
       name: product.name,
       category: product.category,
-      description: product.description, // Added description to productData
+      description: product.description,
       price: parseFloat(product.price),
       quantity: parseInt(product.quantity, 10),
       availability: product.availability,
@@ -297,6 +326,7 @@ const AddProduct = () => {
         name: "",
         category: "",
         description: "",
+        userKeywords: "", // Also clear userKeywords
         price: "",
         quantity: "",
         availability: true,
@@ -306,6 +336,7 @@ const AddProduct = () => {
         imageFile: null,
         imageUrlPreview: null,
       });
+      setShowKeywordsInput(false); // Hide the keywords input again
     } catch (err) {
       console.error("Error adding product:", err);
       setMessage(
@@ -323,8 +354,8 @@ const AddProduct = () => {
         <div className="bg-red-100 text-red-700 p-4 rounded-md shadow-md">
           Error loading Google Maps: {loadError.message}
           <p>
-            Please ensure your `REACT_APP_GOOGLE_MAPS_API_KEY` is correct and
-            has the necessary APIs enabled (Maps JavaScript API, Geocoding API).
+            Please ensure your `REACT_APP_Maps_API_KEY` is correct and has the
+            necessary APIs enabled (Maps JavaScript API, Geocoding API).
           </p>
         </div>
       </div>
@@ -342,7 +373,7 @@ const AddProduct = () => {
           className={`mb-4 p-3 rounded-md text-center ${
             messageType === "success"
               ? "bg-green-100 text-green-700"
-              : messageType === "info" // Added info message type for styling
+              : messageType === "info"
               ? "bg-blue-100 text-blue-700"
               : "bg-red-100 text-red-700"
           }`}
@@ -394,18 +425,15 @@ const AddProduct = () => {
           </select>
         </div>
 
-        {/* Product Description - EXACT MATCH */}
+        {/* Product Description */}
         <div className="md:col-span-2">
           <div className="flex justify-between items-center mb-2">
-            {" "}
-            {/* Adjusted margin-bottom */}
             <label className="block font-semibold text-gray-700 dark:text-gray-300">
               Product Description
             </label>
             <button
               type="button"
               onClick={handleGenerateDescription}
-              // Styling to match the "Use AI to Generate" link
               className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium flex items-center gap-1"
               title="Auto-Generate with AI"
               disabled={aiLoading}
@@ -434,7 +462,6 @@ const AddProduct = () => {
               ) : (
                 <>
                   <span className="text-lg">⚙️</span> Use AI to Generate{" "}
-                  {/* Changed emoji to match reference */}
                 </>
               )}
             </button>
@@ -449,6 +476,26 @@ const AddProduct = () => {
             required
           ></textarea>
         </div>
+
+        {/* Key Features / Keywords - Conditionally rendered */}
+        {showKeywordsInput && (
+          <div className="md:col-span-2 mt-4">
+            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
+              Key Features / Keywords (for AI generation)
+            </label>
+            <input
+              type="text"
+              name="userKeywords"
+              value={product.userKeywords}
+              onChange={handleChange}
+              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+              placeholder="e.g., 'high strength, fast setting, waterproof'"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Separate keywords with commas for best results.
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
@@ -494,13 +541,14 @@ const AddProduct = () => {
               }))
             }
             className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+            required
           >
             <option>Available</option>
             <option>Currently Not Available</option>
           </select>
         </div>
 
-        {/* Location Details - EXACT MATCH */}
+        {/* Location Details */}
         <div className="md:col-span-2 mt-4">
           <h3 className="text-xl font-semibold mb-1 border-b pb-1 border-gray-200 dark:border-gray-700">
             Location Details
@@ -508,20 +556,16 @@ const AddProduct = () => {
         </div>
         <div className="md:col-span-2">
           <div className="flex justify-between items-center mb-2">
-            {" "}
-            {/* Adjusted margin-bottom */}
             <label className="block font-semibold text-gray-700 dark:text-gray-300">
               Enter Location
             </label>
             <button
               type="button"
               onClick={handleUseCurrentLocation}
-              // Styling to match the "Use Current Location" link
               className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium flex items-center gap-1"
               title="Use Current Location"
             >
               <span className="text-lg">📍</span> Use Current Location{" "}
-              {/* Changed emoji to match reference */}
             </button>
           </div>
           <input
@@ -552,7 +596,6 @@ const AddProduct = () => {
                 fullscreenControl: false,
               }}
             >
-              {/* Using standard Marker component */}
               {product.latLng && <Marker position={product.latLng} />}
             </GoogleMap>
             {product.latLng && (

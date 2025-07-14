@@ -51,6 +51,7 @@ import OrderTracking from "./pages/customer/OrderTracking";
 import MyOrders from "./pages/customer/MyOrders";
 import Cart from "./pages/customer/Cart";
 import Checkout from "./pages/customer/Checkout";
+import HelpAndSupport from "./components/HelpAndSupport";
 
 // Import your context providers
 import { DarkModeProvider } from "./context/DarkModeContext";
@@ -92,6 +93,7 @@ function App() {
                   <Route path="/materials" element={<Materials />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
+                  <Route path="/support" element={<HelpAndSupport />} />
                   {/* Supplier Public-ish Routes (can be accessed without ProtectedRoute if desired, but often linked from dashboard) */}
                   <Route path="/supplier/products" element={<MyProducts />} />
                   <Route
