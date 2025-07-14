@@ -10,8 +10,8 @@ import ActionShortcuts from "../../components/ActionShortcuts";
 import DeliveryStatusTable from "../../components/DeliveryStatusTable";
 import NotificationFeed from "../../components/NotificationFeed";
 import ProfileWidget from "../../components/ProfileWidget";
-import Sidebar from "../../components/Sidebar";
-import ResponsiveSidebar from "../../components/ResponsiveSidebar";
+// import Sidebar from "../../components/Sidebar";
+// import ResponsiveSidebar from "../../components/ResponsiveSidebar";
 
 const SupplierDashboard = () => {
   const navigate = useNavigate();
@@ -69,79 +69,90 @@ const SupplierDashboard = () => {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-4 bg-white dark:bg-gray-900 transition-all min-h-screen">
-      {/* 👈 Sidebar */}
-      {/* <Sidebar /> */}
-      {/* <ResponsiveSidebar /> */}
-      <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-        🛠️ Welcome, {supplier?.name || "Supplier"}!
-      </h1>
-      <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
-        Manage your products, categories, orders, and performance.
-      </p>
+    <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen transition-colors duration-300">
+      <div className="max-w-6xl mx-auto py-10 px-4">
+        {/* 👈 Sidebar */}
+        {/* <Sidebar /> */}
+        {/* <ResponsiveSidebar /> */}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cards.map((card, index) => (
-          <div
-            key={index}
-            onClick={() => navigate(card.link)}
-            className="bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-md hover:shadow-xl transition p-6 rounded-lg cursor-pointer"
-          >
-            <h3 className="text-xl font-semibold mb-2">{card.title}</h3>
-            <p className="text-gray-600 dark:text-gray-300">{card.desc}</p>
-          </div>
-        ))}
-      </div>
+        <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
+          🛠️ Welcome, {supplier?.name || "Supplier"}!
+        </h1>
+        <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
+          Manage your products, categories, orders, and performance.
+        </p>
 
-      <ActionShortcuts />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-        <StatCard title="Total Products" value="128" icon={<Box />} />
-        <StatCard title="Earnings (₹)" value="25,400" icon={<DollarSign />} />
-        <StatCard title="Orders" value="47" icon={<ShoppingCart />} />
-        <StatCard title="Average Rating" value="4.5★" icon={<Star />} />
-      </div>
-
-      <div className="flex justify-center my-10">
-        <div className="bg-blue-50 dark:bg-gray-800 shadow-lg rounded-2xl p-6 w-full max-w-md text-center">
-          <div className="flex flex-col items-center">
-            <div className="w-20 h-20 rounded-full bg-blue-200 dark:bg-blue-600 flex items-center justify-center text-3xl font-bold text-white">
-              S
+        {/* 🔗 Dashboard Links */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {cards.map((card, index) => (
+            <div
+              key={index}
+              onClick={() => navigate(card.link)}
+              className="bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-md hover:shadow-xl transition p-6 rounded-lg cursor-pointer"
+            >
+              <h3 className="text-xl font-semibold mb-2">{card.title}</h3>
+              <p className="text-gray-600 dark:text-gray-300">{card.desc}</p>
             </div>
-            <h2 className="text-xl font-semibold text-blue-900 dark:text-white mt-4">
-              Supplier
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300">
-              📍 Hyderabad, India
-            </p>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              📧 supplier@example.com
-            </p>
+          ))}
+        </div>
 
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-              ✏️ Edit Profile
-            </button>
+        {/* ⚡ Shortcuts */}
+        <ActionShortcuts />
+
+        {/* 📊 Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+          <StatCard title="Total Products" value="128" icon={<Box />} />
+          <StatCard title="Earnings (₹)" value="25,400" icon={<DollarSign />} />
+          <StatCard title="Orders" value="47" icon={<ShoppingCart />} />
+          <StatCard title="Average Rating" value="4.5★" icon={<Star />} />
+        </div>
+
+        {/* 👤 Supplier Profile Box */}
+        <div className="flex justify-center my-10">
+          <div className="bg-blue-50 dark:bg-gray-800 shadow-lg rounded-2xl p-6 w-full max-w-md text-center">
+            <div className="flex flex-col items-center">
+              <div className="w-20 h-20 rounded-full bg-blue-200 dark:bg-blue-600 flex items-center justify-center text-3xl font-bold text-white uppercase">
+                {supplier?.name?.[0] || "S"}
+              </div>
+              <h2 className="text-xl font-semibold text-blue-900 dark:text-white mt-4">
+                {supplier?.name || "Supplier"}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                📍 {supplier?.location || "Hyderabad, India"}
+              </p>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                📧 {supplier?.email || "supplier@example.com"}
+              </p>
+
+              <button
+                onClick={() => navigate("/supplier/edit-profile")}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              >
+                ✏️ Edit Profile
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="my-10">
-        <SalesChart />
-      </div>
-      <div className="my-10">
-        <ActivityTimeline />
-      </div>
-      <div className="my-10">
-        <TopProductsTable />
-      </div>
-      <div className="my-10">
-        <RatingsTable />
-      </div>
-      <div className="my-10">
-        <DeliveryStatusTable />
-      </div>
-      <div className="my-10">
-        <NotificationFeed />
+        {/* 📈 Graphs, Tables & More */}
+        <div className="my-10">
+          <SalesChart />
+        </div>
+        <div className="my-10">
+          <ActivityTimeline />
+        </div>
+        <div className="my-10">
+          <TopProductsTable />
+        </div>
+        <div className="my-10">
+          <RatingsTable />
+        </div>
+        <div className="my-10">
+          <DeliveryStatusTable />
+        </div>
+        <div className="my-10">
+          <NotificationFeed />
+        </div>
       </div>
     </div>
   );
