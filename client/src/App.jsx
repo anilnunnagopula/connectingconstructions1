@@ -56,6 +56,12 @@ import HelpAndSupport from "./components/HelpAndSupport";
 // Import your context providers
 import { DarkModeProvider } from "./context/DarkModeContext";
 import { CartProvider } from "./context/CartContext";
+import { AuthProvider } from "./context/AuthContext";
+
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// Create a new query client instance
+const queryClient = new QueryClient();
 
 // It's generally better to define LoadScript once at the top level
 // and let child components use useJsApiLoader without passing libraries,
@@ -65,137 +71,150 @@ import { LoadScript } from "@react-google-maps/api";
 
 function App() {
   return (
-    <CartProvider>
-      <DarkModeProvider>
-        {/* LoadScript should ideally be higher up or used with useJsApiLoader in components */}
-        <LoadScript
-          googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
-          // Libraries should be specified here if LoadScript is used globally,
-          // or in each useJsApiLoader call if LoadScript is not global.
-          // For now, assuming individual components handle their libraries.
-          // If you face "Loader must not be called again with different options" again,
-          // consider moving all libraries here: libraries={["places", "maps", "marker"]}
-        >
-          <Router>
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <ScrollToTop />
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AuthProvider>
+          <CartProvider>
+            <DarkModeProvider>
+              {/* LoadScript should ideally be higher up or used with useJsApiLoader in components */}
+              <LoadScript
+                googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
+                // Libraries should be specified here if LoadScript is used globally,
+                // or in each useJsApiLoader call if LoadScript is not global.
+                // For now, assuming individual components handle their libraries.
+                // If you face "Loader must not be called again with different options" again,
+                // consider moving all libraries here: libraries={["places", "maps", "marker"]}
+              >
+                <div className="flex flex-col min-h-screen">
+                  <Navbar />
+                  <ScrollToTop />
 
-              <div className="flex-grow">
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/verify-otp" element={<VerifyOtp />} />
-                  <Route path="/materials" element={<Materials />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/support" element={<HelpAndSupport />} />
-                  {/* Supplier Public-ish Routes (can be accessed without ProtectedRoute if desired, but often linked from dashboard) */}
-                  <Route path="/supplier/products" element={<MyProducts />} />
-                  <Route
-                    path="/supplier/add-product"
-                    element={<AddProduct />}
-                  />
-                  {/* Corrected EditProduct route path for consistency */}
-                  <Route
-                    path="/supplier/edit-product/:id"
-                    element={<EditProduct />}
-                  />{" "}
-                  {/* <--- CORRECTED PATH */}
-                  <Route
-                    path="/category/:category"
-                    element={<CategoryPage />}
-                  />
-                  {/* Customer Routes (Protected) */}
-                  <Route
-                    path="/customer-dashboard"
-                    element={
-                      <ProtectedRoute allowedRole="customer">
-                        <CustomerDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/customer-dashboard/my-orders"
-                    element={
-                      <ProtectedRoute allowedRole="customer">
-                        <MyOrders />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/customer-dashboard/cart"
-                    element={
-                      <ProtectedRoute allowedRole="customer">
-                        <Cart />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/customer-dashboard/checkout"
-                    element={
-                      <ProtectedRoute allowedRole="customer">
-                        <Checkout />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/customer-dashboard/notifications"
-                    element={
-                      <ProtectedRoute allowedRole="customer">
-                        <CustomerNotifications />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/customer-dashboard/track-order"
-                    element={
-                      <ProtectedRoute allowedRole="customer">
-                        <OrderTracking />
-                      </ProtectedRoute>
-                    }
-                  />
-                  {/* General Protected Routes */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/supplier-dashboard"
-                    element={
-                      <ProtectedRoute allowedRole="supplier">
-                        <SupplierDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
-                  {/* Fallback */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </div>
+                  <div className="flex-grow">
+                    <Routes>
+                      {/* Public Routes */}
+                      <Route path="/" element={<Home />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/register" element={<Register />} />
+                      <Route
+                        path="/forgot-password"
+                        element={<ForgotPassword />}
+                      />
+                      <Route
+                        path="/reset-password"
+                        element={<ResetPassword />}
+                      />
+                      <Route path="/verify-otp" element={<VerifyOtp />} />
+                      <Route path="/materials" element={<Materials />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/support" element={<HelpAndSupport />} />
+                      {/* Supplier Public-ish Routes (can be accessed without ProtectedRoute if desired, but often linked from dashboard) */}
+                      <Route
+                        path="/supplier/products"
+                        element={<MyProducts />}
+                      />
+                      <Route
+                        path="/supplier/add-product"
+                        element={<AddProduct />}
+                      />
+                      {/* Corrected EditProduct route path for consistency */}
+                      <Route
+                        path="/supplier/edit-product/:id"
+                        element={<EditProduct />}
+                      />{" "}
+                      {/* <--- CORRECTED PATH */}
+                      <Route
+                        path="/category/:category"
+                        element={<CategoryPage />}
+                      />
+                      {/* Customer Routes (Protected) */}
+                      <Route
+                        path="/customer-dashboard"
+                        element={
+                          <ProtectedRoute allowedRole="customer">
+                            <CustomerDashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/customer-dashboard/my-orders"
+                        element={
+                          <ProtectedRoute allowedRole="customer">
+                            <MyOrders />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/customer-dashboard/cart"
+                        element={
+                          <ProtectedRoute allowedRole="customer">
+                            <Cart />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/customer-dashboard/checkout"
+                        element={
+                          <ProtectedRoute allowedRole="customer">
+                            <Checkout />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/customer-dashboard/notifications"
+                        element={
+                          <ProtectedRoute allowedRole="customer">
+                            <CustomerNotifications />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/customer-dashboard/track-order"
+                        element={
+                          <ProtectedRoute allowedRole="customer">
+                            <OrderTracking />
+                          </ProtectedRoute>
+                        }
+                      />
+                      {/* General Protected Routes */}
+                      <Route
+                        path="/dashboard"
+                        element={
+                          <ProtectedRoute>
+                            <Dashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/supplier-dashboard"
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <SupplierDashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/profile"
+                        element={
+                          <ProtectedRoute>
+                            <Profile />
+                          </ProtectedRoute>
+                        }
+                      />
+                      {/* Fallback */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </div>
 
-              <Chatbot />
-              <Footer />
-            </div>
-          </Router>
-        </LoadScript>
-      </DarkModeProvider>
-    </CartProvider>
+                  <Chatbot />
+                  <Footer />
+                </div>
+              </LoadScript>
+            </DarkModeProvider>
+          </CartProvider>
+        </AuthProvider>
+      </Router>
+    </QueryClientProvider>
   );
 }
 

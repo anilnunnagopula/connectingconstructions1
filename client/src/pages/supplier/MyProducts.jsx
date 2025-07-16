@@ -1,25 +1,46 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import {
+  getAuth,
+  signInAnonymously,
+  signInWithCustomToken,
+  onAuthStateChanged,
+} from "firebase/auth";
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import { useAuth } from "../../context/AuthContext"; // Import useAuth
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import React Query hooks
+import api from "../../api"; // Import your centralized API functions
 
 const MyProducts = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
+  // Get user from AuthContext (this user object contains MongoDB _id, roles, token, etc.)
+  const { user: authContextUser, isAuthenticated, isAuthLoading } = useAuth();
+  const queryClient = useQueryClient(); // For invalidating React Query caches
+
   const [db, setDb] = useState(null);
   const [auth, setAuth] = useState(null);
-  const [userId, setUserId] = useState(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [actionMessage, setActionMessage] = useState({ type: '', text: '' }); // For success/error messages after CRUD
+  // This state will hold the Firebase Auth UID, which is crucial for Firestore rules
+  const [firebaseAuthUid, setFirebaseAuthUid] = useState(null);
+  const [isFirebaseReady, setIsFirebaseReady] = useState(false);
+  const [firebaseError, setFirebaseError] = useState(null);
+  const [actionMessage, setActionMessage] = useState({ type: "", text: "" });
+
+  // Firebase App ID from environment variables
   const appId = process.env.REACT_APP_FIREBASE_APP_ID || "default-app-id";
 
-  // 1. Firebase Initialization and Authentication
+  // 1. Firebase Initialization and Authentication (Ensure UID is set)
   useEffect(() => {
-    try { 
+    try {
       const firebaseConfig = {
         apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
         authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -30,10 +51,12 @@ const MyProducts = () => {
       };
       console.log("🔥 Firebase Config:", firebaseConfig);
 
-      if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-        setError("Firebase configuration is missing or empty. Please ensure your Firebase project is set up and linked to this environment.");
-        setIsAuthReady(true);
-        return; // Exit early if config is missing
+      if (!firebaseConfig.apiKey) {
+        setFirebaseError(
+          "Firebase API Key is missing. Please check your .env file."
+        );
+        setIsFirebaseReady(true);
+        return;
       }
 
       const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -43,75 +66,178 @@ const MyProducts = () => {
       setDb(firestore);
       setAuth(firebaseAuth);
 
-      const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
-        if (user) {
-          setUserId(user.uid);
-        } else {
-          // Sign in anonymously if no user is authenticated
-          try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-              await signInWithCustomToken(firebaseAuth, __initial_auth_token);
-            } else {
-              await signInAnonymously(firebaseAuth);
+      // Listen for Firebase Auth state changes
+      const unsubscribeAuth = onAuthStateChanged(
+        firebaseAuth,
+        async (currentUser) => {
+          if (currentUser) {
+            // IMPORTANT: Set the Firebase UID here
+            setFirebaseAuthUid(currentUser.uid);
+            console.log("Firebase Auth: User signed in, UID:", currentUser.uid);
+          } else {
+            setFirebaseAuthUid(null); // Clear UID if no user
+            console.log(
+              "Firebase Auth: No user, attempting sign-in or anonymous."
+            );
+            // This part is specific to Canvas environment's auth setup.
+            try {
+              if (
+                typeof __initial_auth_token !== "undefined" &&
+                __initial_auth_token
+              ) {
+                await signInWithCustomToken(firebaseAuth, __initial_auth_token);
+                console.log("Firebase: Signed in with custom token.");
+              } else {
+                await signInAnonymously(firebaseAuth);
+                console.log("Firebase: Signed in anonymously.");
+              }
+            } catch (anonError) {
+              console.error(
+                "Firebase anonymous/custom token sign-in failed:",
+                anonError
+              );
+              setFirebaseError(
+                "Firebase authentication failed. Please check setup."
+              );
             }
-          } catch (anonError) {
-            console.error("Firebase anonymous sign-in failed:", anonError);
-            setError("Authentication failed. Please try again.");
           }
+          setIsFirebaseReady(true); // Firebase Auth state is ready
         }
-        setIsAuthReady(true); // Auth state is ready
-      });
+      );
 
-      return () => unsubscribe(); // Cleanup auth listener
+      return () => unsubscribeAuth(); // Cleanup auth listener
     } catch (err) {
       console.error("Firebase initialization error:", err);
-      // Only set generic error if not already set by specific config checks
-      if (!error) {
-        setError("Failed to initialize application. Please try again later.");
+      setFirebaseError(`Failed to initialize Firebase: ${err.message}`);
+      setIsFirebaseReady(true);
+    }
+  }, []); // Run only once on component mount
+
+  // 2. Fetch Products from Firestore using React Query and onSnapshot
+  const {
+    data: products,
+    isLoading,
+    isError,
+    error: fetchError,
+  } = useQuery({
+    queryKey: ["myProducts", firebaseAuthUid], // Query key depends on Firebase Auth UID
+    queryFn: async () => {
+      // Wait for Firebase to be ready AND a Firebase Auth UID to be available
+      if (!db || !firebaseAuthUid) {
+        throw new Error(
+          "Firestore or Firebase Auth UID not ready for product fetch."
+        );
       }
-      setIsAuthReady(true); // Mark ready even on error to stop loading indicator
-    }
-  }, []);
 
-  // 2. Fetch Products from Firestore (Real-time with onSnapshot)
-  useEffect(() => {
-    if (!isAuthReady || !db || !userId) {
-      return; // Wait for Firebase to be ready and user to be authenticated
-    }
+      console.log(
+        "MyProducts: Attempting to fetch products for Firebase Auth UID:",
+        firebaseAuthUid
+      );
+      console.log("MyProducts: Using Firebase App ID:", appId);
 
-    setLoading(true);
-    setError(null); // Clear previous errors when attempting to load
+      // Return a promise that resolves with the products from onSnapshot
+      return new Promise((resolve, reject) => {
+        const productsCollectionRef = collection(
+          db,
+          `artifacts/${appId}/users/${firebaseAuthUid}/products` // Use Firebase UID in path
+        );
+        // Query to filter products by the current supplier's ID (which is the Firebase UID)
+        // This 'where' clause is good practice for data integrity but relies on rule allowing it.
+        const q = query(
+          productsCollectionRef,
+          where("supplierId", "==", firebaseAuthUid)
+        );
 
-    // Collection path for private user data
-    const productsCollectionRef = collection(
-      db,
-      `artifacts/${appId}/users/${userId}/products`
-    );
-    // Query to filter products by the current supplier's ID (which is the userId)
-    // IMPORTANT: Firebase security rules must allow this read.
-    const q = query(productsCollectionRef, where("supplierId", "==", userId));
+        const unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            const fetchedProducts = snapshot.docs.map((doc) => ({
+              id: doc.id, // Store Firestore document ID
+              ...doc.data(),
+            }));
+            console.log("MyProducts: Fetched products:", fetchedProducts);
+            resolve(fetchedProducts); // Resolve the promise with fetched data
+          },
+          (err) => {
+            console.error("Error fetching products (onSnapshot):", err);
+            console.error("Firestore Error Code:", err.code);
+            console.error("Firestore Error Message:", err.message);
+            reject(
+              new Error(
+                "Failed to load your products. Please ensure Firebase security rules allow read access for your user ID."
+              )
+            );
+          }
+        );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedProducts = snapshot.docs.map(doc => ({
-        id: doc.id, // Store Firestore document ID
-        ...doc.data()
-      }));
-      setProducts(fetchedProducts);
-      setLoading(false);
-    }, (err) => {
-      console.error("Error fetching products:", err);
-      setError("Failed to load your products. Please ensure Firebase security rules allow read access for your user ID.");
-      setLoading(false);
-    });
+        // Return unsubscribe function for cleanup. React Query will handle this.
+        return unsubscribe;
+      });
+    },
+    // Only run query when Firebase is ready AND authenticated with a UID
+    enabled: isFirebaseReady && isAuthenticated && !!firebaseAuthUid,
+    staleTime: Infinity, // Keep data fresh, rely on onSnapshot for real-time updates
+    cacheTime: 0, // Don't cache, onSnapshot is real-time
+  });
 
-    return () => unsubscribe(); // Cleanup snapshot listener
-  }, [isAuthReady, db, userId]); // Re-run when auth or db changes
+  // React Query mutations for CRUD operations
+  const toggleAvailabilityMutation = useMutation({
+    mutationFn: async ({ productId, currentAvailability }) => {
+      if (!db || !firebaseAuthUid)
+        throw new Error("Firebase Auth UID not ready.");
+      const productRef = doc(
+        db,
+        `artifacts/${appId}/users/${firebaseAuthUid}/products`,
+        productId
+      );
+      await updateDoc(productRef, { availability: !currentAvailability });
+    },
+    onSuccess: () => {
+      setActionMessage({
+        type: "success",
+        text: "Availability updated successfully!",
+      });
+      // No need to invalidate 'myProducts' because onSnapshot handles real-time updates
+    },
+    onError: (err) => {
+      setActionMessage({
+        type: "error",
+        text: `Failed to update availability: ${err.message}`,
+      });
+    },
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId) => {
+      if (!db || !firebaseAuthUid)
+        throw new Error("Firebase Auth UID not ready.");
+      const productRef = doc(
+        db,
+        `artifacts/${appId}/users/${firebaseAuthUid}/products`,
+        productId
+      );
+      await deleteDoc(productRef);
+    },
+    onSuccess: () => {
+      setActionMessage({
+        type: "success",
+        text: "Product deleted successfully!",
+      });
+      // No need to invalidate 'myProducts' because onSnapshot handles real-time updates
+    },
+    onError: (err) => {
+      setActionMessage({
+        type: "error",
+        text: `Failed to delete product: ${err.message}`,
+      });
+    },
+  });
 
   // Clear action messages after a few seconds
   useEffect(() => {
     if (actionMessage.text) {
       const timer = setTimeout(() => {
-        setActionMessage({ type: '', text: '' });
+        setActionMessage({ type: "", text: "" });
       }, 5000);
       return () => clearTimeout(timer);
     }
@@ -119,83 +245,50 @@ const MyProducts = () => {
 
   // Handle navigation to edit page using product ID
   const handleEdit = (productId) => {
-    navigate(`/supplier/edit/${productId}`); // Pass Firestore document ID
+    navigate(`/supplier/edit-product/${productId}`); // Pass Firestore document ID
   };
 
-  // Toggle product availability in Firestore
-  const handleAvailabilityToggle = async (productId, currentAvailability) => {
-    if (!db || !userId) {
-      setActionMessage({ type: 'error', text: 'Authentication not ready or user not identified.' });
-      return;
-    }
-    setLoading(true);
-    try {
-      const productRef = doc(db, `artifacts/${__app_id}/users/${userId}/products`, productId);
-      await updateDoc(productRef, {
-        availability: !currentAvailability,
-      });
-      setActionMessage({ type: 'success', text: 'Availability updated successfully!' });
-    } catch (err) {
-      console.error("Error toggling availability:", err);
-      setActionMessage({ type: 'error', text: `Failed to update availability: ${err.message}` });
-    } finally {
-      setLoading(false);
-    }
+  // Toggle product availability
+  const handleAvailabilityToggle = (productId, currentAvailability) => {
+    toggleAvailabilityMutation.mutate({ productId, currentAvailability });
   };
-  //handle delete
-  const handleDelete = async (productId) => {
-    if (!db || !userId) {
-      setActionMessage({
-        type: "error",
-        text: "Authentication not ready or user not identified.",
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      const productRef = doc(
-        db,
-        `artifacts/${appId}/users/${userId}/products`,
-        productId
-      );
-      await deleteDoc(productRef);
-      setActionMessage({
-        type: "success",
-        text: "Product deleted successfully!",
-      });
-    } catch (err) {
-      console.error("Error deleting product:", err);
-      setActionMessage({
-        type: "error",
-        text: `Failed to delete product: ${err.message}`,
-      });
-    } finally {
-      setLoading(false);
+
+  // Handle delete
+  const handleDelete = (productId) => {
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      // Use a custom modal instead of window.confirm in production
+      deleteProductMutation.mutate(productId);
     }
   };
 
-
-  // Render loading/error states before main content
-  if (!isAuthReady) {
+  // Render loading/error states
+  if (!isFirebaseReady || isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
-        <p className="text-xl">Initializing authentication...</p>
+        <p className="text-xl">Initializing Firebase and Authentication...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (firebaseError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
-        <div className="bg-red-100 text-red-700 p-4 rounded-md shadow-md text-center">
-          Error: {error}
-          <p className="mt-2 text-sm">Please ensure your Firebase project is correctly configured and security rules allow access.</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-red-500">
+        <p className="text-xl">Firebase Error: {firebaseError}</p>
       </div>
     );
   }
 
-  if (loading) {
+  // Check if authenticated via AuthContext AND if Firebase Auth UID is available
+  if (!isAuthenticated || !authContextUser || !firebaseAuthUid) {
+    // This case should be handled by ProtectedRoute, but as a fallback
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-red-500">
+        <p className="text-xl">Please log in to view your products.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
         <p className="text-xl">Loading your products...</p>
@@ -203,20 +296,18 @@ const MyProducts = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-red-500">
+        <p className="text-xl">Error: {fetchError.message}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-lg rounded-lg my-10 font-sans">
-      <h1 className="text-3xl font-bold mb-6 text-center text-blue-600 dark:text-blue-400">
-        📦 My Products
-      </h1>
+    <div className="max-w-7xl mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-lg rounded-lg mt-10 mb-10 transition-all duration-300">
+      <h2 className="text-3xl font-bold mb-6 text-center">My Products</h2>
 
-      {/* User ID display for debugging/multi-user context */}
-      {userId && (
-        <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">
-          Your Supplier ID: <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md text-sm">{userId}</span>
-        </p>
-      )}
-
-      {/* Action Message Display */}
       {actionMessage.text && (
         <div
           className={`mb-4 p-3 rounded-md text-center ${
@@ -230,120 +321,119 @@ const MyProducts = () => {
       )}
 
       {products.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
-            No products added yet!
-          </p>
+        <div className="text-center py-10 text-gray-600 dark:text-gray-400">
+          <p className="text-lg mb-4">You haven't added any products yet.</p>
           <button
-            onClick={() => navigate('/add-product')}  
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors duration-200 font-semibold shadow-md"
+            onClick={() => navigate("/supplier/add-product")}
+            className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors duration-200 font-semibold shadow-md"
           >
-            ➕ Add Your First Product
+            Add Your First Product
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((item) => (
-            <div key={item.id} className="bg-gray-50 dark:bg-gray-800 shadow-md p-5 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-200 flex flex-col">
-              {item.imageUrl && ( // Use imageUrl from Firestore
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  className="w-full h-48 object-cover rounded-md mb-4 border border-gray-300 dark:border-gray-600"
-                  // Fallback for broken images
-                  onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/400x300/e0e0e0/555555?text=No+Image"; }}
-                />
-              )}
-              {!item.imageUrl && ( // Placeholder if no image
-                <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-md mb-4 flex items-center justify-center text-gray-500 dark:text-gray-400">
-                  No Image
-                </div>
-              )}
-
-              <h2 className="text-xl font-semibold mb-2 text-blue-700 dark:text-blue-300">{item.name}</h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">
-                <strong>Category:</strong> {item.category}
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">
-                <strong>Description:</strong> {item.description}
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">
-                <strong>Price:</strong> ₹{item.price}
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">
-                <strong>Quantity:</strong>{" "}
-                <span
-                  className={
-                    item.quantity < 5
-                      ? "text-red-600 font-semibold"
-                      : "text-green-600"
-                  }
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <thead>
+              <tr className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 uppercase text-sm leading-normal">
+                <th className="py-3 px-6 text-left">Image</th>
+                <th className="py-3 px-6 text-left">Name</th>
+                <th className="py-3 px-6 text-left">Category</th>
+                <th className="py-3 px-6 text-right">Price</th>
+                <th className="py-3 px-6 text-right">Quantity</th>
+                <th className="py-3 px-6 text-center">Availability</th>
+                <th className="py-3 px-6 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-600 dark:text-gray-300 text-sm font-light">
+              {products.map((product) => (
+                <tr
+                  key={product.id}
+                  className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  {item.quantity} {item.quantity < 5 ? "(Low Stock!)" : ""}
-                </span>
-              </p>
-
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">
-                <strong>Status:</strong>{" "}
-                <span
-                  className={
-                    item.availability ? "text-green-600" : "text-red-600"
-                  }
-                >
-                  {item.availability ? "Available" : "Not Available"}
-                </span>
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">
-                <strong>Location:</strong>{" "}
-                {item.location && item.location.text ? item.location.text : "Not provided"}
-              </p>
-
-              {item.location &&
-                typeof item.location.lat === "number" &&
-                typeof item.location.lng === "number" && (
-                  <a
-                    href={`https://maps.google.com/?q=${item.location.lat},${item.location.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline text-sm mt-1 mb-2 inline-block"
-                  >
-                    📍 View on Map
-                  </a>
-                )}
-
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">
-                <strong>Contact:</strong> {item.contact?.mobile} |{" "}
-                {item.contact?.email}
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
-                <strong>Address:</strong> {item.contact?.address}
-              </p>
-
-              <div className="flex gap-2 mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  onClick={() => handleEdit(item.id)} // Pass Firestore ID
-                  className="bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 transition-colors duration-200 font-semibold text-sm flex-1"
-                  disabled={loading}
-                >
-                  ✏️ Edit
-                </button>
-                <button
-                  onClick={() => handleAvailabilityToggle(item.id, item.availability)} // Pass Firestore ID and current availability
-                  className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors duration-200 font-semibold text-sm flex-1"
-                  disabled={loading}
-                >
-                  {item.availability ? "Deactivate" : "Activate"}
-                </button>
-                <button
-                  onClick={() => handleDelete(item.id)} // Pass Firestore ID
-                  className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors duration-200 font-semibold text-sm flex-1"
-                  disabled={loading}
-                >
-                  ❌ Delete
-                </button>
-              </div>
-            </div>
-          ))}
+                  <td className="py-3 px-6 text-left whitespace-nowrap">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-16 h-16 object-cover rounded-md"
+                        onError={(e) => {
+                          e.target.onerror = null; // Prevent infinite loop
+                          e.target.src = `https://placehold.co/64x64/E0E0E0/333333?text=No+Image`; // Placeholder
+                        }}
+                      />
+                    ) : (
+                      <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-md flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+                        No Image
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 px-6 text-left">{product.name}</td>
+                  <td className="py-3 px-6 text-left">{product.category}</td>
+                  <td className="py-3 px-6 text-right">
+                    ₹{product.price?.toLocaleString("en-IN")}
+                  </td>
+                  <td className="py-3 px-6 text-right">{product.quantity}</td>
+                  <td className="py-3 px-6 text-center">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        product.availability
+                          ? "bg-green-200 text-green-800 dark:bg-green-700 dark:text-green-100"
+                          : "bg-red-200 text-red-800 dark:bg-red-700 dark:text-red-100"
+                      }`}
+                    >
+                      {product.availability ? "Available" : "Not Available"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-6 text-center">
+                    <div className="flex item-center justify-center space-x-3">
+                      <button
+                        onClick={() => handleEdit(product.id)}
+                        className="w-6 h-6 transform hover:text-blue-500 hover:scale-110"
+                        title="Edit Product"
+                        disabled={
+                          toggleAvailabilityMutation.isLoading ||
+                          deleteProductMutation.isLoading
+                        }
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleAvailabilityToggle(
+                            product.id,
+                            product.availability
+                          )
+                        }
+                        className="w-6 h-6 transform hover:text-yellow-500 hover:scale-110"
+                        title={
+                          product.availability
+                            ? "Mark as Unavailable"
+                            : "Mark as Available"
+                        }
+                        disabled={
+                          toggleAvailabilityMutation.isLoading ||
+                          deleteProductMutation.isLoading
+                        }
+                      >
+                        {product.availability ? "🚫" : "✅"}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="w-6 h-6 transform hover:text-red-500 hover:scale-110"
+                        title="Delete Product"
+                        disabled={
+                          toggleAvailabilityMutation.isLoading ||
+                          deleteProductMutation.isLoading
+                        }
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

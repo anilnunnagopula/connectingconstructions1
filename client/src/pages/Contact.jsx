@@ -86,11 +86,10 @@ const Contact = () => {
               className="block"
             >
               <div className="flex items-start gap-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:scale-[1.02] transition cursor-pointer">
-                <FaMapMarkerAlt className="text-red-500 text-xl mt-1" />
-                <div>
-                  <h3 className="font-semibold text-lg">Location</h3>
-                  <p>CVR College Road, Mangalpally, Hyderabad, Telangana</p>
-                </div>
+                <h3 className="font-semibold text-lg">Location</h3>
+                <p className="cursor-pointer hover:text-black">
+                  CVR College Road, Mangalpally, Hyderabad, Telangana
+                </p>
               </div>
             </a>
           </div>
