@@ -1,6 +1,9 @@
 [build]
+  base = "client"
   command = "npm run build"
   publish = "client/build"
+
+
 
 [context.production.environment]
   SECRETS_SCAN_ENABLED = "false"
