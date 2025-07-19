@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 
 // Suggested prompts for the user
 const suggestedPrompts = [
@@ -8,9 +9,9 @@ const suggestedPrompts = [
   "📐 Vastu tips for my new home?",
   "💳 What are the payment options available?",
   "🚚 When will my delivery arrive?",
-  "✨ Compare **cement** and **steel**", // New feature example
-  "✨ Recommend materials for a **waterproof basement**", // New feature example
-  "✨ What is **rebar**?", // New feature example
+  "✨ Compare **cement** and **steel**",
+  "✨ Recommend materials for a **waterproof basement**",
+  "✨ What is **rebar**?",
 ];
 
 // Initial welcome message for the chatbot
@@ -20,76 +21,157 @@ const initialWelcomeMessage = {
     "👷‍♂️ Hey! I'm here to help with your construction needs. Ask me anything!",
 };
 
-// Chatbot component, now accepting an `isLoggedIn` prop
+// --- SVG Icon Components ---
+// A sleeker Paper Plane Send Icon (similar to WhatsApp/Gemini)
+const SendIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+  </svg>
+);
+
+// A simple Microphone Icon
+const MicIcon = ({ isListening }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className={`h-5 w-5 ${
+      isListening ? "text-red-400 animate-pulse" : "text-gray-500"
+    }`}
+    fill="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.2-3c0 3-2.54 5.1-5.2 5.1S6.8 14 6.8 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.49 6-3.31 6-6.72h-1.8z" />
+  </svg>
+);
+// --- End SVG Icon Components ---
+
 const Chatbot = ({ isLoggedIn = false }) => {
-  // Default to false if not provided
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState(() => {
-    // Load messages from localStorage ONLY if logged in
     if (isLoggedIn) {
       const saved = localStorage.getItem("chatMessages");
-      // If saved messages exist and are not just the initial message, load them.
-      // Otherwise, start with the initial welcome message.
       const parsedSaved = saved ? JSON.parse(saved) : [];
       if (parsedSaved.length > 0) {
         return parsedSaved;
       }
     }
-    return [initialWelcomeMessage]; // Always start fresh if not logged in or no saved history
+    return [initialWelcomeMessage];
   });
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  // showSuggestedPrompts is true initially, and set to false on first interaction.
-  // It's only reset to true by clearChat.
   const [showSuggestedPrompts, setShowSuggestedPrompts] = useState(true);
+  const [isListening, setIsListening] = useState(false);
   const bottomRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   // Effect to save messages to localStorage and scroll to bottom
   useEffect(() => {
     if (isLoggedIn) {
-      // Only save to localStorage if logged in
       localStorage.setItem("chatMessages", JSON.stringify(messages));
     } else {
-      // If not logged in, ensure localStorage is cleared or not used for history
       localStorage.removeItem("chatMessages");
     }
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isLoggedIn]); // Add isLoggedIn to dependency array
+  }, [messages, isLoggedIn]);
 
   // Effect to manage showSuggestedPrompts based on messages length
-  // This ensures suggestions are hidden if a conversation has already started
-  // when the chatbot is opened, and are only shown for a truly fresh start.
   useEffect(() => {
     if (
       messages.length > 1 ||
       (messages.length === 1 && messages[0].role === "user")
     ) {
-      // If there's more than just the initial welcome message, or if the first message is from user, hide suggestions
       setShowSuggestedPrompts(false);
     } else {
-      // Otherwise (only initial welcome message), show suggestions
       setShowSuggestedPrompts(true);
     }
-  }, [messages]); // Only depends on messages to determine conversation state
+  }, [messages]);
 
-  // Function to clear the chat history
+  // Initialize SpeechRecognition API
+  useEffect(() => {
+    if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = "en-IN"; // Or 'en-US', 'en-GB'
+
+      recognitionRef.current.onstart = () => {
+        setIsListening(true);
+        setInput("");
+        console.log("Speech recognition started...");
+      };
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        console.log("Speech recognized:", transcript);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+        if (event.error === "not-allowed") {
+          alert(
+            "Microphone access denied. Please allow microphone access in your browser settings."
+          );
+        } else if (event.error === "no-speech") {
+          setInput("No speech detected. Please try again.");
+          setTimeout(() => setInput(""), 3000);
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+        console.log("Speech recognition ended.");
+      };
+    } else {
+      console.warn("Web Speech API not supported in this browser.");
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  const toggleSpeechRecognition = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported by your browser.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
+
   const clearChat = () => {
-    setMessages([initialWelcomeMessage]); // Reset to initial greeting
-    localStorage.removeItem("chatMessages"); // Clear localStorage
-    setShowSuggestedPrompts(true); // Show suggested prompts again
-    setInput(""); // Clear current input
-    setIsSending(false); // Ensure sending state is reset
+    setMessages([initialWelcomeMessage]);
+    localStorage.removeItem("chatMessages");
+    setShowSuggestedPrompts(true);
+    setInput("");
+    setIsSending(false);
+    if (isListening) {
+      recognitionRef.current.stop();
+    }
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || isSending) return;
+    if (!input.trim() || isSending || isListening) return;
 
     let processedInput = input.trim();
     const userOriginalMessage = { role: "user", content: input };
 
-    // Hide suggested prompts once a message is sent
     setShowSuggestedPrompts(false);
 
     // --- Feature 1: Material Comparison ✨ ---
@@ -198,7 +280,6 @@ const Chatbot = ({ isLoggedIn = false }) => {
           const safetyRatings = result.promptFeedback?.safetyRatings;
           let feedbackMessage = "No response from AI 🫠. ";
           if (safetyRatings && safetyRatings.length > 0) {
-            feedbackMessage += "Possible reasons: ";
             safetyRatings.forEach((rating) => {
               if (rating.blocked) {
                 feedbackMessage += `Content blocked due to ${rating.category
@@ -229,15 +310,16 @@ const Chatbot = ({ isLoggedIn = false }) => {
     }
   };
 
-  const renderContent = (content) =>
-    content.split("\n").map((line, idx) => (
-      <p
-        key={idx}
-        dangerouslySetInnerHTML={{
-          __html: line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
-        }}
-      />
-    ));
+  // The renderContent function is no longer needed because ReactMarkdown handles it
+  // const renderContent = (content) =>
+  //   content.split("\n").map((line, idx) => (
+  //     <p
+  //       key={idx}
+  //       dangerouslySetInnerHTML={{
+  //         __html: line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
+  //       }}
+  //     />
+  //   ));
 
   return (
     <div className="fixed bottom-5 right-5 z-50">
@@ -279,7 +361,8 @@ const Chatbot = ({ isLoggedIn = false }) => {
                   <div className="text-xs font-semibold mb-1">
                     {msg.role === "user" ? "You" : "AI Assistant"}
                   </div>
-                  {renderContent(msg.content)}
+                  {/* Use ReactMarkdown to render message content */}
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
               </div>
             ))}
@@ -303,11 +386,12 @@ const Chatbot = ({ isLoggedIn = false }) => {
                     key={i}
                     onClick={() => {
                       setInput(text);
-                      setShowSuggestedPrompts(false); // Hide suggestions when a prompt is clicked
+                      setShowSuggestedPrompts(false);
                     }}
                     className="bg-gray-100 dark:bg-gray-600 hover:bg-blue-100 dark:hover:bg-blue-800 text-xs px-2 py-1 rounded-full text-gray-800 dark:text-white transition-colors duration-200"
                   >
-                    {text}
+                    {/* Use ReactMarkdown to render suggested prompt text */}
+                    <ReactMarkdown>{text}</ReactMarkdown>
                   </button>
                 ))}
               </div>
@@ -318,18 +402,37 @@ const Chatbot = ({ isLoggedIn = false }) => {
             <input
               type="text"
               className="flex-1 p-2 border border-gray-300 rounded-l-md text-sm outline-none bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Type a message..."
+              placeholder={isListening ? "Listening..." : "Type a message..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              disabled={isSending}
+              disabled={isSending || isListening}
             />
+            {/* Microphone Button - Placed just before send button */}
+            <button
+              onClick={toggleSpeechRecognition}
+              className={`bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white px-3 py-2 border-t border-b border-gray-300 dark:border-gray-600
+                          hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200
+                          disabled:opacity-50 disabled:cursor-not-allowed
+                          ${
+                            isListening
+                              ? "text-red-500 dark:text-red-400 animate-pulse"
+                              : ""
+                          }
+                          `}
+              disabled={isSending}
+              title={isListening ? "Stop listening" : "Start voice input"}
+            >
+              <MicIcon isListening={isListening} />
+            </button>
+
+            {/* Send Button - Now with an icon */}
             <button
               onClick={sendMessage}
               className="bg-blue-600 text-white px-4 py-2 rounded-r-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSending}
+              disabled={isSending || isListening}
             >
-              Send
+              <SendIcon />
             </button>
           </div>
         </div>
@@ -346,3 +449,4 @@ const Chatbot = ({ isLoggedIn = false }) => {
 };
 
 export default Chatbot;
+  
