@@ -21,7 +21,10 @@ mongoose
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:3000", // Ensure this matches your frontend URL
+    origin: [
+      "http://localhost:3000",
+      "https://connectingconstructions1.netlify.app",
+    ],
     credentials: true,
   })
 );
