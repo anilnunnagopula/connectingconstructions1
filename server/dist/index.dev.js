@@ -20,7 +20,7 @@ var app = express(); // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000
+  serverSelectionTimeoutMS: 30000
 }).then(function () {
   return console.log("✅ MongoDB connected");
 })["catch"](function (err) {
