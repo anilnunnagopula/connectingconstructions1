@@ -49,7 +49,7 @@ const MyProducts = () => {
         messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
         appId: process.env.REACT_APP_FIREBASE_APP_ID,
       };
-      console.log("🔥 Firebase Config:", firebaseConfig);
+      // console.log("🔥 Firebase Config:", firebaseConfig);
 
       if (!firebaseConfig.apiKey) {
         setFirebaseError(
