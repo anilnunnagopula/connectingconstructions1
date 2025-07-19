@@ -7,7 +7,7 @@ const authRoutes = require("./routes/auth"); // Your existing auth routes
 const supplierRoutes = require("./routes/supplierRoutes"); // <--- ADD THIS LINE
 
 const app = express();
-
+console.log("✅ MONGO_URI =", process.env.MONGO_URI);
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGO_URI, {

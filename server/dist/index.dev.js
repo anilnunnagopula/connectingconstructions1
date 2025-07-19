@@ -15,7 +15,8 @@ var authRoutes = require("./routes/auth"); // Your existing auth routes
 var supplierRoutes = require("./routes/supplierRoutes"); // <--- ADD THIS LINE
 
 
-var app = express(); // Connect to MongoDB
+var app = express();
+console.log("✅ MONGO_URI =", process.env.MONGO_URI); // Connect to MongoDB
 
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
