@@ -63,10 +63,16 @@ var productSchema = new mongoose.Schema({
       required: true
     }
   },
-  imageUrl: {
-    // Stores the base64 string or a URL if you use cloud storage
-    type: String
-  }
+  // --- MODIFICATION START ---
+  // Change imageUrl to imageUrls and make it an array of Strings
+  imageUrls: {
+    type: [String],
+    required: false,
+    // Set to true if at least one image is always mandatory
+    "default": [] // Optional: Default to an empty array if no images are provided
+
+  } // --- MODIFICATION END ---
+
 }, {
   timestamps: true
 }); // Automatically adds createdAt and updatedAt fields

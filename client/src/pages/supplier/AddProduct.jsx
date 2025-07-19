@@ -3,7 +3,6 @@ import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
 import categories from "../../utils/Categories"; // Ensure this path is correct
 
-// Define libraries outside the component to prevent re-creation on re-renders
 const googleMapsLibraries = ["places", "maps"];
 
 const containerStyle = {
@@ -16,6 +15,11 @@ const defaultCenter = {
   lat: 17.385044, // Default to Hyderabad, India
   lng: 78.486671,
 };
+
+// Define constants for image limits
+const MAX_IMAGES = 6; // Allow up to 6 images
+const MAX_IMAGE_SIZE_MB = 5; // Max 5MB per image
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024; // Convert MB to bytes
 
 const AddProduct = () => {
   const navigate = useNavigate();
@@ -34,8 +38,8 @@ const AddProduct = () => {
       email: "",
       address: "",
     },
-    imageFile: null,
-    imageUrlPreview: null,
+    imageFiles: [], // Now an array to hold File objects
+    imageUrls: [], // Now an array to hold Cloudinary URLs
   });
   const [loading, setLoading] = useState(false); // For form submission
   const [aiLoading, setAiLoading] = useState(false); // For AI description generation
@@ -43,15 +47,12 @@ const AddProduct = () => {
   const [messageType, setMessageType] = useState(""); // Type of message (success, error, info)
   const [showKeywordsInput, setShowKeywordsInput] = useState(false); // State for conditional rendering of keywords input
 
-  // Load Google Maps API (ensure REACT_APP_GOOGLE_MAPS_API_KEY is set in your .env)
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
-    // Corrected API key variable name to match your .env setup
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: process.env.REACT_APP_Maps_API_KEY,
     libraries: googleMapsLibraries,
   });
 
-  // Handles changes for all basic product fields
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProduct((prev) => ({
@@ -60,7 +61,6 @@ const AddProduct = () => {
     }));
   };
 
-  // Handles changes for nested contact fields
   const handleContactChange = (e) => {
     const { name, value } = e.target;
     setProduct((prev) => ({
@@ -72,29 +72,127 @@ const AddProduct = () => {
     }));
   };
 
-  // Handles image file selection and creates a preview URL
+  // --- MODIFICATION START: Multi-Image Handling & Size Limit ---
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProduct((prev) => ({
-          ...prev,
-          imageFile: file,
-          imageUrlPreview: reader.result,
-        }));
-      };
-      reader.readAsDataURL(file);
-    } else {
+    const files = Array.from(e.target.files);
+    const validFiles = [];
+    const newMessages = [];
+
+    // Reset current image states if new files are selected from input
+    // This assumes replacing all images. If you want to add, adjust logic.
+    setProduct((prev) => ({
+      ...prev,
+      imageFiles: [],
+      imageUrls: [],
+    }));
+
+    if (files.length > MAX_IMAGES) {
+      newMessages.push(
+        `You can only upload a maximum of ${MAX_IMAGES} images.`
+      );
+      setMessageType("error");
+      setMessage(newMessages.join(" "));
+      return;
+    }
+
+    files.forEach((file) => {
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        newMessages.push(
+          `Image "${file.name}" is too large (max ${MAX_IMAGE_SIZE_MB}MB).`
+        );
+        setMessageType("error");
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (validFiles.length > 0) {
       setProduct((prev) => ({
         ...prev,
-        imageFile: null,
-        imageUrlPreview: null,
+        imageFiles: validFiles, // Store valid File objects
       }));
+      if (newMessages.length === 0) {
+        setMessage("Images selected for upload. Click Add Product to upload.");
+        setMessageType("info");
+      } else {
+        setMessage(newMessages.join(" ") + " Some images were too large.");
+      }
+    } else if (newMessages.length > 0) {
+      setMessage(newMessages.join(" "));
+    } else {
+      setMessage("");
+      setMessageType("");
     }
   };
 
-  // Uses browser's geolocation to set product location
+  // Function to upload an array of images to Cloudinary
+  const uploadImagesToCloudinary = async (files) => {
+    if (!files || files.length === 0) return [];
+
+    const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || !uploadPreset) {
+      console.error("Cloudinary credentials not set in environment variables.");
+      setMessage("Image upload failed: Cloudinary not configured.");
+      setMessageType("error");
+      return [];
+    }
+
+    const uploadedUrls = [];
+    let uploadSuccess = true;
+
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", uploadPreset);
+
+      try {
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        const data = await response.json();
+        if (response.ok && data.secure_url) {
+          uploadedUrls.push(data.secure_url);
+        } else {
+          uploadSuccess = false;
+          setMessage(
+            `Image "${file.name}" upload failed: ${
+              data.error ? data.error.message : "Unknown Cloudinary error."
+            }`
+          );
+          setMessageType("error");
+          console.error("Cloudinary upload error for", file.name, ":", data);
+          // Continue trying to upload other images but mark overall failure
+        }
+      } catch (err) {
+        uploadSuccess = false;
+        setMessage(`Image "${file.name}" upload failed due to network error.`);
+        setMessageType("error");
+        console.error("Cloudinary fetch error for", file.name, ":", err);
+        // Continue trying to upload other images but mark overall failure
+      }
+    }
+
+    if (uploadSuccess && uploadedUrls.length === files.length) {
+      setMessage("All images uploaded to Cloudinary successfully!");
+      setMessageType("success");
+    } else if (uploadedUrls.length > 0) {
+      setMessage(
+        "Some images uploaded, but others failed. Please check console for details."
+      );
+      setMessageType("warning");
+    }
+
+    return uploadedUrls;
+  };
+  // --- MODIFICATION END: Multi-Image Handling & Size Limit ---
+
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {
       setMessage("Fetching current location...");
@@ -131,7 +229,6 @@ const AddProduct = () => {
     }
   };
 
-  // Updates product location based on map clicks
   const handleMapClick = (e) => {
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
@@ -144,7 +241,6 @@ const AddProduct = () => {
     setMessageType("success");
   };
 
-  // Clears messages after a timeout
   useEffect(() => {
     if (message) {
       const timer = setTimeout(() => {
@@ -155,14 +251,12 @@ const AddProduct = () => {
     }
   }, [message]);
 
-  // Function to generate product description using Gemini AI
   const handleGenerateDescription = async () => {
-    setShowKeywordsInput(true); // Show the keywords input when this button is clicked
-    setAiLoading(true); // Set AI loading state
-    setMessage(""); // Clear previous messages
+    setShowKeywordsInput(true);
+    setAiLoading(true);
+    setMessage("");
     setMessageType("");
 
-    // Validate input for AI generation
     if (!product.name && !product.category && !product.userKeywords) {
       setMessage(
         "Please enter a Product Name, select a Category, or provide Keywords to generate a description."
@@ -172,7 +266,6 @@ const AddProduct = () => {
       return;
     }
 
-    // Construct a more specific and dynamic prompt for Gemini
     let prompt = `Generate a concise and appealing product description for a construction material.`;
 
     if (product.name) {
@@ -192,7 +285,6 @@ const AddProduct = () => {
       chatHistory.push({ role: "user", parts: [{ text: prompt }] });
       const payload = { contents: chatHistory };
 
-      // Gemini API key from environment variables
       const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -245,18 +337,17 @@ const AddProduct = () => {
       );
       setMessageType("error");
     } finally {
-      setAiLoading(false); // Reset AI loading state
+      setAiLoading(false);
     }
   };
 
   // Handles the form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true); // Set form loading state
-    setMessage(""); // Clear previous messages
+    setLoading(true);
+    setMessage("");
     setMessageType("");
 
-    // Basic form validation
     if (
       !product.name ||
       !product.category ||
@@ -280,8 +371,6 @@ const AddProduct = () => {
       if (storedUser) {
         const user = JSON.parse(storedUser);
         supplierId = user.email; // Using email as placeholder ID
-        // TODO: For production, consider using Firebase Authentication's user.uid
-        // or a backend-managed session ID for supplierId for better security.
       }
     } catch (error) {
       console.error("Error parsing user from localStorage:", error);
@@ -291,9 +380,41 @@ const AddProduct = () => {
       setMessage("Supplier not logged in. Please log in to add products.");
       setMessageType("error");
       setLoading(false);
-      navigate("/login"); // Redirect to login if no supplier ID
+      navigate("/login");
       return;
     }
+
+    // --- MODIFICATION START: Multi-Image Upload Logic ---
+    let finalImageUrls = [...product.imageUrls]; // Start with any existing uploaded URLs
+
+    // Only upload new files if they are present
+    if (product.imageFiles.length > 0) {
+      setMessage("Uploading images to Cloudinary...");
+      setMessageType("info");
+      const uploadedUrls = await uploadImagesToCloudinary(product.imageFiles);
+
+      if (uploadedUrls.length === 0 && product.imageFiles.length > 0) {
+        // All new image uploads failed, and there were images to upload
+        setMessage("All image uploads failed. Product not added.");
+        setMessageType("error");
+        setLoading(false);
+        return;
+      }
+      finalImageUrls = uploadedUrls; // Replace with newly uploaded URLs
+      setProduct((prev) => ({ ...prev, imageUrls: uploadedUrls })); // Update state for potential re-submission/preview
+    } else if (product.imageUrls.length === 0) {
+      // If no new files selected AND no existing URLs, ensure finalImageUrls is empty
+      finalImageUrls = [];
+    }
+
+    // You might want to remove this validation if images are optional
+    if (finalImageUrls.length === 0) {
+      setMessage("Please upload at least one image for the product.");
+      setMessageType("error");
+      setLoading(false);
+      return;
+    }
+    // --- MODIFICATION END: Multi-Image Upload Logic ---
 
     // Prepare product data for submission
     const productData = {
@@ -310,15 +431,15 @@ const AddProduct = () => {
         lng: product.latLng ? product.latLng.lng : null,
       },
       contact: product.contact,
-      imageUrl: product.imageUrlPreview, // This will be a base64 string if imageFile is used
+      // --- MODIFICATION START: Sending an array of URLs ---
+      imageUrls: finalImageUrls, // Send the array of Cloudinary URLs to backend
+      // --- MODIFICATION END: Sending an array of URLs ---
     };
 
     try {
-      // API URL for your backend (adjust as per your setup)
-      const apiUrl =
-        typeof process !== "undefined" && process.env.REACT_APP_API_URL
-          ? `${process.env.REACT_APP_API_URL}/api/supplier/products`
-          : "http://localhost:5000/api/supplier/products"; // Fallback for demonstration
+      // --- MODIFICATION START: Simplified API URL ---
+      const apiUrl = `${process.env.REACT_APP_API_URL}/api/supplier/products`;
+      // --- MODIFICATION END: Simplified API URL ---
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -341,17 +462,17 @@ const AddProduct = () => {
         name: "",
         category: "",
         description: "",
-        userKeywords: "", // Also clear userKeywords
+        userKeywords: "",
         price: "",
         quantity: "",
         availability: true,
         locationText: "",
         latLng: null,
         contact: { mobile: "", email: "", address: "" },
-        imageFile: null,
-        imageUrlPreview: null,
+        imageFiles: [], // Clear files
+        imageUrls: [], // Clear URLs
       });
-      setShowKeywordsInput(false); // Hide the keywords input again
+      setShowKeywordsInput(false);
     } catch (err) {
       console.error("Error adding product:", err);
       setMessage(
@@ -359,19 +480,18 @@ const AddProduct = () => {
       );
       setMessageType("error");
     } finally {
-      setLoading(false); // Reset form loading state
+      setLoading(false);
     }
   };
 
-  // Display error if Google Maps API fails to load
   if (loadError) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4 font-sans">
         <div className="bg-red-100 text-red-700 p-4 rounded-md shadow-md">
           Error loading Google Maps: {loadError.message}
           <p>
-            Please ensure your `REACT_APP_GOOGLE_MAPS_API_KEY` is correct and
-            has the necessary APIs enabled (Maps JavaScript API, Geocoding API).
+            Please ensure your `REACT_APP_Maps_API_KEY` is correct and has the
+            necessary APIs enabled (Maps JavaScript API, Geocoding API).
           </p>
         </div>
       </div>
@@ -384,7 +504,6 @@ const AddProduct = () => {
         📦 Add New Product
       </h2>
 
-      {/* Message display for success/error/info */}
       {message && (
         <div
           className={`mb-4 p-3 rounded-md text-center ${
@@ -392,6 +511,8 @@ const AddProduct = () => {
               ? "bg-green-100 text-green-700"
               : messageType === "info"
               ? "bg-blue-100 text-blue-700"
+              : messageType === "warning"
+              ? "bg-yellow-100 text-yellow-700"
               : "bg-red-100 text-red-700"
           }`}
         >
@@ -403,7 +524,6 @@ const AddProduct = () => {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-2 gap-6"
       >
-        {/* Product Details */}
         <div className="md:col-span-2">
           <h3 className="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
             Product Details
@@ -442,7 +562,6 @@ const AddProduct = () => {
           </select>
         </div>
 
-        {/* Product Description */}
         <div className="md:col-span-2">
           <div className="flex justify-between items-center mb-2">
             <label className="block font-semibold text-gray-700 dark:text-gray-300">
@@ -494,7 +613,6 @@ const AddProduct = () => {
           ></textarea>
         </div>
 
-        {/* Key Features / Keywords - Conditionally rendered */}
         {showKeywordsInput && (
           <div className="md:col-span-2 mt-4">
             <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
@@ -565,7 +683,6 @@ const AddProduct = () => {
           </select>
         </div>
 
-        {/* Location Details */}
         <div className="md:col-span-2 mt-4">
           <h3 className="text-xl font-semibold mb-1 border-b pb-1 border-gray-200 dark:border-gray-700">
             Location Details
@@ -624,7 +741,6 @@ const AddProduct = () => {
           </div>
         )}
 
-        {/* Contact Details */}
         <div className="md:col-span-2 mt-4">
           <h3 className="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
             Contact Details
@@ -672,29 +788,53 @@ const AddProduct = () => {
           />
         </div>
 
-        {/* Image Upload */}
+        {/* Product Image Section (for multiple images) */}
         <div className="md:col-span-2 mt-4">
           <h3 className="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
-            Product Image
+            Product Images
           </h3>
         </div>
         <div className="md:col-span-2">
           <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-            Upload Image
+            Upload Images (Max {MAX_IMAGES} images, {MAX_IMAGE_SIZE_MB}MB each)
           </label>
           <input
             type="file"
             accept="image/*"
+            multiple // Allow multiple file selection
             onChange={handleImageChange}
             className="w-full text-gray-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
-          {product.imageUrlPreview && (
-            <div className="mt-4 border border-gray-300 dark:border-gray-700 rounded-md p-2 flex justify-center items-center">
-              <img
-                src={product.imageUrlPreview}
-                alt="Product Preview"
-                className="max-w-full h-auto max-h-48 rounded-md object-contain"
-              />
+          {/* Display previews for all selected images */}
+          {(product.imageFiles.length > 0 || product.imageUrls.length > 0) && (
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {/* Display already uploaded images */}
+              {product.imageUrls.map((url, index) => (
+                <div
+                  key={`uploaded-${index}`}
+                  className="border border-gray-300 dark:border-gray-700 rounded-md p-1 flex justify-center items-center h-32 overflow-hidden"
+                >
+                  <img
+                    src={url}
+                    alt={`Product Image ${index + 1}`}
+                    className="max-w-full h-auto max-h-full object-contain"
+                  />
+                </div>
+              ))}
+              {/* Display newly selected local files */}
+              {product.imageFiles.map((file, index) => (
+                <div
+                  key={`local-${index}`}
+                  className="border border-gray-300 dark:border-gray-700 rounded-md p-1 flex justify-center items-center h-32 overflow-hidden"
+                >
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={`New Image ${index + 1}`}
+                    className="max-w-full h-auto max-h-full object-contain"
+                    onLoad={() => URL.revokeObjectURL(file)} // Clean up memory
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
