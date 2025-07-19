@@ -3,8 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const authRoutes = require("./routes/auth"); // Your existing auth routes
-const supplierRoutes = require("./routes/supplierRoutes"); // <--- ADD THIS LINE
+const authRoutes = require("./routes/auth");  
+const supplierRoutes = require("./routes/supplierRoutes");
 
 const app = express();
 console.log("✅ MONGO_URI =", process.env.MONGO_URI);
@@ -32,7 +32,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/supplier", supplierRoutes); // <--- ADD THIS LINE: Use the new supplier routes
+app.use("/api/supplier", supplierRoutes); 
 
 // Basic route for testing server
 app.get("/", (req, res) => {

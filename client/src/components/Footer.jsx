@@ -136,9 +136,16 @@ const Footer = () => {
             >
               📧 anilnunnagopula15@gmail.com
             </a>
-            <p className="hover:text-blue-400 transition duration-200">
-              📞 +91-9398828248
-            </p>
+            <a
+              href="tel:+919398828248"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+            >
+              <div>
+                <p>📞+91 93988 28248</p>
+              </div>
+            </a>
           </div>
 
           {/* Social Media Glow Squad */}

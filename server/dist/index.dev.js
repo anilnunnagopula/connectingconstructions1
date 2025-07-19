@@ -9,11 +9,9 @@ var cors = require("cors");
 
 var mongoose = require("mongoose");
 
-var authRoutes = require("./routes/auth"); // Your existing auth routes
+var authRoutes = require("./routes/auth");
 
-
-var supplierRoutes = require("./routes/supplierRoutes"); // <--- ADD THIS LINE
-
+var supplierRoutes = require("./routes/supplierRoutes");
 
 var app = express();
 console.log("✅ MONGO_URI =", process.env.MONGO_URI); // Connect to MongoDB
@@ -41,8 +39,7 @@ app.use(express.urlencoded({
 })); // Routes
 
 app.use("/api/auth", authRoutes);
-app.use("/api/supplier", supplierRoutes); // <--- ADD THIS LINE: Use the new supplier routes
-// Basic route for testing server
+app.use("/api/supplier", supplierRoutes); // Basic route for testing server
 
 app.get("/", function (req, res) {
   res.send("API is running...");
