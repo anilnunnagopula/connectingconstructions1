@@ -3,13 +3,13 @@ import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 
 // Suggested prompts for the user
 const suggestedPrompts = [
-  "🧱 What is the best cement for my house?",
+  "🧱 What is the best cement for alkaline areas?",
   "📦 How do I track my order?",
   "🛠️ What construction materials do you recommend?",
   "📐 Vastu tips for my new home?",
   "💳 What are the payment options available?",
   "🚚 When will my delivery arrive?",
-  "✨ Compare **cement** and **steel**",
+  "✨ Compare **53** and **43** grade cements",
   "✨ Recommend materials for a **waterproof basement**",
   "✨ What is **rebar**?",
 ];
@@ -18,7 +18,7 @@ const suggestedPrompts = [
 const initialWelcomeMessage = {
   role: "assistant",
   content:
-    "👷‍♂️ Hey! I'm here to help with your construction needs. Ask me anything!",
+    "👷‍♂️ Hey! I'm here to help with your construction needs. Ask me anything! [Note that AI can make mistakes]",
 };
 
 // --- SVG Icon Components ---
