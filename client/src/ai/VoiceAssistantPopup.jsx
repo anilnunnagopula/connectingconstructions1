@@ -147,10 +147,15 @@ const VoiceAssistantPopup = ({
           <ul className="list-disc list-inside space-y-1">
             <li>"Show cement suppliers near Vanasthalipuram"</li>
             <li>"Find 53 grade cement"</li>
-            <li>"Navigate to Bricks"</li>
+            <li>"Navigate to Bricks Suppliers"</li>
             <li>"Suppliers for Labours"</li>
           </ul>
         </div>
+
+        <div className="text-left text-lg text-red-600 dark:text-red-400 pt-2 border-t border-gray-300 dark:border-gray-700">
+            <h3 >Note: This feature is still under Construction</h3>
+        </div>
+
       </div>
     </div>
   );
