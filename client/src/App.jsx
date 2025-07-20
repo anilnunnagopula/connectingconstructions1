@@ -52,6 +52,8 @@ import MyOrders from "./pages/customer/MyOrders";
 import Cart from "./pages/customer/Cart";
 import Checkout from "./pages/customer/Checkout";
 import HelpAndSupport from "./components/HelpAndSupport";
+//legal pages
+import TermsAndConditions from "./pages/legal/TermsAndCondtions";
 
 // Import your context providers
 import { DarkModeProvider } from "./context/DarkModeContext";
@@ -108,6 +110,9 @@ function App() {
                       <Route path="/about" element={<About />} />
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/support" element={<HelpAndSupport />} />
+                      {/* legal routes  */}
+                      <Route path="/legal/termsandcondtions" element={<TermsAndConditions />} />
+
                       {/* Supplier Public-ish Routes (can be accessed without ProtectedRoute if desired, but often linked from dashboard) */}
                       <Route
                         path="/supplier/products"
@@ -116,13 +121,11 @@ function App() {
                       <Route
                         path="/supplier/add-product"
                         element={<AddProduct />}
-                      />
-                      {/* Corrected EditProduct route path for consistency */}
+                      /> 
                       <Route
                         path="/supplier/edit-product/:id"
                         element={<EditProduct />}
-                      />{" "}
-                      {/* <--- CORRECTED PATH */}
+                      />{" "} 
                       <Route
                         path="/category/:category"
                         element={<CategoryPage />}
