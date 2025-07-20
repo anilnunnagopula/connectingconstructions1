@@ -1,6 +1,5 @@
 import React from "react";
-import { FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
-
+import { FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa"; 
 const handleSubmit = async (e) => {
   e.preventDefault();
 
@@ -48,7 +47,9 @@ const Contact = () => {
 
         <div className="grid md:grid-cols-2 gap-10">
           {/* Left: Contact Info Cards */}
+          
           <div className="space-y-8">
+            {/* Phone */}
             <a
               href="tel:+919398828248"
               target="_blank"
@@ -64,6 +65,7 @@ const Contact = () => {
               </div>
             </a>
 
+            {/* Email */}
             <a
               href="mailto:anilnunnagopula15@gmail.com"
               target="_blank"
@@ -79,6 +81,7 @@ const Contact = () => {
               </div>
             </a>
 
+            {/* Location */}
             <a
               href="https://www.google.com/maps/search/?api=1&query=CVR+College+Road,+Mangalpally,+Hyderabad,+Telangana"
               target="_blank"
@@ -86,14 +89,15 @@ const Contact = () => {
               className="block"
             >
               <div className="flex items-start gap-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:scale-[1.02] transition cursor-pointer">
-                <h3 className="font-semibold text-lg">Location</h3>
-                <p className="cursor-pointer hover:text-black">
-                  CVR College Road, Mangalpally, Hyderabad, Telangana
-                </p>
+                <FaMapMarkerAlt className="text-red-600 text-xl mt-1" />
+                <div>
+                  <h3 className="font-semibold text-lg">Location</h3>
+                  <p>CVR College Road, Mangalpally, Hyderabad, Telangana</p>
+                </div>
               </div>
             </a>
           </div>
-
+          
           {/* Right: Contact Form */}
           <div className="bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg">
             <h2 className="text-2xl font-semibold mb-6 text-blue-700 dark:text-blue-300">

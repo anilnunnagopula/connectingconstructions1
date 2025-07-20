@@ -46,7 +46,7 @@ const categories = [
   "Augumented Reality",
   "Demolition works",
   "GIS",
-  // "Contractors",
+  "Portable Cabins",
   // "Contractors",
   // "Contractors",
   // "Contractors",
