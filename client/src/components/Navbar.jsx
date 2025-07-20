@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, Sun, Moon } from "lucide-react";
 import categories from "../utils/Categories";
 import { useDarkMode } from "../context/DarkModeContext";
-
+import VoiceCommand from "../ai/VoiceCommand";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -167,6 +167,7 @@ const Navbar = () => {
               SignUp
             </Link>
           )}
+          <VoiceCommand />
         </div>
 
         {/* Mobile Hamburger Icon */}
