@@ -54,7 +54,7 @@ import Checkout from "./pages/customer/Checkout";
 import HelpAndSupport from "./components/HelpAndSupport";
 //legal pages
 import TermsAndConditions from "./pages/legal/TermsAndCondtions";
-
+import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 // Import your context providers
 import { DarkModeProvider } from "./context/DarkModeContext";
 import { CartProvider } from "./context/CartContext";
@@ -112,6 +112,7 @@ function App() {
                       <Route path="/support" element={<HelpAndSupport />} />
                       {/* legal routes  */}
                       <Route path="/legal/termsandcondtions" element={<TermsAndConditions />} />
+                      <Route path="/legal/privacy-policy" element={<PrivacyPolicy />} />
 
                       {/* Supplier Public-ish Routes (can be accessed without ProtectedRoute if desired, but often linked from dashboard) */}
                       <Route

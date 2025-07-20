@@ -139,8 +139,8 @@ const Footer = () => {
             <a
               href="tel:+919398828248"
               target="_blank"
-              rel="noopener noreferrer"
-              className="block"
+              rel="noopener noreferrer" 
+              className="block hover:text-blue-400 transition duration-200"
             >
               <div>
                 <p>📞+91 93988 28248</p>
@@ -192,7 +192,7 @@ const Footer = () => {
           . All rights reserved.
         </p>
         <div className="mt-2 flex flex-wrap justify-center gap-4">
-          <Link to="#" className="hover:text-white">
+          <Link to="/legal/privacy-policy" className="hover:text-white">
             Privacy Policy
           </Link>
           <Link to="/legal/termsandcondtions" className="hover:text-white">
