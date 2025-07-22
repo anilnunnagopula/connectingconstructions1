@@ -1,19 +1,35 @@
-// server/routes/supplierRoutes.js
+// server/routes/supplierRoutes.js (Example)
 const express = require("express");
 const router = express.Router();
-const {
-  addProduct,
-  getProductById,
-  updateProduct,
-} = require("../controllers/productController"); // Import new functions
+const Product = require("../models/Product");
+const User = require("../models/User"); // Assuming you have a User model
 
-// Route to add a new product
-router.post("/products", addProduct);
+// GET /api/supplier/products - Fetch all products for a logged-in supplier
+router.get("/products", async (req, res) => {
+  try {
+    // In a real application, supplierId would come from an authenticated user's token
+    // For now, we'll use a query parameter as discussed.
+    const supplierEmail = req.query.supplierEmail;
 
-// New: Route to get a single product by ID
-router.get("/products/:id", getProductById); // :id is a URL parameter
+    if (!supplierEmail) {
+      return res.status(400).json({ error: "Supplier email is required." });
+    }
 
-// New: Route to update a product by ID
-router.put("/products/:id", updateProduct); // :id is a URL parameter
+    // Find the user by email to get their MongoDB _id
+    const user = await User.findOne({ email: supplierEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: "Supplier not found." });
+    }
+
+    // Find all products associated with this supplier's _id
+    const products = await Product.find({ supplierId: user._id });
+
+    res.status(200).json(products);
+  } catch (error) {
+    console.error("Error fetching supplier products:", error);
+    res.status(500).json({ error: "Failed to fetch products." });
+  }
+});
 
 module.exports = router;

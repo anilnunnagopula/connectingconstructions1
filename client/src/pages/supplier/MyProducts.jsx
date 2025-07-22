@@ -1,441 +1,315 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { initializeApp, getApps, getApp } from "firebase/app";
-import {
-  getAuth,
-  signInAnonymously,
-  signInWithCustomToken,
-  onAuthStateChanged,
-} from "firebase/auth";
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  onSnapshot,
-  doc,
-  updateDoc,
-  deleteDoc,
-} from "firebase/firestore";
-import { useAuth } from "../../context/AuthContext"; // Import useAuth
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import React Query hooks
-import api from "../../api"; // Import your centralized API functions
 
 const MyProducts = () => {
   const navigate = useNavigate();
-  // Get user from AuthContext (this user object contains MongoDB _id, roles, token, etc.)
-  const { user: authContextUser, isAuthenticated, isAuthLoading } = useAuth();
-  const queryClient = useQueryClient(); // For invalidating React Query caches
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  // Dark mode state, initialized from localStorage or system preference
+  const [darkMode, setDarkMode] = useState(
+    localStorage.getItem("theme") === "dark" ||
+      (!("theme" in localStorage) &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches)
+  );
 
-  const [db, setDb] = useState(null);
-  const [auth, setAuth] = useState(null);
-  // This state will hold the Firebase Auth UID, which is crucial for Firestore rules
-  const [firebaseAuthUid, setFirebaseAuthUid] = useState(null);
-  const [isFirebaseReady, setIsFirebaseReady] = useState(false);
-  const [firebaseError, setFirebaseError] = useState(null);
-  const [actionMessage, setActionMessage] = useState({ type: "", text: "" });
-
-  // Firebase App ID from environment variables
-  const appId = process.env.REACT_APP_FIREBASE_APP_ID || "default-app-id";
-
-  // 1. Firebase Initialization and Authentication (Ensure UID is set)
+  // Effect to apply dark mode class to HTML element
   useEffect(() => {
-    try {
-      const firebaseConfig = {
-        apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-        authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.REACT_APP_FIREBASE_APP_ID,
-      };
-      // console.log("🔥 Firebase Config:", firebaseConfig);
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [darkMode]);
 
-      if (!firebaseConfig.apiKey) {
-        setFirebaseError(
-          "Firebase API Key is missing. Please check your .env file."
-        );
-        setIsFirebaseReady(true);
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setDarkMode((prevMode) => !prevMode);
+  };
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      setMessage("");
+      setMessageType("");
+
+      let supplierEmail = null;
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          supplierEmail = user.email;
+        }
+      } catch (err) {
+        console.error("Error parsing user from localStorage:", err);
+        setError("Failed to retrieve user information. Please log in again.");
+        setMessageType("error");
+        setLoading(false);
+        navigate("/login"); // Redirect to login if user data is bad
         return;
       }
 
-      const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-      const firestore = getFirestore(app);
-      const firebaseAuth = getAuth(app);
-
-      setDb(firestore);
-      setAuth(firebaseAuth);
-
-      // Listen for Firebase Auth state changes
-      const unsubscribeAuth = onAuthStateChanged(
-        firebaseAuth,
-        async (currentUser) => {
-          if (currentUser) {
-            // IMPORTANT: Set the Firebase UID here
-            setFirebaseAuthUid(currentUser.uid);
-            console.log("Firebase Auth: User signed in, UID:", currentUser.uid);
-          } else {
-            setFirebaseAuthUid(null); // Clear UID if no user
-            console.log(
-              "Firebase Auth: No user, attempting sign-in or anonymous."
-            );
-            // This part is specific to Canvas environment's auth setup.
-            try {
-              if (
-                typeof __initial_auth_token !== "undefined" &&
-                __initial_auth_token
-              ) {
-                await signInWithCustomToken(firebaseAuth, __initial_auth_token);
-                console.log("Firebase: Signed in with custom token.");
-              } else {
-                await signInAnonymously(firebaseAuth);
-                console.log("Firebase: Signed in anonymously.");
-              }
-            } catch (anonError) {
-              console.error(
-                "Firebase anonymous/custom token sign-in failed:",
-                anonError
-              );
-              setFirebaseError(
-                "Firebase authentication failed. Please check setup."
-              );
-            }
-          }
-          setIsFirebaseReady(true); // Firebase Auth state is ready
-        }
-      );
-
-      return () => unsubscribeAuth(); // Cleanup auth listener
-    } catch (err) {
-      console.error("Firebase initialization error:", err);
-      setFirebaseError(`Failed to initialize Firebase: ${err.message}`);
-      setIsFirebaseReady(true);
-    }
-  }, []); // Run only once on component mount
-
-  // 2. Fetch Products from Firestore using React Query and onSnapshot
-  const {
-    data: products,
-    isLoading,
-    isError,
-    error: fetchError,
-  } = useQuery({
-    queryKey: ["myProducts", firebaseAuthUid], // Query key depends on Firebase Auth UID
-    queryFn: async () => {
-      // Wait for Firebase to be ready AND a Firebase Auth UID to be available
-      if (!db || !firebaseAuthUid) {
-        throw new Error(
-          "Firestore or Firebase Auth UID not ready for product fetch."
-        );
+      if (!supplierEmail) {
+        setError("Supplier not logged in. Please log in to view products.");
+        setMessageType("error");
+        setLoading(false);
+        navigate("/login"); // Redirect to login if not logged in
+        return;
       }
 
-      console.log(
-        "MyProducts: Attempting to fetch products for Firebase Auth UID:",
-        firebaseAuthUid
-      );
-      console.log("MyProducts: Using Firebase App ID:", appId);
+      try {
+        const apiUrl = `${process.env.REACT_APP_API_URL}/api/supplier/products?supplierEmail=${supplierEmail}`;
 
-      // Return a promise that resolves with the products from onSnapshot
-      return new Promise((resolve, reject) => {
-        const productsCollectionRef = collection(
-          db,
-          `artifacts/${appId}/users/${firebaseAuthUid}/products` // Use Firebase UID in path
-        );
-        // Query to filter products by the current supplier's ID (which is the Firebase UID)
-        // This 'where' clause is good practice for data integrity but relies on rule allowing it.
-        const q = query(
-          productsCollectionRef,
-          where("supplierId", "==", firebaseAuthUid)
-        );
+        console.log("Fetching products from:", apiUrl); // Debugging
 
-        const unsubscribe = onSnapshot(
-          q,
-          (snapshot) => {
-            const fetchedProducts = snapshot.docs.map((doc) => ({
-              id: doc.id, // Store Firestore document ID
-              ...doc.data(),
-            }));
-            console.log("MyProducts: Fetched products:", fetchedProducts);
-            resolve(fetchedProducts); // Resolve the promise with fetched data
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            // If you have authentication tokens (e.g., JWT), include them here:
+            // "Authorization": `Bearer ${user.token}`
           },
-          (err) => {
-            console.error("Error fetching products (onSnapshot):", err);
-            console.error("Firestore Error Code:", err.code);
-            console.error("Firestore Error Message:", err.message);
-            reject(
-              new Error(
-                "Failed to load your products. Please ensure Firebase security rules allow read access for your user ID."
-              )
-            );
-          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch products.");
+        }
+
+        setProducts(data); // Assuming data is an array of products
+        setMessage("Products loaded successfully!");
+        setMessageType("success");
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setError(
+          err.message || "An unexpected error occurred while fetching products."
         );
+        setMessageType("error");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        // Return unsubscribe function for cleanup. React Query will handle this.
-        return unsubscribe;
-      });
-    },
-    // Only run query when Firebase is ready AND authenticated with a UID
-    enabled: isFirebaseReady && isAuthenticated && !!firebaseAuthUid,
-    staleTime: Infinity, // Keep data fresh, rely on onSnapshot for real-time updates
-    cacheTime: 0, // Don't cache, onSnapshot is real-time
-  });
+    fetchProducts();
+  }, [navigate]); // Dependency array includes navigate to avoid lint warnings
 
-  // React Query mutations for CRUD operations
-  const toggleAvailabilityMutation = useMutation({
-    mutationFn: async ({ productId, currentAvailability }) => {
-      if (!db || !firebaseAuthUid)
-        throw new Error("Firebase Auth UID not ready.");
-      const productRef = doc(
-        db,
-        `artifacts/${appId}/users/${firebaseAuthUid}/products`,
-        productId
-      );
-      await updateDoc(productRef, { availability: !currentAvailability });
-    },
-    onSuccess: () => {
-      setActionMessage({
-        type: "success",
-        text: "Availability updated successfully!",
-      });
-      // No need to invalidate 'myProducts' because onSnapshot handles real-time updates
-    },
-    onError: (err) => {
-      setActionMessage({
-        type: "error",
-        text: `Failed to update availability: ${err.message}`,
-      });
-    },
-  });
-
-  const deleteProductMutation = useMutation({
-    mutationFn: async (productId) => {
-      if (!db || !firebaseAuthUid)
-        throw new Error("Firebase Auth UID not ready.");
-      const productRef = doc(
-        db,
-        `artifacts/${appId}/users/${firebaseAuthUid}/products`,
-        productId
-      );
-      await deleteDoc(productRef);
-    },
-    onSuccess: () => {
-      setActionMessage({
-        type: "success",
-        text: "Product deleted successfully!",
-      });
-      // No need to invalidate 'myProducts' because onSnapshot handles real-time updates
-    },
-    onError: (err) => {
-      setActionMessage({
-        type: "error",
-        text: `Failed to delete product: ${err.message}`,
-      });
-    },
-  });
-
-  // Clear action messages after a few seconds
+  // Message display logic
   useEffect(() => {
-    if (actionMessage.text) {
+    if (message) {
       const timer = setTimeout(() => {
-        setActionMessage({ type: "", text: "" });
+        setMessage("");
+        setMessageType("");
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [actionMessage]);
+  }, [message]);
 
-  // Handle navigation to edit page using product ID
-  const handleEdit = (productId) => {
-    navigate(`/supplier/edit-product/${productId}`); // Pass Firestore document ID
-  };
-
-  // Toggle product availability
-  const handleAvailabilityToggle = (productId, currentAvailability) => {
-    toggleAvailabilityMutation.mutate({ productId, currentAvailability });
-  };
-
-  // Handle delete
-  const handleDelete = (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      // Use a custom modal instead of window.confirm in production
-      deleteProductMutation.mutate(productId);
-    }
-  };
-
-  // Render loading/error states
-  if (!isFirebaseReady || isAuthLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
-        <p className="text-xl">Initializing Firebase and Authentication...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 dark:border-blue-400"></div>
+        <p className="mt-4 text-lg font-medium">Loading your products...</p>
       </div>
     );
   }
 
-  if (firebaseError) {
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-red-500">
-        <p className="text-xl">Firebase Error: {firebaseError}</p>
-      </div>
-    );
-  }
-
-  // Check if authenticated via AuthContext AND if Firebase Auth UID is available
-  if (!isAuthenticated || !authContextUser || !firebaseAuthUid) {
-    // This case should be handled by ProtectedRoute, but as a fallback
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-red-500">
-        <p className="text-xl">Please log in to view your products.</p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
-        <p className="text-xl">Loading your products...</p>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-red-500">
-        <p className="text-xl">Error: {fetchError.message}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 transition-colors duration-300">
+        <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 p-6 rounded-lg shadow-xl text-center border border-red-300 dark:border-red-700">
+          <p className="font-bold text-xl mb-2">Oops! Something went wrong.</p>
+          <p className="text-lg">{error}</p>
+          <button
+            onClick={() => window.location.reload()} // Simple reload to retry
+            className="mt-6 bg-red-600 text-white px-6 py-3 rounded-md hover:bg-red-700 transition-colors duration-200 font-semibold shadow-md"
+          >
+            Retry Loading
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-lg rounded-lg mt-10 mb-10 transition-all duration-300">
-      <h2 className="text-3xl font-bold mb-6 text-center">My Products</h2>
-
-      {actionMessage.text && (
-        <div
-          className={`mb-4 p-3 rounded-md text-center ${
-            actionMessage.type === "success"
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-          }`}
-        >
-          {actionMessage.text}
-        </div>
-      )}
-
-      {products.length === 0 ? (
-        <div className="text-center py-10 text-gray-600 dark:text-gray-400">
-          <p className="text-lg mb-4">You haven't added any products yet.</p>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans">
+      <div className="max-w-7xl mx-auto p-6 lg:p-10">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-blue-700 dark:text-blue-300">
+            My Products <span className="text-2xl">📦</span>
+          </h2>
           <button
-            onClick={() => navigate("/supplier/add-product")}
-            className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors duration-200 font-semibold shadow-md"
+            onClick={toggleDarkMode}
+            className="p-3 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-md hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
-            Add Your First Product
+            {darkMode ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 3v1m0 16v1m9-9h1M3 12H2m15.325-4.575l.707-.707M5.968 18.032l-.707.707M18.032 5.968l.707-.707M5.293 5.293l-.707-.707M17 12a5 5 0 11-10 0 5 5 0 0110 0z"
+                />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"
+                />
+              </svg>
+            )}
           </button>
         </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md">
-            <thead>
-              <tr className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 uppercase text-sm leading-normal">
-                <th className="py-3 px-6 text-left">Image</th>
-                <th className="py-3 px-6 text-left">Name</th>
-                <th className="py-3 px-6 text-left">Category</th>
-                <th className="py-3 px-6 text-right">Price</th>
-                <th className="py-3 px-6 text-right">Quantity</th>
-                <th className="py-3 px-6 text-center">Availability</th>
-                <th className="py-3 px-6 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-600 dark:text-gray-300 text-sm font-light">
-              {products.map((product) => (
-                <tr
-                  key={product.id}
-                  className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <td className="py-3 px-6 text-left whitespace-nowrap">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-16 h-16 object-cover rounded-md"
-                        onError={(e) => {
-                          e.target.onerror = null; // Prevent infinite loop
-                          e.target.src = `https://placehold.co/64x64/E0E0E0/333333?text=No+Image`; // Placeholder
-                        }}
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-md flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
-                        No Image
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-3 px-6 text-left">{product.name}</td>
-                  <td className="py-3 px-6 text-left">{product.category}</td>
-                  <td className="py-3 px-6 text-right">
-                    ₹{product.price?.toLocaleString("en-IN")}
-                  </td>
-                  <td className="py-3 px-6 text-right">{product.quantity}</td>
-                  <td className="py-3 px-6 text-center">
+
+        {message && (
+          <div
+            className={`mb-6 p-4 rounded-lg text-center font-medium shadow-md ${
+              messageType === "success"
+                ? "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200"
+                : messageType === "info"
+                ? "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200"
+                : messageType === "warning"
+                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200"
+                : "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200"
+            } transition-colors duration-300`}
+          >
+            {message}
+          </div>
+        )}
+
+        {products.length === 0 ? (
+          <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-lg shadow-xl transition-colors duration-300">
+            <p className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-6">
+              It looks like you haven't added any products yet.
+            </p>
+            <button
+              onClick={() => navigate("/add-product")}
+              className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50"
+            >
+              <span className="mr-2">✨</span> Add Your First Product
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <div
+                key={product._id}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col justify-between transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl border border-gray-200 dark:border-gray-700"
+              >
+                <div>
+                  {product.imageUrls && product.imageUrls.length > 0 ? (
+                    <img
+                      src={product.imageUrls[0]}
+                      alt={product.name}
+                      className="w-full h-48 object-cover rounded-lg mb-4 shadow-sm border border-gray-100 dark:border-gray-700"
+                      onError={(e) => {
+                        e.target.onerror = null; // Prevent infinite loop
+                        e.target.src =
+                          "https://placehold.co/400x300/e0e0e0/555555?text=No+Image"; // Placeholder
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm">
+                      No Image Available
+                    </div>
+                  )}
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 leading-tight">
+                    {product.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 flex items-center">
+                    <span className="font-semibold mr-2">Category:</span>{" "}
+                    <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full text-xs font-medium">
+                      {product.category}
+                    </span>
+                  </p>
+                  <p className="text-base text-gray-700 dark:text-gray-300 mb-3 line-clamp-3">
+                    <span className="font-semibold">Description:</span>{" "}
+                    {product.description}
+                  </p>
+                  <p className="text-2xl font-extrabold text-green-600 dark:text-green-400 mb-2">
+                    ₹{product.price}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                    <span className="font-semibold">Quantity:</span>{" "}
+                    {product.quantity} units
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 flex items-center">
+                    <span className="font-semibold mr-2">Status:</span>{" "}
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      className={`font-bold px-2 py-0.5 rounded-full text-xs ${
                         product.availability
-                          ? "bg-green-200 text-green-800 dark:bg-green-700 dark:text-green-100"
-                          : "bg-red-200 text-red-800 dark:bg-red-700 dark:text-red-100"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                          : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
                       }`}
                     >
                       {product.availability ? "Available" : "Not Available"}
                     </span>
-                  </td>
-                  <td className="py-3 px-6 text-center">
-                    <div className="flex item-center justify-center space-x-3">
-                      <button
-                        onClick={() => handleEdit(product.id)}
-                        className="w-6 h-6 transform hover:text-blue-500 hover:scale-110"
-                        title="Edit Product"
-                        disabled={
-                          toggleAvailabilityMutation.isLoading ||
-                          deleteProductMutation.isLoading
-                        }
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 flex items-center">
+                    <span className="font-semibold mr-2">Location:</span>{" "}
+                    <span className="flex items-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 mr-1 text-red-500"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
                       >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleAvailabilityToggle(
-                            product.id,
-                            product.availability
-                          )
-                        }
-                        className="w-6 h-6 transform hover:text-yellow-500 hover:scale-110"
-                        title={
-                          product.availability
-                            ? "Mark as Unavailable"
-                            : "Mark as Available"
-                        }
-                        disabled={
-                          toggleAvailabilityMutation.isLoading ||
-                          deleteProductMutation.isLoading
-                        }
-                      >
-                        {product.availability ? "🚫" : "✅"}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="w-6 h-6 transform hover:text-red-500 hover:scale-110"
-                        title="Delete Product"
-                        disabled={
-                          toggleAvailabilityMutation.isLoading ||
-                          deleteProductMutation.isLoading
-                        }
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                        <path
+                          fillRule="evenodd"
+                          d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      {product.location.text}
+                    </span>
+                  </p>
+                </div>
+                <div className="mt-4 flex flex-col space-y-3">
+                  <button
+                    onClick={() => navigate(`/edit-product/${product._id}`)}
+                    className="w-full bg-yellow-500 text-white px-5 py-2.5 rounded-lg hover:bg-yellow-600 transition-colors duration-200 font-semibold text-base shadow-md hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50"
+                  >
+                    ✏️ Edit Product
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Implement delete logic here, maybe a confirmation modal
+                      setMessage(
+                        `Delete functionality for ${product.name} not yet implemented.`
+                      );
+                      setMessageType("info");
+                    }}
+                    className="w-full bg-red-600 text-white px-5 py-2.5 rounded-lg hover:bg-red-700 transition-colors duration-200 font-semibold text-base shadow-md hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+                  >
+                    🗑️ Delete Product
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

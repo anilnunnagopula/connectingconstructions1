@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
-import categories from "../../utils/Categories"; // Ensure this path is correct
+import categories from "../../utils/Categories"; 
 
 const googleMapsLibraries = ["places", "maps"];
 
@@ -131,6 +131,16 @@ const AddProduct = () => {
 
     const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
+    console.log(
+      "Cloudinary Cloud Name:",
+      process.env.REACT_APP_CLOUDINARY_CLOUD_NAME
+    );
+    console.log(
+      "Cloudinary Upload Preset:",
+      process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET
+    );
+    console.log("All envs:", process.env);
+
 
     if (!cloudName || !uploadPreset) {
       console.error("Cloudinary credentials not set in environment variables.");
