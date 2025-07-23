@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import categories from "../utils/Categories";
 import { useNavigate } from "react-router-dom";
 import Materials from "./Materials";
+import CommonServices from "../common-services/CommonServices";
 const Home = () => {
   const [showMobilePopup, setShowMobilePopup] = useState(false);
   const navigate = useNavigate();
@@ -39,7 +40,6 @@ const Home = () => {
           </div>
         </div>
       )}
-
       {/* 🔹 Hero Section */}
       <div
         className="w-full h-[95vh] bg-cover bg-center relative"
@@ -62,9 +62,12 @@ const Home = () => {
           </strong>
         </div>
       </div>
-
       {/* 🔹 Category Showcase */}
       <Materials />
+      <hr />
+      
+
+      <CommonServices />
     </div>
   );
 };

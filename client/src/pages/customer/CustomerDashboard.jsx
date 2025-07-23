@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import StatCard from "../../components/StatCard";
 import RecentOrders from "../../components/RecentOrders";
 import { ShoppingBag, Heart, History, Headset } from "lucide-react";
-
+import CommonServices from "../../common-services/CommonServices";
 // ✅ Safe localStorage parse
 function getUserSafely() {
   try {
@@ -123,7 +123,6 @@ const CustomerDashboard = () => {
           What are you building today? Explore materials and services tailored
           for you.
         </p>
-
         {/* 🔗 Quick Links */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           {cards.map((card, index) => (
@@ -139,9 +138,7 @@ const CustomerDashboard = () => {
             </div>
           ))}
         </div>
-
         <hr className="border-gray-300 dark:border-gray-700" />
-
         {/* 📊 Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10 mt-10">
           {stats.map((stat, idx) => (
@@ -153,14 +150,11 @@ const CustomerDashboard = () => {
             />
           ))}
         </div>
-
         <hr className="border-gray-300 dark:border-gray-700" />
-
         {/* 🧾 Recent Orders */}
         <div className="mb-10 mt-10">
           <RecentOrders orders={recentOrders} />
         </div>
-
         {/* 🛒 Start Shopping */}
         <div className="mt-10 text-center">
           <button
@@ -170,7 +164,11 @@ const CustomerDashboard = () => {
             🛒 Start Shopping Now
           </button>
         </div>
+
+        {/* Public & Government Services 🏛️ */}
       </div>
+      <hr />
+      <CommonServices/>
     </div>
   );
 };

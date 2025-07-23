@@ -47,7 +47,7 @@ const categories = [
   "Demolition works",
   "GIS",
   "Portable Cabins",
-  "Municipal Works",
+  // "Municipal Works",
   "Renovation Works",
   // "Contractors",
   // "Contractors",
