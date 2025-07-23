@@ -47,19 +47,24 @@ const Home = () => {
           backgroundImage: `url(${process.env.PUBLIC_URL}/building.jpg)`,
         }}
       >
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center text-white text-center px-4">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            The Amazon for Builders
+        <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center text-white text-center px-4 sm:px-6 transition-all duration-500">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold mb-3 drop-shadow-md leading-tight">
+            The One-Stop
+            <span className="block sm:inline"> Platform for Constructions</span>
           </h1>
-          <p className="text-xl md:text-2xl font-light mb-6">
-            Connecting the Core and the Code
+
+          <p className="text-base sm:text-lg md:text-xl font-medium italic mb-2 text-gray-200 drop-shadow-sm">
+            From Ground Levelling to Government Approvals
           </p>
+
+          <strong className="text-base sm:text-lg md:text-xl font-bold tracking-wide">
+            Connecting Core and Code
+          </strong>
         </div>
       </div>
 
       {/* 🔹 Category Showcase */}
-      <Materials/>
-      
+      <Materials />
     </div>
   );
 };

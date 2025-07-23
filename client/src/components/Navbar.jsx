@@ -65,7 +65,7 @@ const Navbar = () => {
   );
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-lg dark:shadow-xl px-4 py-2 sticky top-0 z-50 text-black dark:text-white transition-all">
+    <nav className="bg-white dark:bg-gray-800 shadow-lg dark:shadow-xl px-2 py-2 sticky top-0 z-50 text-black dark:text-white transition-all">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         {/* Logo */}
         <button
@@ -175,7 +175,7 @@ const Navbar = () => {
         <div className="md:hidden flex items-center gap-1">
           <VoiceCommand />
           <button
-            className="text-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-1"
+            className="text-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-0.5"
             onClick={() => setIsOpen(!isOpen)}
             aria-label={isOpen ? "Close menu" : "Open menu"}
           >
