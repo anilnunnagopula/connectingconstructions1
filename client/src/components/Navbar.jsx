@@ -4,6 +4,7 @@ import { Menu, X, Sun, Moon } from "lucide-react";
 import categories from "../utils/Categories";
 import { useDarkMode } from "../context/DarkModeContext";
 import VoiceCommand from "../ai/VoiceCommand";
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -69,7 +70,7 @@ const Navbar = () => {
         {/* Logo */}
         <button
           onClick={navigateToRoleDashboard}
-          className="text-2xl font-bold text-blue-700 dark:text-blue-400 "
+          className="text-xl md:text-2xl font-bold text-blue-700 dark:text-blue-400"
         >
           ConnectingConstructions
         </button>
@@ -170,21 +171,27 @@ const Navbar = () => {
           <VoiceCommand />
         </div>
 
-        {/* Mobile Hamburger Icon */}
-        <button
-          className="md:hidden text-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label={isOpen ? "Close menu" : "Open menu"}
-        >
-          {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        {/* Mobile Voice + Hamburger Icon */}
+        <div className="md:hidden flex items-center gap-1">
+          <VoiceCommand />
+          <button
+            className="text-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-1"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label={isOpen ? "Close menu" : "Open menu"}
+          >
+            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Dropdown Menu */}
       {isOpen && (
         <div className="md:hidden mt-4 flex flex-col gap-3 px-2 pb-4 animate-fade-in-down">
           <button
-            onClick={navigateToRoleDashboard}
+            onClick={() => {
+              navigateToRoleDashboard();
+              setIsOpen(false);
+            }}
             className="hover:text-blue-600 dark:hover:text-blue-300 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
           >
             Home
@@ -216,6 +223,7 @@ const Navbar = () => {
           {!isLoggedIn && (
             <Link
               to="/about"
+              onClick={() => setIsOpen(false)}
               className="hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
             >
               About
@@ -224,6 +232,7 @@ const Navbar = () => {
 
           <Link
             to="/contact"
+            onClick={() => setIsOpen(false)}
             className="hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
           >
             Contact
@@ -231,7 +240,10 @@ const Navbar = () => {
 
           <div className="flex justify-between items-center">
             <button
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => {
+                setDarkMode(!darkMode);
+                setIsOpen(false);
+              }}
               className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:scale-110 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
               title="Toggle Theme"
             >
@@ -244,7 +256,10 @@ const Navbar = () => {
 
             {isLoggedIn ? (
               <button
-                onClick={handleLogout}
+                onClick={() => {
+                  handleLogout();
+                  setIsOpen(false);
+                }}
                 className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition focus:outline-none focus:ring-2 focus:ring-red-500"
               >
                 Logout
@@ -252,6 +267,7 @@ const Navbar = () => {
             ) : (
               <Link
                 to="/login"
+                onClick={() => setIsOpen(false)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 SignUp
