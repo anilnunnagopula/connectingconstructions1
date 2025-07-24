@@ -74,7 +74,29 @@ import ReturnRefundPolicy from "./pages/legal/ReturnRefundPolicy.jsx";
 import ShippingPolicy from "./pages/legal/ShippingPolicy.jsx";
 import CancellationPolicy from "./pages/legal/CancellationPolicy.jsx";
 
+// Import Customer Policy Components
+import OrderPlacementTracking from './pages/legal/OrderPlacementTracking';
+import PaymentRefundGuidelines from './pages/legal/PaymentRefundGuidelines';
+import ReviewSystemIntegrity from './pages/legal/ReviewSystemIntegrity';
+import SupportGrievanceRedressal from './pages/legal/SupportGrievanceRedressal';
+import CustomerAgreement from './pages/legal/CustomerAgreement'; 
+import PlatformPolicy from './pages/legal/PlatformPolicy';
+import GeneralReviewPolicy from './pages/legal/GeneralReviewPolicy';
+import Disputes from './pages/legal/Disputes'; 
+import LocationTerms from './pages/legal/LocationTerms'; 
+import LaborTerms from './pages/legal/LaborTerms';
 
+// Import Smart Platform Policy Components
+import AIGeneratedInsightsDisclaimer from './pages/legal/AIGeneratedInsightsDisclaimer';
+import AlgorithmicFairnessPolicy from "./pages/legal/AlgorithmicFairnessPolicy";
+import TransparentRecommendationLogic from "./pages/legal/TransparentRecommendationLogic";
+import UserConsentForSmartFeatures from "./pages/legal/UserConsentForSmartFeatures";
+
+// Import Monetization & Revenue Policy Components
+import SubscriptionPlans from "./pages/legal/SubscriptionPolicy.jsx";
+import CommissionModelOverview from "./pages/legal/CommissionModelOverview";
+import AdPlacementFeaturedListings from "./pages/legal/AdPlacementFeaturedListings";
+import AffiliateRevenueProgram from "./pages/legal/AffiliateRevenueProgram";
 // Import context providers
 import { DarkModeProvider } from "./context/DarkModeContext";
 import { CartProvider } from "./context/CartContext";
@@ -203,6 +225,79 @@ function App() {
                       <Route
                         path="/legal/cancellationpolicy"
                         element={<CancellationPolicy />}
+                      />
+                      {/* Customer Policy Pages */}
+                      {/* Customer Policy Pages - UPDATED ROUTES TO MATCH /legal/policyname */}
+                      <Route
+                        path="/legal/orderplacementtracking"
+                        element={<OrderPlacementTracking />}
+                      />
+                      <Route
+                        path="/legal/paymentrefundguidelines"
+                        element={<PaymentRefundGuidelines />}
+                      />
+                      <Route
+                        path="/legal/reviewsystemintegrity"
+                        element={<ReviewSystemIntegrity />}
+                      />
+                      <Route
+                        path="/legal/supportgrievance"
+                        element={<SupportGrievanceRedressal />}
+                      />
+                      <Route
+                        path="/legal/customeragreement"
+                        element={<CustomerAgreement />}
+                      />
+                      <Route
+                        path="/legal/platformpolicy"
+                        element={<PlatformPolicy />}
+                      />
+                      <Route
+                        path="/legal/reviewpolicy"
+                        element={<GeneralReviewPolicy />}
+                      />
+                      <Route path="/legal/disputes" element={<Disputes />} />
+                      <Route
+                        path="/legal/locationterms"
+                        element={<LocationTerms />}
+                      />
+                      <Route
+                        path="/legal/laborterms"
+                        element={<LaborTerms />}
+                      />
+                      {/* Smart Platform Policies */}
+                      <Route
+                        path="/legal/aigeneratedinsightsdisclaimer"
+                        element={<AIGeneratedInsightsDisclaimer />}
+                      />
+                      <Route
+                        path="/legal/algorithmicfairnesspolicy"
+                        element={<AlgorithmicFairnessPolicy />}
+                      />
+                      <Route
+                        path="/legal/transparentrecommendationlogic"
+                        element={<TransparentRecommendationLogic />}
+                      />
+                      <Route
+                        path="/legal/userconsentforsmartfeatures"
+                        element={<UserConsentForSmartFeatures />}
+                      />
+                      {/* Monetization & Revenue Policies */}
+                      <Route
+                        path="/legal/suppliersubscriptionplans"
+                        element={<SubscriptionPlans />}
+                      />
+                      <Route
+                        path="/legal/commissionmodel"
+                        element={<CommissionModelOverview />}
+                      />
+                      <Route
+                        path="/legal/adplacement"
+                        element={<AdPlacementFeaturedListings />}
+                      />
+                      <Route
+                        path="/legal/affiliaterevenueprogram"
+                        element={<AffiliateRevenueProgram />}
                       />
                       {/* Supplier Public-ish Routes (can be accessed without ProtectedRoute if desired, but often linked from dashboard) */}
                       <Route

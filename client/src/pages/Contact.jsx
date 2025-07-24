@@ -1,4 +1,5 @@
 import React from "react";
+import { useEffect } from "react";
 import { FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa"; 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -31,6 +32,11 @@ const handleSubmit = async (e) => {
 };
 
 const Contact = () => {
+  useEffect(() => {
+      // Scrolls to the top of the page when the component mounts
+      window.scrollTo(0, 0);
+    }, []);
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800 px-4 py-6 text-gray-800 dark:text-white">
       <div className="max-w-6xl mx-auto">
@@ -40,8 +46,7 @@ const Contact = () => {
             💬 Get in Touch
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-lg">
-            We're here to help students find hostels and owners list them with
-            ease!
+            We're here to help user to find constrcution materials and suppliers  list their products.
           </p>
         </div>
 

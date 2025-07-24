@@ -68,9 +68,14 @@ const SupplierPartner = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-10 text-black-800 dark:text-white">
+        <h1 className="text-4xl font-bold text-center mb-6 text-black-800 dark:text-white">
           Supplier & Partner Policies
         </h1>
+        <p className="mb-6 text-lg leading-relaxed text-gray-700 dark:text-gray-300 text-center">
+          Learn how ConnectingConstructions monetizes and sustains operations,
+          while staying transparent and fair.{" "}
+          {/* This is the text you provided */}
+        </p>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {policies.map((item, index) => (
@@ -89,6 +94,10 @@ const SupplierPartner = () => {
             </Link>
           ))}
         </div>
+        <p className="mt-12 text-sm text-center italic text-gray-500 dark:text-gray-400">
+          For any clarifications, please refer to the specific policy pages or
+          contact our support team.
+        </p>
       </div>
     </div>
   );

@@ -64,7 +64,7 @@ const About = () => {
         </p>
 
         <div className="mt-12 text-sm text-gray-500 dark:text-gray-400 italic">
-          💡 Crafted with precision, passion & purpose by a fellow Civil + Code
+          💡 Crafted with precision, passion & purpose by a fellow Civil who is Code
           enthusiast.
         </div>
 

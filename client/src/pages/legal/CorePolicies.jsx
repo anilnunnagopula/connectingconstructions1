@@ -76,6 +76,10 @@ const CorePolicies = () => {
             </Link>
           ))}
         </div>
+        <p className="mt-12 text-sm text-center italic text-gray-500 dark:text-gray-400">
+          For any clarifications, please refer to the specific policy pages or
+          contact our support team.
+        </p>
       </div>
     </div>
   );
