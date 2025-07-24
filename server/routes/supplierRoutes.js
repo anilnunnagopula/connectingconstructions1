@@ -1,35 +1,57 @@
-// server/routes/supplierRoutes.js (Example)
+// server/routes/supplierRoutes.js
 const express = require("express");
 const router = express.Router();
-const Product = require("../models/Product");
-const User = require("../models/User"); // Assuming you have a User model
+const { protect, authorizeRoles } = require("../middleware/authMiddleware"); // Import middlewares
 
-// GET /api/supplier/products - Fetch all products for a logged-in supplier
-router.get("/products", async (req, res) => {
-  try {
-    // In a real application, supplierId would come from an authenticated user's token
-    // For now, we'll use a query parameter as discussed.
-    const supplierEmail = req.query.supplierEmail;
+// Import product controller functions
+const {
+  addProduct,
+  getSupplierProductById, // Renamed for clarity, handles supplier's own product
+  updateProduct,
+  deleteProduct,
+  getMyProducts,
+  getAllProductsPublic, // For public access to all products
+  getProductByIdPublic, // For public access to a single product by ID
+} = require("../controllers/productController");
 
-    if (!supplierEmail) {
-      return res.status(400).json({ error: "Supplier email is required." });
-    }
+// Import supplier dashboard controller function
+const {
+  getSupplierDashboardData,
+} = require("../controllers/supplierDashboardController");
 
-    // Find the user by email to get their MongoDB _id
-    const user = await User.findOne({ email: supplierEmail });
+// --- Public Product Routes (Accessible by anyone, including customers Browse) ---
+router.get("/products", getAllProductsPublic); // GET /api/supplier/products (All products)
+router.get("/products/:id", getProductByIdPublic); // GET /api/supplier/products/:id (Single product by ID)
 
-    if (!user) {
-      return res.status(404).json({ error: "Supplier not found." });
-    }
+// --- Supplier-specific Protected Routes (Require authentication and 'supplier' role) ---
 
-    // Find all products associated with this supplier's _id
-    const products = await Product.find({ supplierId: user._id });
+// Route for Supplier Dashboard Data
+router.get(
+  "/dashboard",
+  protect,
+  authorizeRoles("supplier"),
+  getSupplierDashboardData
+); // GET /api/supplier/dashboard
 
-    res.status(200).json(products);
-  } catch (error) {
-    console.error("Error fetching supplier products:", error);
-    res.status(500).json({ error: "Failed to fetch products." });
-  }
-});
+// Routes for managing supplier's own products
+router
+  .route("/myproducts")
+  .post(protect, authorizeRoles("supplier"), addProduct) // POST /api/supplier/myproducts - Add a new product
+  .get(protect, authorizeRoles("supplier"), getMyProducts); // GET /api/supplier/myproducts - Get all products by the authenticated supplier
+
+router
+  .route("/myproducts/:id")
+  .get(protect, authorizeRoles("supplier"), getSupplierProductById) // GET /api/supplier/myproducts/:id - Get specific product owned by supplier
+  .put(protect, authorizeRoles("supplier"), updateProduct) // PUT /api/supplier/myproducts/:id - Update specific product owned by supplier
+  .delete(protect, authorizeRoles("supplier"), deleteProduct); // DELETE /api/supplier/myproducts/:id - Delete specific product owned by supplier
+
+// The /suppliers/:id/location route you had here seemed to be for a separate 'Supplier' model.
+// If suppliers are just 'User's with role 'supplier', then location updates should be handled via user profile updates,
+// or specific routes on the product if a product has a different location than the supplier's profile.
+// Assuming supplier location is part of the User model or product specific location:
+// If supplier location is stored on User model, update it via /api/auth/profile PUT route.
+// If it's on Product, it's handled by product update.
+// Removing this specific route for now to avoid confusion. You can re-add if you have a separate Supplier model.
+// router.put("/suppliers/:id/location", /* ... */);
 
 module.exports = router;

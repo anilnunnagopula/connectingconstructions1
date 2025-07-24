@@ -2,10 +2,23 @@
 
 var User = require("../models/User");
 
-var sendEmail = require("../utils/sendEmail");
+var sendEmail = require("../utils/sendEmail"); // Assuming this utility exists
 
-var bcrypt = require("bcryptjs"); // Import bcryptjs
-// Helper function for validation
+
+var jwt = require("jsonwebtoken"); // NEW: Import jsonwebtoken for creating tokens
+// Helper function to generate a JWT token
+
+
+var generateToken = function generateToken(id, role) {
+  // Make sure JWT_SECRET is defined in your .env file
+  return jwt.sign({
+    id: id,
+    role: role
+  }, process.env.JWT_SECRET, {
+    expiresIn: "1h" // Token valid for 1 hour (adjust as needed)
+
+  });
+}; // Helper function for basic validation (already good, but slightly refined)
 
 
 var validateInput = function validateInput(data, fields) {
@@ -17,7 +30,8 @@ var validateInput = function validateInput(data, fields) {
     for (var _iterator = fields[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
       var field = _step.value;
 
-      if (!data[field]) {
+      if (!data[field] || String(data[field]).trim() === "") {
+        // Check for empty strings too
         throw new Error("".concat(field, " is required"));
       }
     }
@@ -35,11 +49,13 @@ var validateInput = function validateInput(data, fields) {
       }
     }
   }
-}; // Register User
+}; // @desc    Register a new user
+// @route   POST /api/auth/register
+// @access  Public
 
 
 var registerUser = function registerUser(req, res) {
-  var _req$body, role, email, password, name, existingUser, newUser;
+  var _req$body, role, email, password, name, username, existingUser, field, newUser, token;
 
   return regeneratorRuntime.async(function registerUser$(_context) {
     while (1) {
@@ -47,25 +63,23 @@ var registerUser = function registerUser(req, res) {
         case 0:
           _context.prev = 0;
           console.log("Incoming registration request:", req.body);
-          _req$body = req.body, role = _req$body.role, email = _req$body.email, password = _req$body.password, name = _req$body.name;
+          _req$body = req.body, role = _req$body.role, email = _req$body.email, password = _req$body.password, name = _req$body.name, username = _req$body.username; // Added username
+          // Validate required fields
 
-          if (!(!role || !email || !password || !name)) {
-            _context.next = 5;
-            break;
-          }
+          validateInput(req.body, ["role", "email", "password", "name", "username"]); // Added username validation
 
-          return _context.abrupt("return", res.status(400).json({
-            error: "All fields required"
-          }));
+          console.log("Checking for existing user..."); // Check if user already exists by email OR username
 
-        case 5:
-          console.log("Checking for existing user...");
-          _context.next = 8;
+          _context.next = 7;
           return regeneratorRuntime.awrap(User.findOne({
-            email: email
-          }).maxTimeMS(10000).exec());
+            $or: [{
+              email: email
+            }, {
+              username: username
+            }]
+          }).maxTimeMS(10000));
 
-        case 8:
+        case 7:
           existingUser = _context.sent;
 
           if (!existingUser) {
@@ -73,8 +87,9 @@ var registerUser = function registerUser(req, res) {
             break;
           }
 
+          field = existingUser.email === email ? "Email" : "Username";
           return _context.abrupt("return", res.status(400).json({
-            error: "Email already exists"
+            error: "".concat(field, " already exists.")
           }));
 
         case 11:
@@ -84,39 +99,51 @@ var registerUser = function registerUser(req, res) {
             role: role,
             email: email,
             password: password,
-            name: name
-          });
+            name: name,
+            username: username
+          }); // Pass username
+
           _context.next = 15;
           return regeneratorRuntime.awrap(newUser.save());
 
         case 15:
           // This triggers the pre-save hook to hash 'password'
+          // Generate token upon successful registration for immediate login
+          token = generateToken(newUser._id, newUser.role);
           res.status(201).json({
-            message: "Registration successful"
+            message: "Registration successful",
+            _id: newUser._id,
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role,
+            token: token // Send the token
+
           });
-          _context.next = 22;
+          _context.next = 23;
           break;
 
-        case 18:
-          _context.prev = 18;
+        case 19:
+          _context.prev = 19;
           _context.t0 = _context["catch"](0);
-          console.error("Registration error:", _context.t0);
-          res.status(500).json({
-            error: "Registration failed",
-            details: _context.t0.message
+          console.error("Registration error:", _context.t0); // Provide more specific error messages from validation, otherwise generic server error
+
+          res.status(_context.t0.message.includes("required") ? 400 : 500).json({
+            error: _context.t0.message || "Registration failed due to server error."
           });
 
-        case 22:
+        case 23:
         case "end":
           return _context.stop();
       }
     }
-  }, null, null, [[0, 18]]);
-}; // Login User
+  }, null, null, [[0, 19]]);
+}; // @desc    Login User
+// @route   POST /api/auth/login
+// @access  Public
 
 
 var loginUser = function loginUser(req, res) {
-  var _req$body2, email, password, role, user, isMatch;
+  var _req$body2, email, password, role, user, isMatch, token;
 
   return regeneratorRuntime.async(function loginUser$(_context2) {
     while (1) {
@@ -124,64 +151,60 @@ var loginUser = function loginUser(req, res) {
         case 0:
           _context2.prev = 0;
           console.log("Incoming login request:", req.body);
-          _req$body2 = req.body, email = _req$body2.email, password = _req$body2.password, role = _req$body2.role;
+          _req$body2 = req.body, email = _req$body2.email, password = _req$body2.password, role = _req$body2.role; // Assuming role is also sent from frontend for specific login
 
-          if (!(!email || !password || !role)) {
-            _context2.next = 5;
-            break;
-          }
+          validateInput(req.body, ["email", "password", "role"]);
+          console.log("Attempting to find user with email: '".concat(email, "' and role: '").concat(role, "'")); // Find user by email AND role
 
-          return _context2.abrupt("return", res.status(400).json({
-            error: "Email, password, and role are required"
-          }));
-
-        case 5:
-          console.log("Attempting to find user with email: '".concat(email, "' and role: '").concat(role, "'"));
-          _context2.next = 8;
+          _context2.next = 7;
           return regeneratorRuntime.awrap(User.findOne({
             email: email,
             role: role
           }));
 
-        case 8:
+        case 7:
           user = _context2.sent;
 
           if (user) {
-            _context2.next = 12;
+            _context2.next = 11;
             break;
           }
 
           console.log("Login attempt: User not found for provided email/role combination.");
           return _context2.abrupt("return", res.status(401).json({
-            error: "Invalid credentials"
+            error: "Invalid credentials (email/role mismatch)."
           }));
 
-        case 12:
-          // IMPORTANT CHANGE: Use bcrypt.compare() to compare the provided password with the hashed password
+        case 11:
+          // IMPORTANT CHANGE: Use the matchPassword method from the User model
           console.log("Login attempt: User found. Comparing passwords...");
-          _context2.next = 15;
-          return regeneratorRuntime.awrap(bcrypt.compare(password, user.password));
+          _context2.next = 14;
+          return regeneratorRuntime.awrap(user.matchPassword(password));
 
-        case 15:
+        case 14:
           isMatch = _context2.sent;
 
           if (isMatch) {
-            _context2.next = 19;
+            _context2.next = 18;
             break;
           }
 
           console.log("Login attempt: Password mismatch.");
           return _context2.abrupt("return", res.status(401).json({
-            error: "Invalid credentials"
+            error: "Invalid credentials (password mismatch)."
           }));
 
-        case 19:
-          console.log("Login successful for user: ".concat(user.email, " (").concat(user.role, ")"));
+        case 18:
+          console.log("Login successful for user: ".concat(user.email, " (").concat(user.role, ")")); // Generate and send JWT token
+
+          token = generateToken(user._id, user.role);
           res.json({
             message: "Login successful",
+            _id: user._id,
+            name: user.name,
+            email: user.email,
             role: user.role,
-            name: user.name // You might want to send a JWT token here for actual authentication
-            // token: generateAuthToken(user)
+            token: token // Send the token
 
           });
           _context2.next = 27;
@@ -190,10 +213,9 @@ var loginUser = function loginUser(req, res) {
         case 23:
           _context2.prev = 23;
           _context2.t0 = _context2["catch"](0);
-          console.error("Login error:", _context2.t0); // Be careful with exposing err.message directly in production for security reasons
-
-          res.status(500).json({
-            error: "Login failed: " + _context2.t0.message
+          console.error("Login error:", _context2.t0);
+          res.status(_context2.t0.message.includes("required") ? 400 : 500).json({
+            error: _context2.t0.message || "Login failed due to server error."
           });
 
         case 27:
@@ -202,11 +224,13 @@ var loginUser = function loginUser(req, res) {
       }
     }
   }, null, null, [[0, 23]]);
-}; // Send OTP
+}; // @desc    Send OTP for password reset
+// @route   POST /api/auth/send-otp
+// @access  Public
 
 
 var sendOtp = function sendOtp(req, res) {
-  var user, otp, expiresAt;
+  var user, timeSinceLastOtp, otp, expiresAt;
   return regeneratorRuntime.async(function sendOtp$(_context3) {
     while (1) {
       switch (_context3.prev = _context3.next) {
@@ -226,67 +250,70 @@ var sendOtp = function sendOtp(req, res) {
             break;
           }
 
-          return _context3.abrupt("return", res.status(404).json({
-            error: "User not found"
+          return _context3.abrupt("return", res.status(200).json({
+            message: "If an account with that email exists, an OTP has been sent."
           }));
 
         case 7:
           if (!(user.otp && user.otp.expiresAt && user.otp.expiresAt.getTime() > Date.now())) {
-            _context3.next = 10;
+            _context3.next = 11;
             break;
           }
 
-          if (!(user.otp.expiresAt.getTime() - Date.now() < 4 * 60 * 1000)) {
-            _context3.next = 10;
+          timeSinceLastOtp = (user.otp.expiresAt.getTime() - Date.now()) / 1000; // Remaining time in seconds
+
+          if (!(timeSinceLastOtp > 240)) {
+            _context3.next = 11;
             break;
           }
 
           return _context3.abrupt("return", res.status(429).json({
-            error: "Please wait before requesting another OTP."
+            error: "Please wait ".concat(Math.ceil(timeSinceLastOtp - 240), " seconds before requesting another OTP.")
           }));
 
-        case 10:
+        case 11:
           otp = Math.floor(100000 + Math.random() * 900000).toString();
-          expiresAt = Date.now() + 300000; // 5 minutes (in milliseconds)
+          expiresAt = Date.now() + 300000; // 5 minutes validity
 
           user.otp = {
             code: otp,
             expiresAt: new Date(expiresAt)
           };
-          _context3.next = 15;
+          _context3.next = 16;
           return regeneratorRuntime.awrap(user.save());
 
-        case 15:
-          _context3.next = 17;
-          return regeneratorRuntime.awrap(sendEmail(req.body.email, "Your Password Reset OTP", "Your OTP code is: ".concat(otp)));
+        case 16:
+          _context3.next = 18;
+          return regeneratorRuntime.awrap(sendEmail(req.body.email, "Your Connecting Constructions Password Reset OTP", "Your OTP code for password reset is: ".concat(otp, ". This code is valid for 5 minutes.")));
 
-        case 17:
+        case 18:
           res.json({
             message: "OTP sent successfully! Please check your email."
           });
-          _context3.next = 24;
+          _context3.next = 25;
           break;
 
-        case 20:
-          _context3.prev = 20;
+        case 21:
+          _context3.prev = 21;
           _context3.t0 = _context3["catch"](0);
-          console.error("Send OTP error:", _context3.t0); // Log the actual error
-
+          console.error("Send OTP error:", _context3.t0);
           res.status(500).json({
-            error: _context3.t0.message || "Failed to send OTP."
-          }); // Provide a generic message for security
+            error: "Failed to send OTP. Please try again later."
+          }); // Generic message for security
 
-        case 24:
+        case 25:
         case "end":
           return _context3.stop();
       }
     }
-  }, null, null, [[0, 20]]);
-}; // Reset Password
+  }, null, null, [[0, 21]]);
+}; // @desc    Reset Password with OTP
+// @route   POST /api/auth/reset-password
+// @access  Public
 
 
 var resetPassword = function resetPassword(req, res) {
-  var _req$body3, email, otp, newPassword, user, salt;
+  var _req$body3, email, otp, newPassword, user;
 
   return regeneratorRuntime.async(function resetPassword$(_context4) {
     while (1) {
@@ -308,89 +335,215 @@ var resetPassword = function resetPassword(req, res) {
             break;
           }
 
-          return _context4.abrupt("return", res.status(404).json({
-            error: "User not found."
+          return _context4.abrupt("return", res.status(400).json({
+            error: "Invalid request (user not found for email)."
           }));
 
         case 8:
-          if (!(!user.otp || !user.otp.code || !user.otp.expiresAt)) {
+          if (!(!user.otp || user.otp.code !== otp)) {
             _context4.next = 10;
             break;
           }
 
           return _context4.abrupt("return", res.status(400).json({
-            error: "No OTP found for this user or invalid request."
+            error: "Invalid or incorrect OTP code."
           }));
 
         case 10:
-          if (!(user.otp.code !== otp)) {
-            _context4.next = 12;
-            break;
-          }
-
-          return _context4.abrupt("return", res.status(400).json({
-            error: "Invalid OTP code."
-          }));
-
-        case 12:
           if (!(user.otp.expiresAt < new Date())) {
-            _context4.next = 17;
+            _context4.next = 15;
             break;
           }
 
-          // Clear expired OTP to prevent reuse
-          user.otp = undefined;
-          _context4.next = 16;
+          user.otp = undefined; // Clear expired OTP
+
+          _context4.next = 14;
           return regeneratorRuntime.awrap(user.save());
 
-        case 16:
+        case 14:
           return _context4.abrupt("return", res.status(400).json({
             error: "OTP expired. Please request a new one."
           }));
 
-        case 17:
-          _context4.next = 19;
-          return regeneratorRuntime.awrap(bcrypt.genSalt(10));
+        case 15:
+          // Hash the new password using the User model's pre-save hook
+          user.password = newPassword; // The pre-save hook will hash this on save
 
-        case 19:
-          salt = _context4.sent;
-          _context4.next = 22;
-          return regeneratorRuntime.awrap(bcrypt.hash(newPassword, salt));
-
-        case 22:
-          user.password = _context4.sent;
           user.otp = undefined; // Clear OTP after successful reset
 
-          _context4.next = 26;
+          _context4.next = 19;
           return regeneratorRuntime.awrap(user.save());
 
-        case 26:
+        case 19:
           res.json({
             message: "Password reset successful!"
           });
-          _context4.next = 33;
+          _context4.next = 26;
           break;
 
-        case 29:
-          _context4.prev = 29;
+        case 22:
+          _context4.prev = 22;
           _context4.t0 = _context4["catch"](0);
           console.error("Reset Password error:", _context4.t0);
           res.status(500).json({
-            error: _context4.t0.message || "Failed to reset password."
+            error: "Failed to reset password. Please try again later."
           });
 
-        case 33:
+        case 26:
         case "end":
           return _context4.stop();
       }
     }
-  }, null, null, [[0, 29]]);
+  }, null, null, [[0, 22]]);
+}; // NEW: @desc    Get current authenticated user's profile
+// @route   GET /api/auth/profile
+// @access  Private (requires 'protect' middleware)
+
+
+var getUserProfile = function getUserProfile(req, res) {
+  var user;
+  return regeneratorRuntime.async(function getUserProfile$(_context5) {
+    while (1) {
+      switch (_context5.prev = _context5.next) {
+        case 0:
+          if (!req.user) {
+            _context5.next = 6;
+            break;
+          }
+
+          _context5.next = 3;
+          return regeneratorRuntime.awrap(User.findById(req.user.id).select("-password"));
+
+        case 3:
+          user = _context5.sent;
+
+          if (!user) {
+            _context5.next = 6;
+            break;
+          }
+
+          return _context5.abrupt("return", res.json({
+            _id: user._id,
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            phoneNumber: user.phoneNumber,
+            address: user.address,
+            createdAt: user.createdAt
+          }));
+
+        case 6:
+          res.status(404).json({
+            message: "User not found."
+          });
+
+        case 7:
+        case "end":
+          return _context5.stop();
+      }
+    }
+  });
+}; // NEW: @desc    Update current authenticated user's profile
+// @route   PUT /api/auth/profile
+// @access  Private (requires 'protect' middleware)
+
+
+var updateUserProfile = function updateUserProfile(req, res) {
+  var user, updatedUser, token;
+  return regeneratorRuntime.async(function updateUserProfile$(_context6) {
+    while (1) {
+      switch (_context6.prev = _context6.next) {
+        case 0:
+          if (req.user) {
+            _context6.next = 2;
+            break;
+          }
+
+          return _context6.abrupt("return", res.status(401).json({
+            message: "Not authorized."
+          }));
+
+        case 2:
+          _context6.prev = 2;
+          _context6.next = 5;
+          return regeneratorRuntime.awrap(User.findById(req.user.id));
+
+        case 5:
+          user = _context6.sent;
+
+          if (!user) {
+            _context6.next = 20;
+            break;
+          }
+
+          // Update fields if they are provided in the request body
+          user.name = req.body.name || user.name;
+          user.username = req.body.username || user.username;
+          user.email = req.body.email || user.email;
+          user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+          user.address = req.body.address || user.address; // You might or might not allow role change via profile update. For now, we'll keep it.
+          // user.role = req.body.role || user.role;
+
+          if (req.body.newPassword) {
+            // If a new password is provided, update it
+            user.password = req.body.newPassword; // Pre-save hook will hash this
+          }
+
+          _context6.next = 15;
+          return regeneratorRuntime.awrap(user.save());
+
+        case 15:
+          updatedUser = _context6.sent;
+          // Generate a new token if user data critical to token (like role) changes, or simply to refresh session
+          token = generateToken(updatedUser._id, updatedUser.role);
+          res.json({
+            message: "Profile updated successfully!",
+            _id: updatedUser._id,
+            name: updatedUser.name,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            role: updatedUser.role,
+            phoneNumber: updatedUser.phoneNumber,
+            address: updatedUser.address,
+            token: token // Send new token
+
+          });
+          _context6.next = 21;
+          break;
+
+        case 20:
+          res.status(404).json({
+            message: "User not found."
+          });
+
+        case 21:
+          _context6.next = 27;
+          break;
+
+        case 23:
+          _context6.prev = 23;
+          _context6.t0 = _context6["catch"](2);
+          console.error("Update profile error:", _context6.t0);
+          res.status(500).json({
+            error: "Failed to update profile: " + _context6.t0.message
+          });
+
+        case 27:
+        case "end":
+          return _context6.stop();
+      }
+    }
+  }, null, null, [[2, 23]]);
 };
 
 module.exports = {
   registerUser: registerUser,
   loginUser: loginUser,
   sendOtp: sendOtp,
-  // Removed verifyOtp as it's typically combined into resetPassword for a single flow
-  resetPassword: resetPassword
+  resetPassword: resetPassword,
+  getUserProfile: getUserProfile,
+  // Export new function
+  updateUserProfile: updateUserProfile // Export new function
+
 };

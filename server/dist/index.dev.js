@@ -13,6 +13,12 @@ var authRoutes = require("./routes/auth");
 
 var supplierRoutes = require("./routes/supplierRoutes");
 
+var customerRoutes = require("./routes/customerRoutes"); // NEW: Import customer routes
+
+
+var generalRoutes = require("./routes/generalRoutes"); // NEW: Import general routes
+
+
 var app = express(); // console.log("✅ MONGO_URI =", process.env.MONGO_URI);
 // Connect to MongoDB
 
@@ -39,7 +45,10 @@ app.use(express.urlencoded({
 })); // Routes
 
 app.use("/api/auth", authRoutes);
-app.use("/api/supplier", supplierRoutes); // Basic route for testing server
+app.use("/api/supplier", supplierRoutes);
+app.use("/api/customer", customerRoutes); // NEW: Mount customer routes
+
+app.use("/", generalRoutes); // Basic route for testing server
 
 app.get("/", function (req, res) {
   res.send("API is running...");

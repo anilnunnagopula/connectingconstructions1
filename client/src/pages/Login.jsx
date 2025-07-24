@@ -25,7 +25,9 @@ const Login = () => {
       return;
     }
 
-    // Test credentials
+    // --- IMPORTANT: Remove or disable these hardcoded test credentials in production ---
+    // They bypass your actual backend authentication.
+    // For development, they can be useful, but ensure they are not deployed.
     if (
       (formData.role === "customer" &&
         formData.email === "customer@gmail.com" &&
@@ -34,17 +36,23 @@ const Login = () => {
         formData.email === "supplier@gmail.com" &&
         formData.password === "supplier")
     ) {
+      // For these test credentials, you'd also need to mock a token if you plan to use them for protected routes.
+      // For now, if you use this, protected routes will still fail without a real token.
       localStorage.setItem(
         "user",
         JSON.stringify({
           name: formData.email.split("@")[0],
           email: formData.email,
           role: formData.role,
+          // Mock a token here IF you still want to use these for testing protected routes,
+          // but it's better to just use real user registrations for that.
+          // token: "mock-token-for-testing-only"
         })
       );
       navigate(`/${formData.role}-dashboard`);
       return;
     }
+    // --- End of hardcoded test credentials block ---
 
     try {
       const response = await fetch(
@@ -56,19 +64,31 @@ const Login = () => {
         }
       );
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Login failed");
+      const data = await response.json(); // Always parse JSON for error details
+      if (!response.ok) {
+        // If response.ok is false, it's an HTTP error (e.g., 400, 401, 500)
+        // The backend sends { error: "Invalid credentials" } or similar
+        throw new Error(data.error || "Login failed.");
+      }
 
+      // --- CRUCIAL CHANGE HERE: Store the token and _id from the backend response ---
       localStorage.setItem(
         "user",
         JSON.stringify({
-          name: data.name || formData.email.split("@")[0],
-          email: formData.email,
+          _id: data._id, // Store the user's MongoDB ID
+          name: data.name, // The backend now sends the user's name
+          email: data.email,
           role: data.role,
+          token: data.token, // Store the JWT token from the backend
+          username: data.username, // Store username if returned and needed on client-side
         })
       );
+      // --- End of CRUCIAL CHANGE ---
+
+      // Navigate to the correct dashboard based on the role returned from the server
       navigate(`/${data.role}-dashboard`);
     } catch (err) {
+      console.error("Login submission error:", err);
       setError(err.message || "Login failed. Please try again.");
     }
   };

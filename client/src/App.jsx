@@ -42,7 +42,9 @@ import Footer from "./components/Footer";
 import Materials from "./pages/Materials";
 import MyProducts from "./pages/supplier/MyProducts";
 import AddProduct from "./pages/supplier/AddProduct";
-import EditProduct from "./pages/supplier/EditProduct"; // Make sure this import is present
+import EditProduct from "./pages/supplier/EditProduct"; 
+import LocationPage from "./pages/supplier/LocationPage.jsx";
+
 import CategoryPage from "./pages/CategoryPage";
 import Chatbot from "./components/Chatbot";
 import ScrollToTop from "./components/ScrollToTop";
@@ -123,11 +125,6 @@ function App() {
               {/* LoadScript should ideally be higher up or used with useJsApiLoader in components */}
               <LoadScript
                 googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
-                // Libraries should be specified here if LoadScript is used globally,
-                // or in each useJsApiLoader call if LoadScript is not global.
-                // For now, assuming individual components handle their libraries.
-                // If you face "Loader must not be called again with different options" again,
-                // consider moving all libraries here: libraries={["places", "maps", "marker"]}
               >
                 <div className="flex flex-col min-h-screen">
                   <Navbar />
@@ -308,6 +305,11 @@ function App() {
                         path="/supplier/add-product"
                         element={<AddProduct />}
                       />
+                      <Route
+                        path="/supplier/location"
+                        element={<LocationPage />}
+                      />
+
                       <Route
                         path="/supplier/edit-product/:id"
                         element={<EditProduct />}

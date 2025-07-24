@@ -1,79 +1,52 @@
 "use strict";
 
-// server/routes/supplierRoutes.js (Example)
+// server/routes/supplierRoutes.js
 var express = require("express");
 
 var router = express.Router();
 
-var Product = require("../models/Product");
+var _require = require("../middleware/authMiddleware"),
+    protect = _require.protect,
+    authorizeRoles = _require.authorizeRoles; // Import middlewares
+// Import product controller functions
 
-var User = require("../models/User"); // Assuming you have a User model
-// GET /api/supplier/products - Fetch all products for a logged-in supplier
+
+var _require2 = require("../controllers/productController"),
+    addProduct = _require2.addProduct,
+    getSupplierProductById = _require2.getSupplierProductById,
+    updateProduct = _require2.updateProduct,
+    deleteProduct = _require2.deleteProduct,
+    getMyProducts = _require2.getMyProducts,
+    getAllProductsPublic = _require2.getAllProductsPublic,
+    getProductByIdPublic = _require2.getProductByIdPublic; // Import supplier dashboard controller function
 
 
-router.get("/products", function _callee(req, res) {
-  var supplierEmail, user, products;
-  return regeneratorRuntime.async(function _callee$(_context) {
-    while (1) {
-      switch (_context.prev = _context.next) {
-        case 0:
-          _context.prev = 0;
-          // In a real application, supplierId would come from an authenticated user's token
-          // For now, we'll use a query parameter as discussed.
-          supplierEmail = req.query.supplierEmail;
+var _require3 = require("../controllers/supplierDashboardController"),
+    getSupplierDashboardData = _require3.getSupplierDashboardData; // --- Public Product Routes (Accessible by anyone, including customers Browse) ---
 
-          if (supplierEmail) {
-            _context.next = 4;
-            break;
-          }
 
-          return _context.abrupt("return", res.status(400).json({
-            error: "Supplier email is required."
-          }));
+router.get("/products", getAllProductsPublic); // GET /api/supplier/products (All products)
 
-        case 4:
-          _context.next = 6;
-          return regeneratorRuntime.awrap(User.findOne({
-            email: supplierEmail
-          }));
+router.get("/products/:id", getProductByIdPublic); // GET /api/supplier/products/:id (Single product by ID)
+// --- Supplier-specific Protected Routes (Require authentication and 'supplier' role) ---
+// Route for Supplier Dashboard Data
 
-        case 6:
-          user = _context.sent;
+router.get("/dashboard", protect, authorizeRoles("supplier"), getSupplierDashboardData); // GET /api/supplier/dashboard
+// Routes for managing supplier's own products
 
-          if (user) {
-            _context.next = 9;
-            break;
-          }
+router.route("/myproducts").post(protect, authorizeRoles("supplier"), addProduct) // POST /api/supplier/myproducts - Add a new product
+.get(protect, authorizeRoles("supplier"), getMyProducts); // GET /api/supplier/myproducts - Get all products by the authenticated supplier
 
-          return _context.abrupt("return", res.status(404).json({
-            error: "Supplier not found."
-          }));
+router.route("/myproducts/:id").get(protect, authorizeRoles("supplier"), getSupplierProductById) // GET /api/supplier/myproducts/:id - Get specific product owned by supplier
+.put(protect, authorizeRoles("supplier"), updateProduct) // PUT /api/supplier/myproducts/:id - Update specific product owned by supplier
+["delete"](protect, authorizeRoles("supplier"), deleteProduct); // DELETE /api/supplier/myproducts/:id - Delete specific product owned by supplier
+// The /suppliers/:id/location route you had here seemed to be for a separate 'Supplier' model.
+// If suppliers are just 'User's with role 'supplier', then location updates should be handled via user profile updates,
+// or specific routes on the product if a product has a different location than the supplier's profile.
+// Assuming supplier location is part of the User model or product specific location:
+// If supplier location is stored on User model, update it via /api/auth/profile PUT route.
+// If it's on Product, it's handled by product update.
+// Removing this specific route for now to avoid confusion. You can re-add if you have a separate Supplier model.
+// router.put("/suppliers/:id/location", /* ... */);
 
-        case 9:
-          _context.next = 11;
-          return regeneratorRuntime.awrap(Product.find({
-            supplierId: user._id
-          }));
-
-        case 11:
-          products = _context.sent;
-          res.status(200).json(products);
-          _context.next = 19;
-          break;
-
-        case 15:
-          _context.prev = 15;
-          _context.t0 = _context["catch"](0);
-          console.error("Error fetching supplier products:", _context.t0);
-          res.status(500).json({
-            error: "Failed to fetch products."
-          });
-
-        case 19:
-        case "end":
-          return _context.stop();
-      }
-    }
-  }, null, null, [[0, 15]]);
-});
 module.exports = router;

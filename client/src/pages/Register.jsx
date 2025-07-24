@@ -5,18 +5,32 @@ const Register = () => {
   const [formData, setFormData] = useState({
     role: "customer",
     name: "",
+    // NEW: Initialize username field
+    username: "", // This will be dynamically set
     email: "",
     password: "",
     confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [passwordMatchError, setPasswordMatchError] = useState(""); // New state for password mismatch
+  const [passwordMatchError, setPasswordMatchError] = useState("");
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const newState = { ...prev, [name]: value };
+
+      // NEW: Automatically generate username from name field
+      if (name === "name") {
+        // Convert name to a simple username format (lowercase, hyphenated, no spaces/special chars)
+        newState.username = value
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "");
+      }
+      return newState;
+    });
     // Clear password mismatch error when typing
     if (name === "password" || name === "confirmPassword") {
       setPasswordMatchError("");
@@ -40,6 +54,22 @@ const Register = () => {
       return;
     }
 
+    // NEW: Ensure username is populated before sending
+    // This is a fallback in case the name field was never changed (e.g., auto-filled)
+    let finalUsername = formData.username;
+    if (!finalUsername && formData.name) {
+      finalUsername = formData.name
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
+    } else if (!finalUsername && formData.email) {
+      // Fallback to email prefix if name is also empty
+      finalUsername = formData.email
+        .split("@")[0]
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "");
+    }
+
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/api/auth/register`,
@@ -48,29 +78,42 @@ const Register = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             role: formData.role,
-            email: formData.email,
-            password: formData.password, // Send the password
             name: formData.name,
+            username: finalUsername, // NEW: Send the generated username
+            email: formData.email,
+            password: formData.password,
           }),
         }
       );
 
-      const data = await response.json(); // Always parse JSON for error details
+      const data = await response.json();
 
       if (!response.ok) {
-        // If response.ok is false, it's an HTTP error (e.g., 400, 500)
-        // The backend sends { error: "Email already exists" } or similar
         throw new Error(data.error || "Registration failed. Please try again.");
       }
 
-      // If response.ok is true (e.g., 201 Created)
-      navigate("/login"); // Navigate on successful registration
+      // If registration is successful, the server now sends a token and user details.
+      // Store them in local storage and navigate.
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          _id: data._id, // Store _id
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          token: data.token, // Store the JWT token
+          // Also store username if needed on client-side
+          username: data.username, // Store the username from the response
+        })
+      );
+
+      navigate(`/${data.role}-dashboard`); // Navigate using the role from the response
     } catch (err) {
-      console.error("Registration submission error:", err); // Log the full error
+      console.error("Registration submission error:", err);
       setError(
         err.message.includes("timed out")
           ? "Database connection timed out. Please try again."
-          : err.message // Display the backend's error message (e.g., "Email already exists")
+          : err.message
       );
     }
   };
@@ -101,12 +144,12 @@ const Register = () => {
           ))}
         </div>
 
-        {error && ( // Display server-side errors (like "Email already exists")
+        {error && (
           <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
             {error}
           </div>
         )}
-        {passwordMatchError && ( // Display client-side password mismatch error
+        {passwordMatchError && (
           <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
             {passwordMatchError}
           </div>
@@ -153,7 +196,7 @@ const Register = () => {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white"
                 required
-                minLength="6" // HTML5 minLength attribute for basic client-side validation
+                minLength="6"
               />
               <button
                 type="button"

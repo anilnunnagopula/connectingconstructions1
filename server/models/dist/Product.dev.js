@@ -4,10 +4,8 @@
 var mongoose = require("mongoose");
 
 var productSchema = new mongoose.Schema({
-  // supplierId will be the MongoDB _id of the User who is the supplier
-  // It's crucial to store the actual _id from your User collection.
-  // The frontend currently sends email as supplierId, so we'll find the _id on the backend.
-  supplierId: {
+  // Renamed from supplierId to supplier for consistency with ref: 'User'
+  supplier: {
     type: mongoose.Schema.Types.ObjectId,
     // Use ObjectId to link to the User model
     required: true,
@@ -17,11 +15,21 @@ var productSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
+    trim: true // Consider unique: true with supplier to allow different suppliers to have same product name
+    // unique: true, // If product names must be globally unique
+
+  },
+  description: {
+    // Added description field
+    type: String,
+    required: true,
+    // Make description required
     trim: true
   },
   category: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   price: {
     type: Number,
@@ -29,15 +37,18 @@ var productSchema = new mongoose.Schema({
     min: 0
   },
   quantity: {
+    // Renamed from 'stock' to 'quantity' to match your usage
     type: Number,
     required: true,
     min: 0
   },
   availability: {
+    // Based on quantity > 0, or manual override
     type: Boolean,
     "default": true
   },
   location: {
+    // Supplier's default location for this product
     text: {
       type: String,
       required: true
@@ -50,6 +61,7 @@ var productSchema = new mongoose.Schema({
     }
   },
   contact: {
+    // Supplier's contact for this product (can be derived from supplier user)
     mobile: {
       type: String,
       required: true
@@ -63,18 +75,34 @@ var productSchema = new mongoose.Schema({
       required: true
     }
   },
-  // --- MODIFICATION START ---
-  // Change imageUrl to imageUrls and make it an array of Strings
   imageUrls: {
+    // This is now an array of strings as per your modification
     type: [String],
     required: false,
-    // Set to true if at least one image is always mandatory
-    "default": [] // Optional: Default to an empty array if no images are provided
-
-  } // --- MODIFICATION END ---
-
+    // Set to true if at least one image is mandatory
+    "default": []
+  },
+  // NEW: Fields for aggregated rating (from Review model)
+  averageRating: {
+    type: Number,
+    "default": 0,
+    min: 0,
+    max: 5
+  },
+  numReviews: {
+    type: Number,
+    "default": 0,
+    min: 0
+  }
 }, {
   timestamps: true
-}); // Automatically adds createdAt and updatedAt fields
+} // Automatically adds createdAt and updatedAt fields
+); // Add an index to prevent a supplier from having two products with the exact same name
 
+productSchema.index({
+  name: 1,
+  supplier: 1
+}, {
+  unique: true
+});
 module.exports = mongoose.model("Product", productSchema);
