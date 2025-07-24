@@ -53,9 +53,29 @@ import Cart from "./pages/customer/Cart";
 import Checkout from "./pages/customer/Checkout";
 import HelpAndSupport from "./components/HelpAndSupport";
 //legal pages
-import TermsAndConditions from "./pages/legal/TermsAndCondtions";
+import CorePolicies from "./pages/legal/CorePolicies";
+import SmartPlatform from "./pages/legal/SmartPlatform";
+import SupplierPartner from "./pages/legal/SupplierPartner";
+import CustomerPlatform from "./pages/legal/CustomerPlatform";
+import Monetization from "./pages/legal/Monetization";
+
+import TermsAndConditions from "./pages/legal/TermsAndConditions";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
-// Import your context providers
+import CookiePolicy from "./pages/legal/CookiePolicy.jsx";
+import Disclaimer from "./pages/legal/Disclaimer.jsx";
+import DataProtection from "./pages/legal/DataProtection.jsx";
+import SecurityPractices from "./pages/legal/SecurityPractices.jsx";
+
+import SupplierAgreement from "./pages/legal/SupplierAgreement.jsx";
+import ProductGuidelines from "./pages/legal/ProductGuidelines.jsx";
+import LogisticsAgreement from "./pages/legal/LogisticsAgreement.jsx";
+import PricingPolicy from "./pages/legal/PricingPolicy.jsx";
+import ReturnRefundPolicy from "./pages/legal/ReturnRefundPolicy.jsx";
+import ShippingPolicy from "./pages/legal/ShippingPolicy.jsx";
+import CancellationPolicy from "./pages/legal/CancellationPolicy.jsx";
+
+
+// Import context providers
 import { DarkModeProvider } from "./context/DarkModeContext";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -111,9 +131,79 @@ function App() {
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/support" element={<HelpAndSupport />} />
                       {/* legal routes  */}
-                      <Route path="/legal/termsandcondtions" element={<TermsAndConditions />} />
-                      <Route path="/legal/privacy-policy" element={<PrivacyPolicy />} />
-
+                      <Route
+                        path="/legal/supplier-partner"
+                        element={<SupplierPartner />}
+                      />
+                      <Route
+                        path="/legal/core-policies"
+                        element={<CorePolicies />}
+                      />
+                      <Route
+                        path="/legal/customer-platform"
+                        element={<CustomerPlatform />}
+                      />
+                      <Route
+                        path="/legal/smart-platform"
+                        element={<SmartPlatform />}
+                      />
+                      <Route
+                        path="/legal/monetization"
+                        element={<Monetization />}
+                      />
+                      {/* legal of core polices  */}
+                      <Route
+                        path="/legal/termsandconditions"
+                        element={<TermsAndConditions />}
+                      />
+                      <Route
+                        path="/legal/privacypolicy"
+                        element={<PrivacyPolicy />}
+                      />
+                      <Route
+                        path="/legal/cookiepolicy"
+                        element={<CookiePolicy />}
+                      />
+                      <Route
+                        path="/legal/disclaimer"
+                        element={<Disclaimer />}
+                      />
+                      <Route
+                        path="/legal/dataprotection"
+                        element={<DataProtection />}
+                      />
+                      <Route
+                        path="/legal/securitypractices"
+                        element={<SecurityPractices />}
+                      />
+                      <Route
+                        path="/legal/supplieragreement"
+                        element={<SupplierAgreement />}
+                      />
+                      <Route
+                        path="/legal/productguidelines"
+                        element={<ProductGuidelines />}
+                      />
+                      <Route
+                        path="/legal/logisticsagreement"
+                        element={<LogisticsAgreement />}
+                      />
+                      <Route
+                        path="/legal/pricingpolicy"
+                        element={<PricingPolicy />}
+                      />
+                      <Route
+                        path="/legal/returnrefundpolicy"
+                        element={<ReturnRefundPolicy />}
+                      />
+                      <Route
+                        path="/legal/shippingpolicy"
+                        element={<ShippingPolicy />}
+                      />
+                      <Route
+                        path="/legal/cancellationpolicy"
+                        element={<CancellationPolicy />}
+                      />
                       {/* Supplier Public-ish Routes (can be accessed without ProtectedRoute if desired, but often linked from dashboard) */}
                       <Route
                         path="/supplier/products"
@@ -122,11 +212,11 @@ function App() {
                       <Route
                         path="/supplier/add-product"
                         element={<AddProduct />}
-                      /> 
+                      />
                       <Route
                         path="/supplier/edit-product/:id"
                         element={<EditProduct />}
-                      />{" "} 
+                      />{" "}
                       <Route
                         path="/category/:category"
                         element={<CategoryPage />}

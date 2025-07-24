@@ -439,7 +439,7 @@ const TermsAndConditions = () => {
             href="mailto:support@connectingconstructions.com"
             className="underline text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
           >
-            support@connectingconstructions.com
+            anilnunnagopula15@gmail.com
           </a>
         </p>
         <p className="mb-8 text-lg leading-relaxed text-gray-700 dark:text-gray-300">

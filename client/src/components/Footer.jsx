@@ -33,8 +33,10 @@ const Footer = () => {
             ConnectingConstructions
           </h2>
           <p className="text-sm leading-6">
-            The Amazon for Builders
+            The One_Stop platform for construction
             <br />— your all-in-one construction ecosystem.
+            <br />
+            <strong className="italic">Connecting Core and Code</strong>
           </p>
           <div className="flex gap-4 mt-2">
             <a href="#" className="text-white text-lg hover:text-gray-300">
@@ -63,12 +65,15 @@ const Footer = () => {
               </Link>
             </li>
             <li>
-              <Link to="/cart" className="hover:text-white">
+              <Link to="/customer-dashboard/cart" className="hover:text-white">
                 🛒 Cart
               </Link>
             </li>
             <li>
-              <Link to="/my-orders" className="hover:text-white">
+              <Link
+                to="/customer-dashboard/my-orders"
+                className="hover:text-white"
+              >
                 📜 Orders
               </Link>
             </li>
@@ -92,18 +97,18 @@ const Footer = () => {
               </Link>
             </li>
             <li>
-              <Link to="/category/iron" className="hover:text-white">
-                Iron
-              </Link>
-            </li>
-            <li>
-              <Link to="/category/paints" className="hover:text-white">
-                Paints
+              <Link to="/category/rmc" className="hover:text-white">
+                RMC
               </Link>
             </li>
             <li>
               <Link to="/category/trucks" className="hover:text-white">
                 Trucks
+              </Link>
+            </li>
+            <li>
+              <Link to="/category/morrum" className="hover:text-white">
+                Morrum
               </Link>
             </li>
             <li>
@@ -139,7 +144,7 @@ const Footer = () => {
             <a
               href="tel:+919398828248"
               target="_blank"
-              rel="noopener noreferrer" 
+              rel="noopener noreferrer"
               className="block hover:text-blue-400 transition duration-200"
             >
               <div>
@@ -191,15 +196,22 @@ const Footer = () => {
           </span>
           . All rights reserved.
         </p>
-        <div className="mt-2 flex flex-wrap justify-center gap-4">
-          <Link to="/legal/privacy-policy" className="hover:text-white">
-            Privacy Policy
+        {/* 🔥 Main Legal Category Links */}
+        <div className="mt-2 flex justify-center gap-6 flex-wrap text-white font-medium">
+          <Link to="/legal/core-policies" className="hover:underline">
+            Core Policies
           </Link>
-          <Link to="/legal/termsandcondtions" className="hover:text-white">
-            Terms & Conditions
+          <Link to="/legal/supplier-partner" className="hover:underline">
+            Supplier & Partner
           </Link>
-          <Link to="#" className="hover:text-white">
-            Support
+          <Link to="/legal/customer-platform" className="hover:underline">
+            Customer & Platform
+          </Link>
+          <Link to="/legal/smart-platform" className="hover:underline">
+            Smart Platform
+          </Link>
+          <Link to="/legal/monetization" className="hover:underline">
+            Monetization
           </Link>
         </div>
       </div>

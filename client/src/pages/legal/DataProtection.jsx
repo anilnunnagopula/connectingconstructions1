@@ -13,7 +13,8 @@ import {
   Scale,
 } from "lucide-react"; // Importing icons
 
-const PrivacyPolicy = () => {
+const DataProtection = () => {
+  // Renamed the component
   useEffect(() => {
     // Scrolls to the top of the page when the component mounts
     window.scrollTo(0, 0);
@@ -24,11 +25,11 @@ const PrivacyPolicy = () => {
       <div className="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-12 transform transition-all duration-300 ease-in-out hover:shadow-3xl hover:-translate-y-1">
         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-8 text-center flex items-center justify-center gap-3">
           <Shield className="text-blue-600 dark:text-blue-400" size={36} />{" "}
-          ConnectingConstructions Privacy Policy
+          ConnectingConstructions Data Protection Policy {/* Updated heading */}
         </h1>
 
         <p className="mb-8 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
-          This Privacy Policy outlines how{" "}
+          This Data Protection Policy outlines how{" "}
           <strong>ConnectingConstructions</strong> (“we,” “us,” “our”) collects,
           uses, discloses, and protects your personal information when you use
           our platform — including our website, mobile app, and any related
@@ -301,28 +302,29 @@ const PrivacyPolicy = () => {
           Governing Law
         </h2>
         <p className="text-lg mb-6 text-gray-700 dark:text-gray-300">
-          This Privacy Policy shall be governed by and construed in accordance
-          with the laws of India, without regard to its conflict of law
-          provisions. Any disputes arising under or in connection with this
-          Privacy Policy shall be subject to the exclusive jurisdiction of the
-          courts located in Telangana, India.
+          This Data Protection Policy shall be governed by and construed in
+          accordance with the laws of India, without regard to its conflict of
+          law provisions. Any disputes arising under or in connection with this
+          Data Protection Policy shall be subject to the exclusive jurisdiction
+          of the courts located in Telangana, India.
         </p>
 
         {/* SECTION 11: Changes to This Privacy Policy */}
         <h2 className="text-2xl font-bold mt-10 mb-4 border-b-2 border-blue-200 dark:border-blue-700 pb-3 flex items-center gap-2">
           <Info className="text-blue-500 dark:text-blue-300" size={24} /> 11.
-          Changes to This Privacy Policy
+          Changes to This Data Protection Policy {/* Updated heading */}
         </h2>
         <p className="text-lg mb-6 text-gray-700 dark:text-gray-300">
-          We may update our Privacy Policy from time to time. We will notify you
-          of any changes by posting the new Privacy Policy on this page and
-          updating the "Last updated" date. We will also inform you via email
-          and/or a prominent notice on our Service prior to the change becoming
-          effective, if the changes are material. You are advised to review this
-          Privacy Policy periodically for any changes. Continued use of the
-          Service after any modifications to this Privacy Policy will constitute
-          your acknowledgment of the modifications and your consent to abide and
-          be bound by the modified Privacy Policy.
+          We may update our Data Protection Policy from time to time. We will
+          notify you of any changes by posting the new Data Protection Policy on
+          this page and updating the "Last updated" date. We will also inform
+          you via email and/or a prominent notice on our Service prior to the
+          change becoming effective, if the changes are material. You are
+          advised to review this Data Protection Policy periodically for any
+          changes. Continued use of the Service after any modifications to this
+          Data Protection Policy will constitute your acknowledgment of the
+          modifications and your consent to abide and be bound by the modified
+          Data Protection Policy.
         </p>
 
         {/* SECTION 12: Consent */}
@@ -331,9 +333,9 @@ const PrivacyPolicy = () => {
           12. Your Consent
         </h2>
         <p className="text-lg mb-6 text-gray-700 dark:text-gray-300">
-          By using our Service, you hereby consent to our Privacy Policy and
-          agree to its terms. If you do not agree with this policy, please do
-          not use our Service.
+          By using our Service, you hereby consent to our Data Protection Policy
+          and agree to its terms. If you do not agree with this policy, please
+          do not use our Service.
         </p>
 
         {/* SECTION 13: Contact Us */}
@@ -342,8 +344,8 @@ const PrivacyPolicy = () => {
           Contact Us
         </h2>
         <p className="mb-2 text-lg text-gray-700 dark:text-gray-300">
-          If you have any questions or concerns about this Privacy Policy,
-          please contact us:
+          If you have any questions or concerns about this Data Protection
+          Policy, please contact us:
         </p>
         <ul className="list-disc pl-6 space-y-2 text-gray-700 dark:text-gray-300">
           <li>
@@ -369,4 +371,4 @@ const PrivacyPolicy = () => {
   );
 };
 
-export default PrivacyPolicy;
+export default DataProtection;
