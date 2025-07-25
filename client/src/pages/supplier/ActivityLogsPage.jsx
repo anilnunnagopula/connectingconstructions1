@@ -142,7 +142,7 @@ const ActivityLogsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-white transition-colors duration-300 py-10 px-4">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 py-10 px-4">
       <div className="max-w-6xl mx-auto">
         <button
           onClick={() => navigate(-1)} // Go back to the previous page (dashboard)
