@@ -1,57 +1,107 @@
 // server/routes/supplierRoutes.js
 const express = require("express");
 const router = express.Router();
-const { protect, authorizeRoles } = require("../middleware/authMiddleware"); // Import middlewares
+const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 
-// Import product controller functions
+// Import existing controllers
 const {
   addProduct,
-  getSupplierProductById, // Renamed for clarity, handles supplier's own product
+  getMyProducts,
+  getProductById,
   updateProduct,
   deleteProduct,
-  getMyProducts,
-  getAllProductsPublic, // For public access to all products
-  getProductByIdPublic, // For public access to a single product by ID
+  getAllProductsPublic,
+  getProductByIdPublic,
 } = require("../controllers/productController");
-
-// Import supplier dashboard controller function
 const {
   getSupplierDashboardData,
 } = require("../controllers/supplierDashboardController");
+const {
+  getShopLocations,
+  addShopLocation,
+  updateShopLocation,
+  deleteShopLocation,
+} = require("../controllers/shopLocationController");
 
-// --- Public Product Routes (Accessible by anyone, including customers Browse) ---
-router.get("/products", getAllProductsPublic); // GET /api/supplier/products (All products)
-router.get("/products/:id", getProductByIdPublic); // GET /api/supplier/products/:id (Single product by ID)
+// NEW: Import the detailed data controller functions
+const {
+  getAllActivityLogs,
+  getDetailedTopProducts,
+  getAllCustomerFeedback,
+  getAllDeliveryStatuses,
+  getAllNotifications,
+} = require("../controllers/supplierDetailedDataController"); // Ensure path is correct
 
-// --- Supplier-specific Protected Routes (Require authentication and 'supplier' role) ---
+// --- Public Product Routes (Accessible by anyone) ---
+router.get("/products", getAllProductsPublic);
+router.get("/products/:id", getProductByIdPublic);
 
-// Route for Supplier Dashboard Data
+// --- Supplier-specific Protected Routes (Require 'supplier' role) ---
+
+// Dashboard Data
 router.get(
   "/dashboard",
   protect,
   authorizeRoles("supplier"),
   getSupplierDashboardData
-); // GET /api/supplier/dashboard
+);
 
-// Routes for managing supplier's own products
+// Product Management
 router
   .route("/myproducts")
-  .post(protect, authorizeRoles("supplier"), addProduct) // POST /api/supplier/myproducts - Add a new product
-  .get(protect, authorizeRoles("supplier"), getMyProducts); // GET /api/supplier/myproducts - Get all products by the authenticated supplier
+  .post(protect, authorizeRoles("supplier"), addProduct)
+  .get(protect, authorizeRoles("supplier"), getMyProducts);
 
 router
   .route("/myproducts/:id")
-  .get(protect, authorizeRoles("supplier"), getSupplierProductById) // GET /api/supplier/myproducts/:id - Get specific product owned by supplier
-  .put(protect, authorizeRoles("supplier"), updateProduct) // PUT /api/supplier/myproducts/:id - Update specific product owned by supplier
-  .delete(protect, authorizeRoles("supplier"), deleteProduct); // DELETE /api/supplier/myproducts/:id - Delete specific product owned by supplier
+  .get(protect, authorizeRoles("supplier"), getProductById)
+  .put(protect, authorizeRoles("supplier"), updateProduct)
+  .delete(protect, authorizeRoles("supplier"), deleteProduct);
 
-// The /suppliers/:id/location route you had here seemed to be for a separate 'Supplier' model.
-// If suppliers are just 'User's with role 'supplier', then location updates should be handled via user profile updates,
-// or specific routes on the product if a product has a different location than the supplier's profile.
-// Assuming supplier location is part of the User model or product specific location:
-// If supplier location is stored on User model, update it via /api/auth/profile PUT route.
-// If it's on Product, it's handled by product update.
-// Removing this specific route for now to avoid confusion. You can re-add if you have a separate Supplier model.
-// router.put("/suppliers/:id/location", /* ... */);
+// Shop Location Management
+router
+  .route("/shop-locations")
+  .get(protect, authorizeRoles("supplier"), getShopLocations)
+  .post(protect, authorizeRoles("supplier"), addShopLocation);
+
+router
+  .route("/shop-locations/:id")
+  .put(protect, authorizeRoles("supplier"), updateShopLocation)
+  .delete(protect, authorizeRoles("supplier"), deleteShopLocation);
+
+// --- NEW DETAILED DATA ROUTES ---
+router.get(
+  "/activity-logs",
+  protect,
+  authorizeRoles("supplier"),
+  getAllActivityLogs
+);
+router.get(
+  "/top-products",
+  protect,
+  authorizeRoles("supplier"),
+  getDetailedTopProducts
+);
+router.get(
+  "/customer-feedback",
+  protect,
+  authorizeRoles("supplier"),
+  getAllCustomerFeedback
+);
+router.get(
+  "/delivery-status",
+  protect,
+  authorizeRoles("supplier"),
+  getAllDeliveryStatuses
+);
+router.get(
+  "/notifications",
+  protect,
+  authorizeRoles("supplier"),
+  getAllNotifications
+);
+
+// Add route for License and Certificates here when its controller is ready
+// router.get('/license-and-certificates', protect, authorizeRoles('supplier'), getLicensesAndCertificates);
 
 module.exports = router;

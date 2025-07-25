@@ -450,52 +450,73 @@ var getUserProfile = function getUserProfile(req, res) {
 
 
 var updateUserProfile = function updateUserProfile(req, res) {
-  var user, updatedUser, token;
+  var user, isMatch, updatedUser, token;
   return regeneratorRuntime.async(function updateUserProfile$(_context6) {
     while (1) {
       switch (_context6.prev = _context6.next) {
         case 0:
-          if (req.user) {
-            _context6.next = 2;
-            break;
-          }
-
-          return _context6.abrupt("return", res.status(401).json({
-            message: "Not authorized."
-          }));
-
-        case 2:
-          _context6.prev = 2;
-          _context6.next = 5;
+          _context6.next = 2;
           return regeneratorRuntime.awrap(User.findById(req.user.id));
 
-        case 5:
+        case 2:
           user = _context6.sent;
 
           if (!user) {
+            _context6.next = 27;
+            break;
+          }
+
+          user.name = req.body.name || user.name;
+          user.username = req.body.username || user.username;
+          user.email = req.body.email || user.email; // Email might have special update logic
+
+          user.phoneNumber = req.body.phoneNumber || user.phoneNumber; // NEW: handle phoneNumber
+
+          user.address = req.body.address || user.address; // Handles location update
+          // Password change logic (more secure version)
+
+          if (!(req.body.currentPassword && req.body.newPassword)) {
+            _context6.next = 18;
+            break;
+          }
+
+          _context6.next = 12;
+          return regeneratorRuntime.awrap(user.matchPassword(req.body.currentPassword));
+
+        case 12:
+          isMatch = _context6.sent;
+
+          if (isMatch) {
+            _context6.next = 15;
+            break;
+          }
+
+          return _context6.abrupt("return", res.status(400).json({
+            message: 'Current password is incorrect.'
+          }));
+
+        case 15:
+          user.password = req.body.newPassword; // Pre-save hook will hash this
+
+          _context6.next = 20;
+          break;
+
+        case 18:
+          if (!req.body.newPassword) {
             _context6.next = 20;
             break;
           }
 
-          // Update fields if they are provided in the request body
-          user.name = req.body.name || user.name;
-          user.username = req.body.username || user.username;
-          user.email = req.body.email || user.email;
-          user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
-          user.address = req.body.address || user.address; // You might or might not allow role change via profile update. For now, we'll keep it.
-          // user.role = req.body.role || user.role;
+          return _context6.abrupt("return", res.status(400).json({
+            message: 'Current password is required to change password.'
+          }));
 
-          if (req.body.newPassword) {
-            // If a new password is provided, update it
-            user.password = req.body.newPassword; // Pre-save hook will hash this
-          }
-
-          _context6.next = 15;
+        case 20:
+          _context6.next = 22;
           return regeneratorRuntime.awrap(user.save());
 
-        case 15:
+        case 22:
           updatedUser = _context6.sent;
-          // Generate a new token if user data critical to token (like role) changes, or simply to refresh session
           token = generateToken(updatedUser._id, updatedUser.role);
           res.json({
             message: "Profile updated successfully!",
@@ -505,36 +526,25 @@ var updateUserProfile = function updateUserProfile(req, res) {
             email: updatedUser.email,
             role: updatedUser.role,
             phoneNumber: updatedUser.phoneNumber,
+            // NEW: Return phoneNumber
             address: updatedUser.address,
-            token: token // Send new token
-
+            // Return updated address
+            token: token
           });
-          _context6.next = 21;
+          _context6.next = 28;
           break;
 
-        case 20:
+        case 27:
           res.status(404).json({
             message: "User not found."
           });
 
-        case 21:
-          _context6.next = 27;
-          break;
-
-        case 23:
-          _context6.prev = 23;
-          _context6.t0 = _context6["catch"](2);
-          console.error("Update profile error:", _context6.t0);
-          res.status(500).json({
-            error: "Failed to update profile: " + _context6.t0.message
-          });
-
-        case 27:
+        case 28:
         case "end":
           return _context6.stop();
       }
     }
-  }, null, null, [[2, 23]]);
+  });
 };
 
 module.exports = {
@@ -543,7 +553,5 @@ module.exports = {
   sendOtp: sendOtp,
   resetPassword: resetPassword,
   getUserProfile: getUserProfile,
-  // Export new function
-  updateUserProfile: updateUserProfile // Export new function
-
+  updateUserProfile: updateUserProfile
 };

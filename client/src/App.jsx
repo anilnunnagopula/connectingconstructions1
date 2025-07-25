@@ -44,6 +44,13 @@ import MyProducts from "./pages/supplier/MyProducts";
 import AddProduct from "./pages/supplier/AddProduct";
 import EditProduct from "./pages/supplier/EditProduct"; 
 import LocationPage from "./pages/supplier/LocationPage.jsx";
+import SettingsPage from "./pages/supplier/SettingsPage.jsx";
+
+import ActivityLogsPage from "./pages/supplier/ActivityLogsPage.jsx";
+import TopProductsPage from "./pages/supplier/components/TopProductsPage.jsx";
+import CustomerFeedbackPage from "./pages/supplier/components/CustomerFeedbackPage";
+import DeliveryStatusPage from "./pages/supplier/components/DeliveryStatusPage";
+import NotificationsPage from "./pages/supplier/components/NotificationsFeed.jsx";
 
 import CategoryPage from "./pages/CategoryPage";
 import Chatbot from "./components/Chatbot";
@@ -309,7 +316,35 @@ function App() {
                         path="/supplier/location"
                         element={<LocationPage />}
                       />
-
+                      <Route
+                        path="/supplier/settings"
+                        element={<SettingsPage />}
+                      />
+                      {/* Routes for the new detailed pages from Supplier Dashboard cards */}
+                      <Route
+                        path="/supplier/activity-logs"
+                        element={<ActivityLogsPage />}
+                      />
+                      <Route
+                        path="/supplier/top-products"
+                        element={<TopProductsPage />}
+                      />
+                      <Route
+                        path="/supplier/customer-feedback"
+                        element={<CustomerFeedbackPage />}
+                      />
+                      <Route
+                        path="/supplier/delivery-status"
+                        element={<DeliveryStatusPage />}
+                      />
+                      <Route
+                        path="/supplier/notifications"
+                        element={<NotificationsPage />}
+                      />
+                      {/* <Route
+                        path="/supplier/license-and-certificates"
+                        element={<LicenseAndCertificatesPage />}
+                      /> */}
                       <Route
                         path="/supplier/edit-product/:id"
                         element={<EditProduct />}

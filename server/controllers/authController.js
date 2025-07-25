@@ -254,61 +254,48 @@ const getUserProfile = async (req, res) => {
 // @route   PUT /api/auth/profile
 // @access  Private (requires 'protect' middleware)
 const updateUserProfile = async (req, res) => {
-  if (!req.user) {
-    // Should ideally be caught by protect middleware, but good safeguard
-    return res.status(401).json({ message: "Not authorized." });
-  }
-
-  try {
     const user = await User.findById(req.user.id);
-
     if (user) {
-      // Update fields if they are provided in the request body
-      user.name = req.body.name || user.name;
-      user.username = req.body.username || user.username;
-      user.email = req.body.email || user.email;
-      user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
-      user.address = req.body.address || user.address;
-      // You might or might not allow role change via profile update. For now, we'll keep it.
-      // user.role = req.body.role || user.role;
+        user.name = req.body.name || user.name;
+        user.username = req.body.username || user.username;
+        user.email = req.body.email || user.email; // Email might have special update logic
+        user.phoneNumber = req.body.phoneNumber || user.phoneNumber; // NEW: handle phoneNumber
+        user.address = req.body.address || user.address; // Handles location update
 
-      if (req.body.newPassword) {
-        // If a new password is provided, update it
-        user.password = req.body.newPassword; // Pre-save hook will hash this
-      }
+        // Password change logic (more secure version)
+        if (req.body.currentPassword && req.body.newPassword) {
+            const isMatch = await user.matchPassword(req.body.currentPassword);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Current password is incorrect.' });
+            }
+            user.password = req.body.newPassword; // Pre-save hook will hash this
+        } else if (req.body.newPassword) { // If only newPassword is sent without current, it's problematic
+            return res.status(400).json({ message: 'Current password is required to change password.' });
+        }
 
-      const updatedUser = await user.save();
+        const updatedUser = await user.save();
+        const token = generateToken(updatedUser._id, updatedUser.role);
 
-      // Generate a new token if user data critical to token (like role) changes, or simply to refresh session
-      const token = generateToken(updatedUser._id, updatedUser.role);
-
-      res.json({
-        message: "Profile updated successfully!",
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        phoneNumber: updatedUser.phoneNumber,
-        address: updatedUser.address,
-        token, // Send new token
-      });
+        res.json({
+            message: "Profile updated successfully!",
+            _id: updatedUser._id,
+            name: updatedUser.name,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            role: updatedUser.role,
+            phoneNumber: updatedUser.phoneNumber, // NEW: Return phoneNumber
+            address: updatedUser.address, // Return updated address
+            token,
+        });
     } else {
-      res.status(404).json({ message: "User not found." });
+        res.status(404).json({ message: "User not found." });
     }
-  } catch (error) {
-    console.error("Update profile error:", error);
-    res
-      .status(500)
-      .json({ error: "Failed to update profile: " + error.message });
-  }
 };
-
 module.exports = {
   registerUser,
   loginUser,
   sendOtp,
   resetPassword,
-  getUserProfile, // Export new function
-  updateUserProfile, // Export new function
+  getUserProfile, 
+  updateUserProfile, 
 };
