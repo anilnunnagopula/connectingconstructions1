@@ -12,7 +12,7 @@ var mongoose = require("mongoose");
 var authRoutes = require("./routes/auth"); // const supplierRoutes = require("./routes/supplierRoutes");
 
 
-var supplierRoutes = require("./routes/tempSupplierRoutes");
+var supplierRoutes = require("./routes/supplierRoutes");
 
 var customerRoutes = require("./routes/customerRoutes"); // NEW: Import customer routes
 
