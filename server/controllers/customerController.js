@@ -20,7 +20,8 @@ const validateRequiredFields = (data, fields) => {
 // @desc    Create a new order
 // @route   POST /api/customer/orders
 // @access  Private (Customer only)
-exports.createOrder = async (req, res) => {
+const createOrder = async (req, res) => {
+  // CHANGED: from exports.createOrder to const createOrder
   // req.user is populated by 'protect' middleware and 'authorizeRoles("customer")'
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
@@ -107,7 +108,8 @@ exports.createOrder = async (req, res) => {
 // @desc    Get all orders for the authenticated customer
 // @route   GET /api/customer/orders/my
 // @access  Private (Customer only)
-exports.getMyOrders = async (req, res) => {
+const getMyOrders = async (req, res) => {
+  // CHANGED: from exports.getMyOrders to const getMyOrders
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -129,7 +131,8 @@ exports.getMyOrders = async (req, res) => {
 // @desc    Get a single order by ID for the authenticated customer
 // @route   GET /api/customer/orders/:id
 // @access  Private (Customer only)
-exports.getOrderById = async (req, res) => {
+const getOrderById = async (req, res) => {
+  // CHANGED: from exports.getOrderById to const getOrderById
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -162,7 +165,8 @@ exports.getOrderById = async (req, res) => {
 // @desc    Add product to wishlist
 // @route   POST /api/customer/wishlist
 // @access  Private (Customer only)
-exports.addToWishlist = async (req, res) => {
+const addToWishlist = async (req, res) => {
+  // CHANGED: from exports.addToWishlist to const addToWishlist
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -207,7 +211,8 @@ exports.addToWishlist = async (req, res) => {
 // @desc    Get customer's wishlist
 // @route   GET /api/customer/wishlist/my
 // @access  Private (Customer only)
-exports.getMyWishlist = async (req, res) => {
+const getMyWishlist = async (req, res) => {
+  // CHANGED: from exports.getMyWishlist to const getMyWishlist
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -230,7 +235,8 @@ exports.getMyWishlist = async (req, res) => {
 // @desc    Remove product from wishlist
 // @route   DELETE /api/customer/wishlist/:id
 // @access  Private (Customer only)
-exports.removeFromWishlist = async (req, res) => {
+const removeFromWishlist = async (req, res) => {
+  // CHANGED: from exports.removeFromWishlist to const removeFromWishlist
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -256,12 +262,10 @@ exports.removeFromWishlist = async (req, res) => {
         .status(400)
         .json({ message: "Invalid wishlist item ID format." });
     }
-    res
-      .status(500)
-      .json({
-        message: "Failed to remove from wishlist.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to remove from wishlist.",
+      error: error.message,
+    });
   }
 };
 
@@ -270,7 +274,8 @@ exports.removeFromWishlist = async (req, res) => {
 // @desc    Record a product view (or update existing view)
 // @route   POST /api/customer/view-history
 // @access  Private (Customer only) - this might be called on product page load
-exports.recordProductView = async (req, res) => {
+const recordProductView = async (req, res) => {
+  // CHANGED: from exports.recordProductView to const recordProductView
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -301,7 +306,8 @@ exports.recordProductView = async (req, res) => {
 // @desc    Get customer's view history
 // @route   GET /api/customer/view-history/my
 // @access  Private (Customer only)
-exports.getMyViewHistory = async (req, res) => {
+const getMyViewHistory = async (req, res) => {
+  // CHANGED: from exports.getMyViewHistory to const getMyViewHistory
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -324,7 +330,8 @@ exports.getMyViewHistory = async (req, res) => {
 // @desc    Create a new support request
 // @route   POST /api/customer/support-requests
 // @access  Private (Customer only)
-exports.createSupportRequest = async (req, res) => {
+const createSupportRequest = async (req, res) => {
+  // CHANGED: from exports.createSupportRequest to const createSupportRequest
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -342,12 +349,10 @@ exports.createSupportRequest = async (req, res) => {
     });
 
     await supportRequest.save();
-    res
-      .status(201)
-      .json({
-        message: "Support request submitted successfully!",
-        supportRequest,
-      });
+    res.status(201).json({
+      message: "Support request submitted successfully!",
+      supportRequest,
+    });
   } catch (error) {
     console.error("Error creating support request:", error);
     res
@@ -359,7 +364,8 @@ exports.createSupportRequest = async (req, res) => {
 // @desc    Get customer's support requests
 // @route   GET /api/customer/support-requests/my
 // @access  Private (Customer only)
-exports.getMySupportRequests = async (req, res) => {
+const getMySupportRequests = async (req, res) => {
+  // CHANGED: from exports.getMySupportRequests to const getMySupportRequests
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -371,11 +377,23 @@ exports.getMySupportRequests = async (req, res) => {
     res.json(supportRequests);
   } catch (error) {
     console.error("Error fetching support requests:", error);
-    res
-      .status(500)
-      .json({
-        message: "Failed to fetch support requests.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to fetch support requests.",
+      error: error.message,
+    });
   }
+};
+
+// CRITICAL: Add this module.exports block at the very end
+module.exports = {
+  createOrder,
+  getMyOrders,
+  getOrderById,
+  addToWishlist,
+  getMyWishlist,
+  removeFromWishlist,
+  recordProductView,
+  getMyViewHistory,
+  createSupportRequest,
+  getMySupportRequests,
 };

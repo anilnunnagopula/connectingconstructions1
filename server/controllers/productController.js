@@ -109,7 +109,7 @@ const addProduct = async (req, res) => {
 // @desc    Get a single product by ID (for supplier to view their own product)
 // @route   GET /api/supplier/myproducts/:id
 // @access  Private (Supplier only, ensures they own the product)
-const getSupplierProductById = async (req, res) => {
+const getProductById = async (req, res) => {
   try {
     const productId = req.params.id;
     const supplierId = req.user.id; // From authenticated user
@@ -319,10 +319,10 @@ const getProductByIdPublic = async (req, res) => {
 
 module.exports = {
   addProduct,
-  getSupplierProductById, // Renamed for clarity in exports
+  getProductById, // CHANGED: Renamed the exported function
   updateProduct,
   deleteProduct,
   getMyProducts,
-  getAllProductsPublic, // Export new public function
-  getProductByIdPublic, // Export new public function
+  getAllProductsPublic,
+  getProductByIdPublic,
 };

@@ -8,9 +8,9 @@ var mongoose = require("mongoose"); // @desc    Get all shop locations for the a
 // @access  Private (Supplier only)
 
 
-exports.getShopLocations = function _callee(req, res) {
+var getShopLocations = function getShopLocations(req, res) {
   var locations;
-  return regeneratorRuntime.async(function _callee$(_context) {
+  return regeneratorRuntime.async(function getShopLocations$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
@@ -58,10 +58,10 @@ exports.getShopLocations = function _callee(req, res) {
 // @access  Private (Supplier only)
 
 
-exports.addShopLocation = function _callee2(req, res) {
+var addShopLocation = function addShopLocation(req, res) {
   var _req$body, name, address, lat, lng, existingLocation, newLocation, createdLocation;
 
-  return regeneratorRuntime.async(function _callee2$(_context2) {
+  return regeneratorRuntime.async(function addShopLocation$(_context2) {
     while (1) {
       switch (_context2.prev = _context2.next) {
         case 0:
@@ -146,10 +146,10 @@ exports.addShopLocation = function _callee2(req, res) {
 // @access  Private (Supplier only)
 
 
-exports.updateShopLocation = function _callee3(req, res) {
+var updateShopLocation = function updateShopLocation(req, res) {
   var id, _req$body2, name, address, lat, lng, locationToUpdate, existingWithName, updatedLocation;
 
-  return regeneratorRuntime.async(function _callee3$(_context3) {
+  return regeneratorRuntime.async(function updateShopLocation$(_context3) {
     while (1) {
       switch (_context3.prev = _context3.next) {
         case 0:
@@ -256,9 +256,9 @@ exports.updateShopLocation = function _callee3(req, res) {
 // @access  Private (Supplier only)
 
 
-exports.deleteShopLocation = function _callee4(req, res) {
+var deleteShopLocation = function deleteShopLocation(req, res) {
   var id, result;
-  return regeneratorRuntime.async(function _callee4$(_context4) {
+  return regeneratorRuntime.async(function deleteShopLocation$(_context4) {
     while (1) {
       switch (_context4.prev = _context4.next) {
         case 0:
@@ -314,4 +314,12 @@ exports.deleteShopLocation = function _callee4(req, res) {
       }
     }
   }, null, null, [[3, 12]]);
+}; // CRITICAL: This module.exports block MUST be at the very end
+
+
+module.exports = {
+  getShopLocations: getShopLocations,
+  addShopLocation: addShopLocation,
+  updateShopLocation: updateShopLocation,
+  deleteShopLocation: deleteShopLocation
 };

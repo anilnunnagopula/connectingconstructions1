@@ -8,7 +8,8 @@ const mongoose = require("mongoose"); // For ObjectId if needed for complex aggr
 // @desc    Get aggregated data for the customer dashboard
 // @route   GET /api/customer/dashboard
 // @access  Private (Customer only)
-exports.getCustomerDashboardData = async (req, res) => {
+const getCustomerDashboardData = async (req, res) => {
+  // CHANGED: from exports.getCustomerDashboardData to const getCustomerDashboardData
   // The 'authorizeRoles("customer")' middleware ensures only customers can hit this endpoint
   const customerId = req.user.id; // Get the customer's ID from the authenticated user
 
@@ -48,11 +49,14 @@ exports.getCustomerDashboardData = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching customer dashboard data:", error);
-    res
-      .status(500)
-      .json({
-        message: "Failed to fetch dashboard data.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to fetch dashboard data.",
+      error: error.message,
+    });
   }
+};
+
+// CRITICAL: This module.exports block MUST be at the very end
+module.exports = {
+  getCustomerDashboardData,
 };

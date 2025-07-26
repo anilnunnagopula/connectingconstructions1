@@ -15,12 +15,13 @@ var mongoose = require("mongoose"); // For ObjectId if needed for complex aggreg
 // @access  Private (Customer only)
 
 
-exports.getCustomerDashboardData = function _callee(req, res) {
+var getCustomerDashboardData = function getCustomerDashboardData(req, res) {
   var customerId, ordersMade, wishlistItems, historyViewed, supportRequests, recentOrders;
-  return regeneratorRuntime.async(function _callee$(_context) {
+  return regeneratorRuntime.async(function getCustomerDashboardData$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
+          // CHANGED: from exports.getCustomerDashboardData to const getCustomerDashboardData
           // The 'authorizeRoles("customer")' middleware ensures only customers can hit this endpoint
           customerId = req.user.id; // Get the customer's ID from the authenticated user
 
@@ -93,4 +94,9 @@ exports.getCustomerDashboardData = function _callee(req, res) {
       }
     }
   }, null, null, [[1, 20]]);
+}; // CRITICAL: This module.exports block MUST be at the very end
+
+
+module.exports = {
+  getCustomerDashboardData: getCustomerDashboardData
 };

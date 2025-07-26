@@ -4,7 +4,8 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/auth");
-const supplierRoutes = require("./routes/supplierRoutes");
+// const supplierRoutes = require("./routes/supplierRoutes");
+const supplierRoutes = require("./routes/tempSupplierRoutes"); 
 const customerRoutes = require("./routes/customerRoutes"); // NEW: Import customer routes
 const generalRoutes = require("./routes/generalRoutes"); // NEW: Import general routes
 

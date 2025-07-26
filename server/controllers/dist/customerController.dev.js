@@ -48,10 +48,10 @@ var validateRequiredFields = function validateRequiredFields(data, fields) {
 // @access  Private (Customer only)
 
 
-exports.createOrder = function _callee2(req, res) {
+var createOrder = function createOrder(req, res) {
   var _req$body, orderItems, shippingAddress, paymentMethod, taxPrice, shippingPrice, itemsFromDb, order, createdOrder;
 
-  return regeneratorRuntime.async(function _callee2$(_context2) {
+  return regeneratorRuntime.async(function createOrder$(_context2) {
     while (1) {
       switch (_context2.prev = _context2.next) {
         case 0:
@@ -176,9 +176,9 @@ exports.createOrder = function _callee2(req, res) {
 // @access  Private (Customer only)
 
 
-exports.getMyOrders = function _callee3(req, res) {
+var getMyOrders = function getMyOrders(req, res) {
   var orders;
-  return regeneratorRuntime.async(function _callee3$(_context3) {
+  return regeneratorRuntime.async(function getMyOrders$(_context3) {
     while (1) {
       switch (_context3.prev = _context3.next) {
         case 0:
@@ -225,9 +225,9 @@ exports.getMyOrders = function _callee3(req, res) {
 // @access  Private (Customer only)
 
 
-exports.getOrderById = function _callee4(req, res) {
+var getOrderById = function getOrderById(req, res) {
   var order;
-  return regeneratorRuntime.async(function _callee4$(_context4) {
+  return regeneratorRuntime.async(function getOrderById$(_context4) {
     while (1) {
       switch (_context4.prev = _context4.next) {
         case 0:
@@ -297,9 +297,9 @@ exports.getOrderById = function _callee4(req, res) {
 // @access  Private (Customer only)
 
 
-exports.addToWishlist = function _callee5(req, res) {
+var addToWishlist = function addToWishlist(req, res) {
   var productId, product, existingWishlistItem, wishlistItem;
-  return regeneratorRuntime.async(function _callee5$(_context5) {
+  return regeneratorRuntime.async(function addToWishlist$(_context5) {
     while (1) {
       switch (_context5.prev = _context5.next) {
         case 0:
@@ -386,9 +386,9 @@ exports.addToWishlist = function _callee5(req, res) {
 // @access  Private (Customer only)
 
 
-exports.getMyWishlist = function _callee6(req, res) {
+var getMyWishlist = function getMyWishlist(req, res) {
   var wishlist;
-  return regeneratorRuntime.async(function _callee6$(_context6) {
+  return regeneratorRuntime.async(function getMyWishlist$(_context6) {
     while (1) {
       switch (_context6.prev = _context6.next) {
         case 0:
@@ -435,9 +435,9 @@ exports.getMyWishlist = function _callee6(req, res) {
 // @access  Private (Customer only)
 
 
-exports.removeFromWishlist = function _callee7(req, res) {
+var removeFromWishlist = function removeFromWishlist(req, res) {
   var wishlistItemId, result;
-  return regeneratorRuntime.async(function _callee7$(_context7) {
+  return regeneratorRuntime.async(function removeFromWishlist$(_context7) {
     while (1) {
       switch (_context7.prev = _context7.next) {
         case 0:
@@ -510,9 +510,9 @@ exports.removeFromWishlist = function _callee7(req, res) {
 // @access  Private (Customer only) - this might be called on product page load
 
 
-exports.recordProductView = function _callee8(req, res) {
+var recordProductView = function recordProductView(req, res) {
   var productId, viewHistoryItem;
-  return regeneratorRuntime.async(function _callee8$(_context8) {
+  return regeneratorRuntime.async(function recordProductView$(_context8) {
     while (1) {
       switch (_context8.prev = _context8.next) {
         case 0:
@@ -574,9 +574,9 @@ exports.recordProductView = function _callee8(req, res) {
 // @access  Private (Customer only)
 
 
-exports.getMyViewHistory = function _callee9(req, res) {
+var getMyViewHistory = function getMyViewHistory(req, res) {
   var viewHistory;
-  return regeneratorRuntime.async(function _callee9$(_context9) {
+  return regeneratorRuntime.async(function getMyViewHistory$(_context9) {
     while (1) {
       switch (_context9.prev = _context9.next) {
         case 0:
@@ -627,10 +627,10 @@ exports.getMyViewHistory = function _callee9(req, res) {
 // @access  Private (Customer only)
 
 
-exports.createSupportRequest = function _callee10(req, res) {
+var createSupportRequest = function createSupportRequest(req, res) {
   var _req$body2, subject, message, priority, supportRequest;
 
-  return regeneratorRuntime.async(function _callee10$(_context10) {
+  return regeneratorRuntime.async(function createSupportRequest$(_context10) {
     while (1) {
       switch (_context10.prev = _context10.next) {
         case 0:
@@ -683,9 +683,9 @@ exports.createSupportRequest = function _callee10(req, res) {
 // @access  Private (Customer only)
 
 
-exports.getMySupportRequests = function _callee11(req, res) {
+var getMySupportRequests = function getMySupportRequests(req, res) {
   var supportRequests;
-  return regeneratorRuntime.async(function _callee11$(_context11) {
+  return regeneratorRuntime.async(function getMySupportRequests$(_context11) {
     while (1) {
       switch (_context11.prev = _context11.next) {
         case 0:
@@ -729,4 +729,18 @@ exports.getMySupportRequests = function _callee11(req, res) {
       }
     }
   }, null, null, [[2, 9]]);
+}; // CRITICAL: Add this module.exports block at the very end
+
+
+module.exports = {
+  createOrder: createOrder,
+  getMyOrders: getMyOrders,
+  getOrderById: getOrderById,
+  addToWishlist: addToWishlist,
+  getMyWishlist: getMyWishlist,
+  removeFromWishlist: removeFromWishlist,
+  recordProductView: recordProductView,
+  getMyViewHistory: getMyViewHistory,
+  createSupportRequest: createSupportRequest,
+  getMySupportRequests: getMySupportRequests
 };

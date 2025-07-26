@@ -143,9 +143,9 @@ var addProduct = function addProduct(req, res) {
 // @access  Private (Supplier only, ensures they own the product)
 
 
-var getSupplierProductById = function getSupplierProductById(req, res) {
+var getProductById = function getProductById(req, res) {
   var productId, supplierId, product;
-  return regeneratorRuntime.async(function getSupplierProductById$(_context2) {
+  return regeneratorRuntime.async(function getProductById$(_context2) {
     while (1) {
       switch (_context2.prev = _context2.next) {
         case 0:
@@ -555,13 +555,11 @@ var getProductByIdPublic = function getProductByIdPublic(req, res) {
 
 module.exports = {
   addProduct: addProduct,
-  getSupplierProductById: getSupplierProductById,
-  // Renamed for clarity in exports
+  getProductById: getProductById,
+  // CHANGED: Renamed the exported function
   updateProduct: updateProduct,
   deleteProduct: deleteProduct,
   getMyProducts: getMyProducts,
   getAllProductsPublic: getAllProductsPublic,
-  // Export new public function
-  getProductByIdPublic: getProductByIdPublic // Export new public function
-
+  getProductByIdPublic: getProductByIdPublic
 };

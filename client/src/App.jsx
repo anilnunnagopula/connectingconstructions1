@@ -46,11 +46,13 @@ import EditProduct from "./pages/supplier/EditProduct";
 import LocationPage from "./pages/supplier/LocationPage.jsx";
 import SettingsPage from "./pages/supplier/SettingsPage.jsx";
 
-import ActivityLogsPage from "./pages/supplier/ActivityLogsPage.jsx";
-import TopProductsPage from "./pages/supplier/components/TopProductsPage.jsx";
-import CustomerFeedbackPage from "./pages/supplier/components/CustomerFeedbackPage";
-import DeliveryStatusPage from "./pages/supplier/components/DeliveryStatusPage";
-import NotificationsPage from "./pages/supplier/components/NotificationsFeed.jsx";
+import ActivityLogsPage from "./pages/supplier/ActivityLogsPage";
+import CustomerFeedbackPage from "./pages/supplier/CustomerFeedbackPage";
+import DeliveryStatusPage from "./pages/supplier/DeliveryStatusPage";
+import NotificationsPage from "./pages/supplier/NotificationsPage";
+import TopProductsPage from "./pages/supplier/TopProductsPage";
+import LicenseAndCertificatesPage from "./pages/supplier/LicenseAndCertificatesPage";
+
 
 import CategoryPage from "./pages/CategoryPage";
 import Chatbot from "./components/Chatbot";
