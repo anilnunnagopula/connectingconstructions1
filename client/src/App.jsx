@@ -307,7 +307,7 @@ function App() {
                       />
                       {/* Supplier Public-ish Routes (can be accessed without ProtectedRoute if desired, but often linked from dashboard) */}
                       <Route
-                        path="/supplier/products"
+                        path="/supplier/myproducts"
                         element={<MyProducts />}
                       />
                       <Route

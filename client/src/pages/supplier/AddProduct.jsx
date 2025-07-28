@@ -376,17 +376,29 @@ const AddProduct = () => {
     }
 
     let supplierId = null;
+    let token = null;
+
     try {
       const storedUser = localStorage.getItem("user");
+      // REMOVE THIS LINE: const storedToken = localStorage.getItem("token"); // This is always null
+
+      console.log("storedUser from localStorage:", storedUser);
+      // console.log("storedToken from localStorage:", storedToken); // Remove this log as well
+
       if (storedUser) {
+        // Only check for storedUser, as token is inside it
         const user = JSON.parse(storedUser);
         supplierId = user.email; // Using email as placeholder ID
+        token = user.token; // *** CORRECTED: Get token from the parsed user object ***
       }
     } catch (error) {
-      console.error("Error parsing user from localStorage:", error);
+      console.error("Error parsing user from localStorage:", error); // Adjusted error message
     }
 
-    if (!supplierId) {
+    console.log("supplierId before check:", supplierId);
+    console.log("token before check:", token);
+
+    if (!supplierId || !token) {
       setMessage("Supplier not logged in. Please log in to add products.");
       setMessageType("error");
       setLoading(false);
@@ -448,13 +460,14 @@ const AddProduct = () => {
 
     try {
       // --- MODIFICATION START: Simplified API URL ---
-      const apiUrl = `${process.env.REACT_APP_API_URL}/api/supplier/products`;
+      const apiUrl = `${process.env.REACT_APP_API_URL}/api/supplier/myproducts`;
       // --- MODIFICATION END: Simplified API URL ---
 
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(productData),
       });
