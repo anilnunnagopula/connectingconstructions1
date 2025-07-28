@@ -46,6 +46,7 @@ import EditProduct from "./pages/supplier/EditProduct";
 import ProductDetail from "./pages/supplier/ProductDetail.jsx";
 import LocationPage from "./pages/supplier/LocationPage.jsx";
 import SettingsPage from "./pages/supplier/SettingsPage.jsx";
+import CategoriesPage from "./pages/supplier/CategoriesPage.jsx";
 
 import ActivityLogsPage from "./pages/supplier/ActivityLogsPage";
 import CustomerFeedbackPage from "./pages/supplier/CustomerFeedbackPage";
@@ -357,6 +358,14 @@ function App() {
                         element={
                           <ProtectedRoute allowedRole="supplier">
                             <ProductDetail />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/supplier/categories" // <--- The path from the dashboard card
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <CategoriesPage />
                           </ProtectedRoute>
                         }
                       />
