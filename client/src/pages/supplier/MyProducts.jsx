@@ -264,10 +264,10 @@ const MyProducts = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans">
-      <div className="max-w-7xl mx-auto p-6 md:p-10 lg:p-12">
-        <div className="flex justify-between items-center mb-10">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-800 dark:text-white tracking-tight leading-tight">
-            My Products <span className="text-blue-500">📦</span>
+      <div className="max-w-7xl mx-auto p-4 md:p-10 lg:p-12">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-gray-800 dark:text-white tracking-tight leading-tight">
+            My Products
           </h2>
         </div>
 
@@ -402,7 +402,7 @@ const MyProducts = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation(); // Prevent card click from triggering
-                      navigate(`/edit-product/${product._id}`);
+                      navigate(`/supplier/edit-product/${product._id}`);
                     }}
                     className="flex-grow-0 flex-shrink-0 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-semibold shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                     title="Edit Product"

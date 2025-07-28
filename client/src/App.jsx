@@ -43,6 +43,7 @@ import Materials from "./pages/Materials";
 import MyProducts from "./pages/supplier/MyProducts";
 import AddProduct from "./pages/supplier/AddProduct";
 import EditProduct from "./pages/supplier/EditProduct"; 
+import ProductDetail from "./pages/supplier/ProductDetail.jsx";
 import LocationPage from "./pages/supplier/LocationPage.jsx";
 import SettingsPage from "./pages/supplier/SettingsPage.jsx";
 
@@ -348,9 +349,17 @@ function App() {
                         element={<LicenseAndCertificatesPage />}
                       /> */}
                       <Route
-                        path="/edit-product/:id"
+                        path="/supplier/edit-product/:id"
                         element={<EditProduct />}
                       />{" "}
+                      <Route
+                        path="/supplier/product/:id" // <--- This is the new, specific path
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <ProductDetail />
+                          </ProtectedRoute>
+                        }
+                      />
                       <Route
                         path="/category/:category"
                         element={<CategoryPage />}
