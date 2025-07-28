@@ -1,3 +1,5 @@
+// SupplierDashboard.jsx
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -173,7 +175,7 @@ const SupplierDashboard = () => {
     {
       title: "✏️ Edit Product",
       desc: "Update info of existing products.",
-      link: "/supplier/myproducts",
+      link: "/supplier/myproducts", // 1st navigate to my products and then we need to click on edit option in that page
     },
     {
       title: "🗂️ Categories",
@@ -227,7 +229,7 @@ const SupplierDashboard = () => {
       link: "/supplier/notifications", // New route for detailed notifications
     },
     {
-      title: "📃 License And Certificates", 
+      title: "📃 License And Certificates",
       desc: "view and add all your license and certificates",
       link: "/supplier/license-and-certificates",
     },

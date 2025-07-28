@@ -348,7 +348,7 @@ function App() {
                         element={<LicenseAndCertificatesPage />}
                       /> */}
                       <Route
-                        path="/supplier/edit-product/:id"
+                        path="/edit-product/:id"
                         element={<EditProduct />}
                       />{" "}
                       <Route

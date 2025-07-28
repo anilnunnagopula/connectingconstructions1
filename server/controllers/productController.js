@@ -130,7 +130,9 @@ const getProductById = async (req, res) => {
         .json({ error: "Product not found or you do not own this product." });
     }
 
-    res.status(200).json({ message: "Product fetched successfully!", product });
+    // CHANGE THIS LINE: Send only the product object
+    res.status(200).json(product); // <--- REMOVED THE WRAPPING OBJECT AND MESSAGE
+
   } catch (error) {
     console.error("Error fetching supplier's product by ID:", error);
     if (error.name === "CastError") {

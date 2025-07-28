@@ -182,10 +182,9 @@ var getProductById = function getProductById(req, res) {
           }));
 
         case 10:
-          res.status(200).json({
-            message: "Product fetched successfully!",
-            product: product
-          });
+          // CHANGE THIS LINE: Send only the product object
+          res.status(200).json(product); // <--- REMOVED THE WRAPPING OBJECT AND MESSAGE
+
           _context2.next = 19;
           break;
 
