@@ -1,5 +1,5 @@
 // server/controllers/customerController.js
-const Order = require("../models/Order");
+const Order = require("../models/OrderModel");
 const Product = require("../models/Product");
 const Wishlist = require("../models/Wishlist");
 const ViewHistory = require("../models/ViewHistory");

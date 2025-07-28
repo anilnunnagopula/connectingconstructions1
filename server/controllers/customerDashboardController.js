@@ -1,5 +1,5 @@
 // server/controllers/customerDashboardController.js
-const Order = require("../models/Order");
+const Order = require("../models/OrderModel");
 const Wishlist = require("../models/Wishlist");
 const ViewHistory = require("../models/ViewHistory");
 const SupportRequest = require("../models/SupportRequest");

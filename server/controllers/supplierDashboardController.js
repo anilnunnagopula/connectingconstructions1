@@ -1,6 +1,6 @@
 // server/controllers/supplierDashboardController.js
 const Product = require("../models/Product");
-const Order = require("../models/Order"); // Corrected path based on previous discussion
+const Order = require("../models/OrderModel"); // Corrected path based on previous discussion
 const Review = require("../models/Review");
 const User = require("../models/User"); // Required for user details in orders/reviews
 const mongoose = require("mongoose");

@@ -1,129 +1,74 @@
 "use strict";
 
-// server/models/Order.js
+// server/models/OrderModel.js
 var mongoose = require("mongoose");
 
-var orderItemSchema = new mongoose.Schema({
-  product: {
-    // Reference to the actual Product (ObjectId)
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    required: true
-  },
-  name: {
-    type: String,
-    required: true
-  },
-  qty: {
-    type: Number,
-    required: true
-  },
-  image: {
-    type: String
-  },
-  // Assuming main image URL
-  price: {
-    type: Number,
-    required: true
-  },
-  // Crucially, store the supplier ID for this specific item at the time of order
-  supplier: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true
-  }
-});
 var orderSchema = new mongoose.Schema({
-  user: {
-    // The customer who placed the order
-    type: mongoose.Schema.Types.ObjectId,
+  customer: {
+    // Link to Customer/User who placed the order
+    type: mongoose.Schema.ObjectId,
     ref: "User",
+    // Assuming your User model contains customer data
     required: true
   },
-  orderItems: [orderItemSchema],
-  // Array of products in the order
+  products: [// Array of products in this order
+  {
+    productId: {
+      type: mongoose.Schema.ObjectId,
+      ref: "Product",
+      // Link to the Product model
+      required: true
+    },
+    name: String,
+    price: Number,
+    quantity: Number,
+    // Crucial: Add supplierId here so you can filter orders by supplier
+    supplier: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      // Reference to the supplier user
+      required: true
+    }
+  }],
+  totalAmount: {
+    type: Number,
+    required: true
+  },
   shippingAddress: {
-    address: {
-      type: String,
-      required: true
-    },
-    city: {
-      type: String,
-      required: true
-    },
-    postalCode: {
-      type: String,
-      required: true
-    },
-    country: {
-      type: String,
-      required: true
-    }
+    address: String,
+    city: String,
+    state: String,
+    zipCode: String // Add any other relevant address fields
+
   },
-  paymentMethod: {
+  orderStatus: {
     type: String,
-    required: true
+    "enum": ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Refunded"],
+    "default": "Pending"
   },
-  paymentResult: {
-    // Details from payment gateway
-    id: {
-      type: String
-    },
-    status: {
-      type: String
-    },
-    update_time: {
-      type: String
-    },
-    email_address: {
-      type: String
+  // Optionally, for tracking history
+  statusHistory: [{
+    status: String,
+    timestamp: {
+      type: Date,
+      "default": Date.now
     }
+  }],
+  createdAt: {
+    type: Date,
+    "default": Date.now
   },
-  taxPrice: {
-    type: Number,
-    required: true,
-    "default": 0.0
-  },
-  shippingPrice: {
-    type: Number,
-    required: true,
-    "default": 0.0
-  },
-  totalPrice: {
-    type: Number,
-    required: true,
-    "default": 0.0
-  },
-  isPaid: {
-    type: Boolean,
-    required: true,
-    "default": false
-  },
-  paidAt: {
-    type: Date
-  },
-  isDelivered: {
-    type: Boolean,
-    required: true,
-    "default": false
-  },
-  deliveredAt: {
-    type: Date
+  updatedAt: {
+    type: Date,
+    "default": Date.now
   }
 }, {
-  timestamps: true // Adds `createdAt` and `updatedAt`
-
-}); // Pre-save hook to calculate totalPrice if not provided or if items change
+  timestamps: true
+}); // Automatically adds createdAt and updatedAt
+// Update updatedAt on save
 
 orderSchema.pre("save", function (next) {
-  if (this.isModified("orderItems") || this.isNew) {
-    var itemsTotalPrice = this.orderItems.reduce(function (acc, item) {
-      return acc + item.qty * item.price;
-    }, 0);
-    this.totalPrice = itemsTotalPrice + this.taxPrice + this.shippingPrice;
-  }
-
+  this.updatedAt = Date.now();
   next();
 });
-var Order = mongoose.model("Order", orderSchema);
-module.exports = Order;
+module.exports = mongoose.model("Order", orderSchema);

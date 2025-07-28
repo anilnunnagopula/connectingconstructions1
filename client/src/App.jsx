@@ -40,6 +40,7 @@ import Navbar from "./components/Navbar";
 import About from "./pages/About";
 import Footer from "./components/Footer";
 import Materials from "./pages/Materials";
+
 import MyProducts from "./pages/supplier/MyProducts";
 import AddProduct from "./pages/supplier/AddProduct";
 import EditProduct from "./pages/supplier/EditProduct"; 
@@ -47,13 +48,15 @@ import ProductDetail from "./pages/supplier/ProductDetail.jsx";
 import LocationPage from "./pages/supplier/LocationPage.jsx";
 import SettingsPage from "./pages/supplier/SettingsPage.jsx";
 import CategoriesPage from "./pages/supplier/CategoriesPage.jsx";
+import OrdersPage from "./pages/supplier/OrdersPage.jsx";
+import LicenseAndCertificatesPage from "./pages/supplier/LicenseAndCertificatesPage";
+import AnalyticsPage from "./pages/supplier/AnalyticsPage.jsx";
 
 import ActivityLogsPage from "./pages/supplier/ActivityLogsPage";
 import CustomerFeedbackPage from "./pages/supplier/CustomerFeedbackPage";
 import DeliveryStatusPage from "./pages/supplier/DeliveryStatusPage";
 import NotificationsPage from "./pages/supplier/NotificationsPage";
 import TopProductsPage from "./pages/supplier/TopProductsPage";
-import LicenseAndCertificatesPage from "./pages/supplier/LicenseAndCertificatesPage";
 
 
 import CategoryPage from "./pages/CategoryPage";
@@ -345,10 +348,14 @@ function App() {
                         path="/supplier/notifications"
                         element={<NotificationsPage />}
                       />
-                      {/* <Route
-                        path="/supplier/license-and-certificates"
-                        element={<LicenseAndCertificatesPage />}
-                      /> */}
+                      <Route
+                        path="/supplier/license-and-certificates" // <--- The path from the dashboard card
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <LicenseAndCertificatesPage />
+                          </ProtectedRoute>
+                        }
+                      />
                       <Route
                         path="/supplier/edit-product/:id"
                         element={<EditProduct />}
@@ -369,6 +376,23 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
+                      <Route
+                        path="/supplier/orders" // <--- The path from the dashboard card
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <OrdersPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/supplier/analytics" // <--- The path from the dashboard card
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <AnalyticsPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      
                       <Route
                         path="/category/:category"
                         element={<CategoryPage />}

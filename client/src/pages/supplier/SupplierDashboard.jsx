@@ -188,11 +188,6 @@ const SupplierDashboard = () => {
       link: "/supplier/location",
     },
     {
-      title: "📊 Analytics",
-      desc: "Monitor your shop performance.",
-      link: "/supplier/analytics",
-    },
-    {
       title: "🧾 Orders",
       desc: "Check and manage customer orders.",
       link: "/supplier/orders",
@@ -232,6 +227,11 @@ const SupplierDashboard = () => {
       title: "📃 License And Certificates",
       desc: "view and add all your license and certificates",
       link: "/supplier/license-and-certificates",
+    },
+    {
+      title: "📊 Analytics",
+      desc: "Monitor your shop performance.",
+      link: "/supplier/analytics",
     },
   ];
 

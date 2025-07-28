@@ -1,14 +1,18 @@
 // pages/supplier/CategoriesPage.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import globalCategoriesData from "../../utils/Categories"; // <--- IMPORT THIS LINE
 
 const CategoriesPage = () => {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState([]);
-  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categories, setCategories] = useState([]); // Supplier's own categories
+  // const [globalCategories, setGlobalCategories] = useState([]); // No longer needed as state
+  const [newCategoryName, setNewCategoryName] = useState(""); // For custom typing or editing
+  const [selectedGlobalCategory, setSelectedGlobalCategory] = useState(""); // For dropdown selection
+
   const [editingCategory, setEditingCategory] = useState(null); // { id, name }
-  const [loading, setLoading] = useState(true);
-  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true); // Initial loading for fetching all data
+  const [formSubmitting, setFormSubmitting] = useState(false); // For add/edit/delete operations
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
 
@@ -23,8 +27,11 @@ const CategoriesPage = () => {
     }
   }, []);
 
-  // Fetch categories
-  const fetchCategories = useCallback(async () => {
+  // --- REMOVE: Fetch Global Categories (no longer needed) ---
+  // const fetchGlobalCategories = useCallback(async () => { /* ... */ }, []);
+
+  // --- Fetch Supplier's Own Categories ---
+  const fetchSupplierCategories = useCallback(async () => {
     setLoading(true);
     setMessage("");
     setMessageType("");
@@ -39,7 +46,6 @@ const CategoriesPage = () => {
     }
 
     try {
-      // Assuming your backend has a /api/supplier/categories endpoint for fetching supplier's categories
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/api/supplier/categories`,
         {
@@ -53,25 +59,27 @@ const CategoriesPage = () => {
 
       if (!response.ok) {
         throw new Error(
-          data.message || data.error || "Failed to fetch categories."
+          data.message || data.error || "Failed to fetch your categories."
         );
       }
 
-      setCategories(data); // Assuming data is an array of category objects { _id, name }
-      setMessage("Categories loaded successfully.");
+      setCategories(data);
+      setMessage("Your categories loaded successfully.");
       setMessageType("success");
     } catch (err) {
-      console.error("Error fetching categories:", err);
-      setMessage(err.message || "Error loading categories.");
+      console.error("Error fetching supplier categories:", err);
+      setMessage(err.message || "Error loading your categories.");
       setMessageType("error");
     } finally {
       setLoading(false);
     }
   }, [navigate, getToken]);
 
+  // Initial fetch for supplier categories only
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    fetchSupplierCategories();
+    // setGlobalCategories(globalCategoriesData); // No longer needed as state, use directly
+  }, [fetchSupplierCategories]); // Removed fetchGlobalCategories from dependencies
 
   // Handle message timeout
   useEffect(() => {
@@ -100,9 +108,37 @@ const CategoriesPage = () => {
       return;
     }
 
-    if (!newCategoryName.trim()) {
+    let categoryNameToSubmit = "";
+
+    if (editingCategory) {
+      // If editing, use the text input directly
+      categoryNameToSubmit = newCategoryName.trim();
+    } else {
+      // If adding: prioritize dropdown selection, otherwise use custom typed name
+      if (selectedGlobalCategory) {
+        // Find the name from the imported data using the selected ID (string value)
+        categoryNameToSubmit = selectedGlobalCategory; // The ID is the name itself in this setup
+      } else {
+        categoryNameToSubmit = newCategoryName.trim();
+      }
+    }
+
+    if (!categoryNameToSubmit) {
       setMessage("Category name cannot be empty.");
       setMessageType("error");
+      setFormSubmitting(false);
+      return;
+    }
+
+    // Check if category already exists in supplier's list if adding
+    if (
+      !editingCategory &&
+      categories.some(
+        (cat) => cat.name.toLowerCase() === categoryNameToSubmit.toLowerCase()
+      )
+    ) {
+      setMessage(`Category "${categoryNameToSubmit}" is already in your list.`);
+      setMessageType("warning");
       setFormSubmitting(false);
       return;
     }
@@ -122,7 +158,7 @@ const CategoriesPage = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: newCategoryName.trim() }), // Send only the name
+        body: JSON.stringify({ name: categoryNameToSubmit }),
       });
       const data = await response.json();
 
@@ -139,8 +175,9 @@ const CategoriesPage = () => {
       );
       setMessageType("success");
       setNewCategoryName("");
-      setEditingCategory(null); // Clear editing state
-      fetchCategories(); // Re-fetch categories to update list
+      setSelectedGlobalCategory(""); // Clear dropdown selection
+      setEditingCategory(null);
+      fetchSupplierCategories(); // Re-fetch supplier's categories
     } catch (err) {
       console.error(
         `Error ${editingCategory ? "updating" : "adding"} category:`,
@@ -166,7 +203,7 @@ const CategoriesPage = () => {
       return;
     }
 
-    setLoading(true); // Can use a more granular loading state if needed
+    setFormSubmitting(true);
     setMessage("");
     setMessageType("");
     const token = getToken();
@@ -174,7 +211,7 @@ const CategoriesPage = () => {
     if (!token) {
       setMessage("Authentication required. Please log in.");
       setMessageType("error");
-      setLoading(false);
+      setFormSubmitting(false);
       navigate("/login");
       return;
     }
@@ -200,26 +237,28 @@ const CategoriesPage = () => {
 
       setMessage(`Category "${categoryName}" deleted successfully!`);
       setMessageType("success");
-      fetchCategories(); // Re-fetch categories to update list
+      fetchSupplierCategories(); // Re-fetch categories to update list
     } catch (err) {
       console.error("Error deleting category:", err);
       setMessage(err.message || "Failed to delete category.");
       setMessageType("error");
     } finally {
-      setLoading(false);
+      setFormSubmitting(false);
     }
   };
 
   // Start editing a category
   const startEditing = (category) => {
     setEditingCategory({ id: category._id, name: category.name });
-    setNewCategoryName(category.name);
+    setNewCategoryName(category.name); // Pre-fill text input for editing
+    setSelectedGlobalCategory(""); // Clear dropdown when editing
   };
 
   // Cancel editing
   const cancelEditing = () => {
     setEditingCategory(null);
     setNewCategoryName("");
+    setSelectedGlobalCategory("");
   };
 
   if (loading) {
@@ -265,20 +304,51 @@ const CategoriesPage = () => {
               : "Add New Category"}
           </h3>
           <div className="flex flex-col sm:flex-row gap-4">
-            <input
-              type="text"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="Enter category name (e.g., Cement, Steel, Bricks)"
-              className="flex-grow border border-gray-300 px-4 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              required
-              disabled={formSubmitting}
-            />
+            {/* Conditional Rendering for Dropdown or Text Input for Adding */}
+            {!editingCategory ? ( // Only show dropdown if NOT editing
+              <select
+                value={selectedGlobalCategory}
+                onChange={(e) => setSelectedGlobalCategory(e.target.value)}
+                className="flex-grow border border-gray-300 px-4 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                disabled={formSubmitting}
+              >
+                <option value="">
+                  -- Select from predefined categories --
+                </option>
+                {/* Use globalCategoriesData directly */}
+                {globalCategoriesData.map((catName, index) => (
+                  <option key={index} value={catName}>
+                    {catName}
+                  </option> // Use catName as value and key
+                ))}
+              </select>
+            ) : (
+              // Text input always visible for editing
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder={
+                  editingCategory
+                    ? "Update category name"
+                    : "Type a custom category name"
+                }
+                className="flex-grow border border-gray-300 px-4 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                required // Always required when editing
+                disabled={formSubmitting}
+              />
+            )}
+
             <div className="flex gap-2">
               <button
                 type="submit"
                 className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors duration-200 font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={formSubmitting}
+                disabled={
+                  formSubmitting ||
+                  (!editingCategory &&
+                    !selectedGlobalCategory &&
+                    !newCategoryName.trim())
+                } // Disable if adding and no input/selection
               >
                 {formSubmitting
                   ? editingCategory
@@ -300,6 +370,12 @@ const CategoriesPage = () => {
               )}
             </div>
           </div>
+          {/* Add a descriptive text if not editing and global categories are available */}
+          {!editingCategory && globalCategoriesData.length > 0 && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              Select a category from the dropdown or type a custom one.
+            </p>
+          )}
         </form>
 
         {/* Categories List */}

@@ -11,8 +11,8 @@ const {
   getProductById,
   updateProduct,
   deleteProduct,
-  getAllProductsPublic, // Note: This is a public route, could go in a public/productRoutes.js
-  getProductByIdPublic, // Note: This is a public route, could go in a public/productRoutes.js
+  getAllProductsPublic,
+  getProductByIdPublic,
 } = require("../controllers/productController");
 
 // Category Controllers
@@ -45,15 +45,26 @@ const {
   getAllNotifications,
 } = require("../controllers/supplierDetailedDataController");
 
+const {
+  getSupplierOrders,
+  updateOrderStatus,
+} = require("../controllers/orderController"); // Import order controller functions
+
+const {
+    getLicenses,
+    addLicense,
+    deleteLicense,
+} = require("../controllers/licenseController"); // Import license controller functions
+
+const {
+    getSupplierAnalytics, 
+} = require("../controllers/analyticsController"); 
+
 // --- Public Routes (Accessible by anyone) ---
-// Note: It's common practice to put public routes in a separate router file (e.g., publicRoutes.js)
-// and then import/mount them in your main app.js or server.js file.
-// For now, keeping them here as they were, but separated for clarity.
 router.get("/products", getAllProductsPublic);
 router.get("/products/:id", getProductByIdPublic);
 
 // --- Supplier-specific Protected Routes (Require 'supplier' role) ---
-// All routes below will use 'protect' and 'authorizeRoles("supplier")' middleware
 
 // Dashboard Summary Data
 router.get(
@@ -63,43 +74,42 @@ router.get(
   getSupplierDashboardData
 );
 
-// Product Management (for the logged-in supplier's OWN products)
+// Product Management
 router
   .route("/myproducts")
-  .post(protect, authorizeRoles("supplier"), addProduct) // Add a new product
-  .get(protect, authorizeRoles("supplier"), getMyProducts); // Get all products by this supplier
+  .post(protect, authorizeRoles("supplier"), addProduct)
+  .get(protect, authorizeRoles("supplier"), getMyProducts);
 
 router
   .route("/myproducts/:id")
-  .get(protect, authorizeRoles("supplier"), getProductById) // Get a specific product by ID (owned by supplier)
-  .put(protect, authorizeRoles("supplier"), updateProduct) // Update a specific product
-  .delete(protect, authorizeRoles("supplier"), deleteProduct); // Delete a specific product
+  .get(protect, authorizeRoles("supplier"), getProductById)
+  .put(protect, authorizeRoles("supplier"), updateProduct)
+  .delete(protect, authorizeRoles("supplier"), deleteProduct);
 
-// Category Management (for the logged-in supplier's OWN categories)
+// Category Management
 router
   .route("/categories")
-  .get(protect, authorizeRoles("supplier"), getCategories) // Get all categories for this supplier
-  .post(protect, authorizeRoles("supplier"), addCategory); // Add a new category
+  .get(protect, authorizeRoles("supplier"), getCategories)
+  .post(protect, authorizeRoles("supplier"), addCategory);
 
 router
   .route("/categories/:id")
-  .put(protect, authorizeRoles("supplier"), updateCategory) // Update a specific category
-  .delete(protect, authorizeRoles("supplier"), deleteCategory); // Delete a specific category
+  .put(protect, authorizeRoles("supplier"), updateCategory)
+  .delete(protect, authorizeRoles("supplier"), deleteCategory);
 
-// Shop Location Management (for the supplier's MULTIPLE shop locations)
+// Shop Location Management
 router
   .route("/shop-locations")
-  .get(protect, authorizeRoles("supplier"), getShopLocations) // Get all shop locations for this supplier
-  .post(protect, authorizeRoles("supplier"), addShopLocation); // Add a new shop location
+  .get(protect, authorizeRoles("supplier"), getShopLocations)
+  .post(protect, authorizeRoles("supplier"), addShopLocation);
 
 router
   .route("/shop-locations/:id")
-  .get(protect, authorizeRoles("supplier"), getShopLocations) // Could add a get by ID if needed (though current controller fetches all)
-  .put(protect, authorizeRoles("supplier"), updateShopLocation) // Update a specific shop location
-  .delete(protect, authorizeRoles("supplier"), deleteShopLocation); // Delete a specific shop location
+  .get(protect, authorizeRoles("supplier"), getShopLocations)
+  .put(protect, authorizeRoles("supplier"), updateShopLocation)
+  .delete(protect, authorizeRoles("supplier"), deleteShopLocation);
 
-// Detailed Data Routes (for pages linked from dashboard cards)
-// These fetch comprehensive, paginated data for the dedicated detail pages.
+// Detailed Data Routes
 router.get(
   "/activity-logs",
   protect,
@@ -131,7 +141,49 @@ router.get(
   getAllNotifications
 );
 
-// Placeholder for License and Certificates route when its controller function is ready
+// Order Management
+router.get(
+  "/orders",
+  protect,
+  authorizeRoles("supplier"),
+  getSupplierOrders // Used here
+);
+router.put(
+  "/orders/:id/status",
+  protect,
+  authorizeRoles("supplier"),
+  updateOrderStatus // Used here
+);
+
+router.get(
+  "/license-and-certificates",
+  protect,
+  authorizeRoles("supplier"),
+  getLicenses
+);
+router.post(
+  "/license-and-certificates",
+  protect,
+  authorizeRoles("supplier"),
+  addLicense
+);
+router.delete(
+  "/license-and-certificates/:id",
+  protect,
+  authorizeRoles("supplier"),
+  deleteLicense
+);
+
+// Analytics Data
+// Analytics Data
+router.get(
+    "/analytics",
+    protect,
+    authorizeRoles("supplier"),
+    getSupplierAnalytics
+);
+
+// Placeholder for License and Certificates route
 // router.get('/license-and-certificates', protect, authorizeRoles('supplier'), getLicensesAndCertificates);
 
 module.exports = router;
