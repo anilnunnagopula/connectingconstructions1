@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, Sun, Moon } from "lucide-react";
+import { Menu, X, Sun, Moon, Bell, Plus, UserCircle } from "lucide-react";
 import categories from "../utils/Categories";
 import { useDarkMode } from "../context/DarkModeContext";
 import VoiceCommand from "../ai/VoiceCommand";
@@ -9,6 +9,8 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [mobileDropdown, setMobileDropdown] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
   const { darkMode, setDarkMode } = useDarkMode();
@@ -51,6 +53,7 @@ const Navbar = () => {
     if (e.key === "Escape") {
       setShowDropdown(false);
       setMobileDropdown(false);
+      setShowProfileDropdown(false);
     }
   }, []);
 
@@ -86,39 +89,79 @@ const Navbar = () => {
             Home
           </button>
 
-          {/* Hoverable Categories */}
-          <div
-            className="relative group"
-            onMouseEnter={() => setShowDropdown(true)}
-            onMouseLeave={() => setShowDropdown(false)}
-          >
-            <button
-              className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-300 transition focus:outline-none"
-              aria-haspopup="true"
-              aria-expanded={showDropdown}
-            >
-              Categories <Menu className="w-5 h-5" />
-            </button>
+          {/* Hoverable Categories - Only show if NOT logged in or if customer */}
+          {!isLoggedIn || userRole === "customer" ? (
             <div
-              className={`absolute top-8 left-0 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-56 z-50 transform transition-all duration-200 ease-in-out origin-top ${
-                showDropdown
-                  ? "opacity-100 scale-100 visible"
-                  : "opacity-0 scale-95 invisible"
-              } max-h-64 overflow-y-auto`}
+              className="relative group"
+              onMouseEnter={() => setShowDropdown(true)}
+              onMouseLeave={() => setShowDropdown(false)}
               onKeyDown={handleKeyDown}
               tabIndex="0"
             >
-              {memoizedCategories.map((cat, idx) => (
-                <div
-                  key={idx}
-                  className="px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700 cursor-pointer"
-                  onClick={() => handleCategoryClick(cat)}
-                >
-                  {cat}
-                </div>
-              ))}
+              <button
+                className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-300 transition focus:outline-none"
+                aria-haspopup="true"
+                aria-expanded={showDropdown}
+              >
+                Categories <Menu className="w-5 h-5" />
+              </button>
+              <div
+                className={`absolute top-8 left-0 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-56 z-50 transform transition-all duration-200 ease-in-out origin-top ${
+                  showDropdown
+                    ? "opacity-100 scale-100 visible"
+                    : "opacity-0 scale-95 invisible"
+                } max-h-64 overflow-y-auto`}
+              >
+                {memoizedCategories.map((cat, idx) => (
+                  <div
+                    key={idx}
+                    className="px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700 cursor-pointer"
+                    onClick={() => handleCategoryClick(cat)}
+                  >
+                    {cat}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            // New Supplier-specific Desktop Links
+            userRole === "supplier" && (
+              <>
+                <Link
+                  to="/supplier/myproducts"
+                  className={`hover:text-blue-600 dark:hover:text-blue-300 ${
+                    isActive("/supplier/myproducts") ? "text-blue-600" : ""
+                  }`}
+                >
+                  My Products
+                </Link>
+                <Link
+                  to="/supplier/orders"
+                  className={`hover:text-blue-600 dark:hover:text-blue-300 ${
+                    isActive("/supplier/orders") ? "text-blue-600" : ""
+                  }`}
+                >
+                  Orders
+                </Link>
+                <Link
+                  to="/supplier/analytics"
+                  className={`hover:text-blue-600 dark:hover:text-blue-300 ${
+                    isActive("/supplier/analytics") ? "text-blue-600" : ""
+                  }`}
+                >
+                  Analytics
+                </Link>
+                <Link
+                  to="/supplier/payments"
+                  className={`hover:text-blue-600 dark:hover:text-blue-300 ${
+                    isActive("/supplier/payments") ? "text-blue-600" : ""
+                  }`}
+                >
+                  Payments
+                </Link>
+              </>
+            )
+          )}
 
           {!isLoggedIn && (
             <Link
@@ -140,35 +183,120 @@ const Navbar = () => {
             Contact
           </Link>
 
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm"
-            title={`Switch to ${darkMode ? "light" : "dark"} mode`}
-            aria-label={`Toggle ${darkMode ? "light" : "dark"} mode`}
-          >
-            {darkMode ? (
-              <Sun size={18} className="text-yellow-400" />
-            ) : (
-              <Moon size={18} className="text-blue-500" />
-            )}
-          </button>
+          {/* Grouping Action Icons/Buttons: Voice, Notifications, Add Product, Theme Toggle, Profile */}
+          <div className="flex items-center gap-4">
+            {/* Voice Command */}
+            <VoiceCommand />
 
-          {isLoggedIn ? (
+            {/* Notifications (Placeholder) */}
+            {isLoggedIn && (
+              <button
+                onClick={() => navigate("/supplier/notifications")}
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm relative"
+                title="Notifications"
+                aria-label="Notifications"
+              >
+                <Bell size={18} className="text-gray-700 dark:text-white" />
+              </button>
+            )}
+
+            {/* Add Product Quick Link */}
+            {isLoggedIn && userRole === "supplier" && (
+              <button
+                onClick={() => navigate("/supplier/add-product")}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-600 text-white text-xl hover:bg-blue-700 transition-all duration-300 shadow-sm"
+                title="Add New Product"
+                aria-label="Add New Product"
+              >
+                <Plus size={18} />
+              </button>
+            )}
+
+            {/* Theme Toggle */}
             <button
-              onClick={handleLogout}
-              className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition focus:outline-none focus:ring-2 focus:ring-red-500"
+              onClick={() => setDarkMode(!darkMode)}
+              className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm"
+              title={`Switch to ${darkMode ? "light" : "dark"} mode`}
+              aria-label={`Toggle ${darkMode ? "light" : "dark"} mode`}
             >
-              Logout
+              {darkMode ? (
+                <Sun size={18} className="text-yellow-400" />
+              ) : (
+                <Moon size={18} className="text-blue-500" />
+              )}
             </button>
-          ) : (
-            <Link
-              to="/login"
-              className="px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-900"
-            >
-              SignUp
-            </Link>
-          )}
-          <VoiceCommand />
+
+            {/* User Profile/Logout Dropdown */}
+            {isLoggedIn ? (
+              <div
+                className="relative group"
+                onMouseEnter={() => setShowProfileDropdown(true)}
+                onMouseLeave={() => setShowProfileDropdown(false)}
+                onKeyDown={handleKeyDown}
+                tabIndex="0"
+              >
+                <button
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)} // Toggle on click
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-700 text-white hover:bg-blue-800 transition focus:outline-none focus:ring-2 focus:ring-blue-500" // Only icon, make it same size as others
+                  title={user?.name || "User Profile"} // Title for hover
+                  aria-haspopup="true"
+                  aria-expanded={showProfileDropdown}
+                  aria-label="User Profile Menu"
+                >
+                  <UserCircle size={20} /> {/* Only show icon */}
+                </button>
+                <div
+                  className={`absolute top-full right-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-48 z-50 transform transition-all duration-200 ease-in-out origin-top-right ${
+                    showProfileDropdown
+                      ? "opacity-100 scale-100 visible"
+                      : "opacity-0 scale-95 invisible"
+                  }`}
+                >
+                  <Link
+                    to={
+                      userRole === "customer"
+                        ? "/customer-dashboard"
+                        : "/supplier-dashboard"
+                    }
+                    className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      setIsOpen(false);
+                    }}
+                  >
+                    My Dashboard
+                  </Link>
+                  <Link
+                    to="/supplier/settings" // Corrected to supplier-specific settings
+                    className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      setIsOpen(false);
+                    }}
+                  >
+                    Settings
+                  </Link>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setShowProfileDropdown(false);
+                      setIsOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-700"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-900"
+              >
+                SignUp
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Mobile Voice + Hamburger Icon */}
@@ -197,28 +325,65 @@ const Navbar = () => {
             Home
           </button>
 
-          <div>
-            <button
-              className="w-full text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
-              onClick={() => setMobileDropdown(!mobileDropdown)}
-              aria-expanded={mobileDropdown}
-            >
-              Categories {mobileDropdown ? "▲" : "▼"}
-            </button>
-            {mobileDropdown && (
-              <div className="pl-4 mt-2 space-y-1">
-                {memoizedCategories.map((cat, idx) => (
-                  <div
-                    key={idx}
-                    className="cursor-pointer text-sm hover:text-blue-500 dark:hover:text-blue-300"
-                    onClick={() => handleCategoryClick(cat)}
-                  >
-                    {cat}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Mobile Categories - Only show if NOT logged in or if customer */}
+          {!isLoggedIn || userRole === "customer" ? (
+            <div>
+              <button
+                className="w-full text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+                onClick={() => setMobileDropdown(!mobileDropdown)}
+                aria-expanded={mobileDropdown}
+              >
+                Categories {mobileDropdown ? "▲" : "▼"}
+              </button>
+              {mobileDropdown && (
+                <div className="pl-4 mt-2 space-y-1">
+                  {memoizedCategories.map((cat, idx) => (
+                    <div
+                      key={idx}
+                      className="cursor-pointer text-sm hover:text-blue-500 dark:hover:text-blue-300"
+                      onClick={() => handleCategoryClick(cat)}
+                    >
+                      {cat}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            // New Supplier-specific Mobile Links
+            userRole === "supplier" && (
+              <>
+                <Link
+                  to="/supplier/myproducts"
+                  className="block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+                  onClick={() => setIsOpen(false)}
+                >
+                  My Products
+                </Link>
+                <Link
+                  to="/supplier/orders"
+                  className="block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Orders
+                </Link>
+                <Link
+                  to="/supplier/analytics"
+                  className="block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Analytics
+                </Link>
+                <Link
+                  to="/supplier/payments"
+                  className="block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Payments
+                </Link>
+              </>
+            )
+          )}
 
           {!isLoggedIn && (
             <Link
@@ -238,7 +403,7 @@ const Navbar = () => {
             Contact
           </Link>
 
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-4">
             <button
               onClick={() => {
                 setDarkMode(!darkMode);
@@ -255,15 +420,56 @@ const Navbar = () => {
             </button>
 
             {isLoggedIn ? (
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsOpen(false);
-                }}
-                className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                Logout
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-700 text-white hover:bg-blue-800 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  title={user?.name || "User Profile"}
+                  aria-haspopup="true"
+                  aria-expanded={showProfileDropdown}
+                  aria-label="User Profile Menu"
+                >
+                  <UserCircle size={20} />
+                </button>
+                {showProfileDropdown && (
+                  <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-48 z-50 transform transition-all duration-200 ease-in-out origin-top-right">
+                    <Link
+                      to={
+                        userRole === "customer"
+                          ? "/customer-dashboard"
+                          : "/supplier-dashboard"
+                      }
+                      className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        setIsOpen(false);
+                      }}
+                    >
+                      My Dashboard
+                    </Link>
+                    <Link
+                      to="/supplier/settings"
+                      className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        setIsOpen(false);
+                      }}
+                    >
+                      Settings
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setShowProfileDropdown(false);
+                        setIsOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-700"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link
                 to="/login"
