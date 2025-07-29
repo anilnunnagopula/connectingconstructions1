@@ -1,7 +1,7 @@
 "use strict";
 
 // server/controllers/supplierDashboardController.js
-var Product = require("../models/ProductModel"); // Make sure this path is correct
+var Product = require("../models/Product"); // Make sure this path is correct
 
 
 var Order = require("../models/OrderModel"); // Make sure this path is correct
@@ -33,17 +33,17 @@ exports.getSupplierDashboardData = function _callee(req, res) {
           _context.next = 7;
           return regeneratorRuntime.awrap(Order.aggregate([{
             $match: {
-              'products.supplier': supplierId,
+              "products.supplier": supplierId,
               // Match orders with products from this supplier
-              orderStatus: 'Delivered' // Consider only delivered orders for these metrics
+              orderStatus: "Delivered" // Consider only delivered orders for these metrics
 
             }
           }, {
-            $unwind: '$products' // Deconstruct products array
+            $unwind: "$products" // Deconstruct products array
 
           }, {
             $match: {
-              'products.supplier': supplierId // Filter again for current supplier's products after unwind
+              "products.supplier": supplierId // Filter again for current supplier's products after unwind
 
             }
           }, {
@@ -52,14 +52,14 @@ exports.getSupplierDashboardData = function _callee(req, res) {
               // Group all
               totalEarnings: {
                 $sum: {
-                  $multiply: ['$products.price', '$products.quantity']
+                  $multiply: ["$products.price", "$products.quantity"]
                 }
               },
               totalProductsSold: {
-                $sum: '$products.quantity'
+                $sum: "$products.quantity"
               },
               orderIds: {
-                $addToSet: '$_id'
+                $addToSet: "$_id"
               } // Get unique order IDs
 
             }
@@ -68,7 +68,7 @@ exports.getSupplierDashboardData = function _callee(req, res) {
               _id: 0,
               totalEarnings: 1,
               totalOrders: {
-                $size: '$orderIds'
+                $size: "$orderIds"
               },
               // Count unique orders
               totalProductsSold: 1
@@ -103,32 +103,32 @@ exports.getSupplierDashboardData = function _callee(req, res) {
           _context.next = 14;
           return regeneratorRuntime.awrap(Order.aggregate([{
             $match: {
-              'products.supplier': supplierId,
-              orderStatus: 'Delivered',
+              "products.supplier": supplierId,
+              orderStatus: "Delivered",
               // Only count delivered sales
               createdAt: {
                 $gte: sevenDaysAgo
               }
             }
           }, {
-            $unwind: '$products'
+            $unwind: "$products"
           }, {
             $match: {
-              'products.supplier': supplierId // Match supplier's products after unwind
+              "products.supplier": supplierId // Match supplier's products after unwind
 
             }
           }, {
             $group: {
               _id: {
                 $dateToString: {
-                  format: '%Y-%m-%d',
-                  date: '$createdAt'
+                  format: "%Y-%m-%d",
+                  date: "$createdAt"
                 }
               },
               // Group by date string
               dailyEarnings: {
                 $sum: {
-                  $multiply: ['$products.price', '$products.quantity']
+                  $multiply: ["$products.price", "$products.quantity"]
                 }
               }
             }
@@ -152,9 +152,9 @@ exports.getSupplierDashboardData = function _callee(req, res) {
           for (i = 0; i < 7; i++) {
             date = new Date(sevenDaysAgo);
             date.setDate(date.getDate() + i);
-            dateString = date.toISOString().split('T')[0];
-            labels.push(date.toLocaleDateString('en-US', {
-              weekday: 'short'
+            dateString = date.toISOString().split("T")[0];
+            labels.push(date.toLocaleDateString("en-US", {
+              weekday: "short"
             })); // E.g., 'Mon', 'Tue'
 
             data.push(dailyEarningsMap.get(dateString) || 0); // Push 0 if no sales for that day

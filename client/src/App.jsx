@@ -50,7 +50,9 @@ import SettingsPage from "./pages/supplier/SettingsPage.jsx";
 import CategoriesPage from "./pages/supplier/CategoriesPage.jsx";
 import OrdersPage from "./pages/supplier/OrdersPage.jsx";
 import LicenseAndCertificatesPage from "./pages/supplier/LicenseAndCertificatesPage";
+import PaymentsPage from "./pages/supplier/PaymentsPage.jsx";
 import AnalyticsPage from "./pages/supplier/AnalyticsPage.jsx";
+
 
 import ActivityLogsPage from "./pages/supplier/ActivityLogsPage";
 import CustomerFeedbackPage from "./pages/supplier/CustomerFeedbackPage";
@@ -392,7 +394,14 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
-                      
+                      <Route
+                        path="/supplier/payments" // <--- The path from the dashboard card
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <PaymentsPage />
+                          </ProtectedRoute>
+                        }
+                      />
                       <Route
                         path="/category/:category"
                         element={<CategoryPage />}

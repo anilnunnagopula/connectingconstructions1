@@ -6,7 +6,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import StatCard from "../../components/StatCard";
 import { Box, DollarSign, ShoppingCart, Star } from "lucide-react";
-import SalesChart from "../../components/SalesChart";
+import SalesChart from "./components/SalesChart";
 
 // No longer importing these directly into SupplierDashboard.jsx's render
 // import ActivityTimeline from "./components/ActivityTimeline";
@@ -32,6 +32,12 @@ const SupplierDashboard = () => {
     totalEarnings: 0,
     totalOrders: 0,
     averageRating: 0,
+  });
+
+  // NEW: State for weekly earnings chart data
+  const [weeklyEarningsChartData, setWeeklyEarningsChartData] = useState({
+    labels: [],
+    data: [],
   });
 
   // We no longer need separate states for these if they are not rendered directly on dashboard
@@ -85,6 +91,11 @@ const SupplierDashboard = () => {
             totalOrders: data.totalOrders,
             averageRating: data.averageRating,
           });
+
+          // NEW: Set weekly earnings chart data
+          setWeeklyEarningsChartData(
+            data.weeklyEarnings || { labels: [], data: [] }
+          );
 
           // We no longer need to set states for:
           // setRecentActivity(data.notifications || []);
@@ -233,6 +244,11 @@ const SupplierDashboard = () => {
       desc: "Monitor your shop performance.",
       link: "/supplier/analytics",
     },
+    {
+      title: "💹 Payments ",
+      desc: "Payment methods and Details.",
+      link: "/supplier/payments",
+    },
   ];
 
   return (
@@ -245,7 +261,6 @@ const SupplierDashboard = () => {
         <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
           Manage your products, categories, orders, and performance.
         </p>
-
         {/* 🔗 Dashboard Links (including the new ones) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {cards.map((card, index) => (
@@ -259,10 +274,8 @@ const SupplierDashboard = () => {
             </div>
           ))}
         </div>
-
         {/* ⚡ Shortcuts */}
         <ActionShortcuts />
-
         {/* 📊 Dynamic Stats (remain on dashboard summary) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
           <StatCard
@@ -286,7 +299,6 @@ const SupplierDashboard = () => {
             icon={<Star />}
           />
         </div>
-
         {/* 👤 Supplier Profile Box (remains on dashboard) */}
         <div className="flex justify-center my-10">
           <div className="bg-blue-50 dark:bg-gray-800 shadow-lg rounded-2xl p-6 w-full max-w-md text-center">
@@ -313,10 +325,13 @@ const SupplierDashboard = () => {
             </div>
           </div>
         </div>
-
         {/* 📈 Graphs, Tables & More (SalesChart remains, others are now cards) */}
         <div className="my-10">
-          <SalesChart />
+          {/* Pass the dynamic weeklyEarningsChartData to SalesChart */}
+          <SalesChart
+            labels={weeklyEarningsChartData.labels}
+            data={weeklyEarningsChartData.data}
+          />
         </div>
         {/* REMOVED direct rendering of the other components */}
         {/* <div className="my-10"><ActivityTimeline events={recentActivity} /></div> */}

@@ -58,7 +58,15 @@ var _require8 = require("../controllers/licenseController"),
 
 
 var _require9 = require("../controllers/analyticsController"),
-    getSupplierAnalytics = _require9.getSupplierAnalytics; // --- Public Routes (Accessible by anyone) ---
+    getSupplierAnalytics = _require9.getSupplierAnalytics;
+
+var _require10 = require("../controllers/paymentController"),
+    getPayoutMethods = _require10.getPayoutMethods,
+    addPayoutMethod = _require10.addPayoutMethod,
+    updatePayoutMethod = _require10.updatePayoutMethod,
+    deletePayoutMethod = _require10.deletePayoutMethod,
+    getPayoutHistory = _require10.getPayoutHistory; // Import payment controller functions
+// --- Public Routes (Accessible by anyone) ---
 
 
 router.get("/products", getAllProductsPublic);
@@ -91,7 +99,16 @@ router.post("/license-and-certificates", protect, authorizeRoles("supplier"), ad
 router["delete"]("/license-and-certificates/:id", protect, authorizeRoles("supplier"), deleteLicense); // Analytics Data
 // Analytics Data
 
-router.get("/analytics", protect, authorizeRoles("supplier"), getSupplierAnalytics); // Placeholder for License and Certificates route
+router.get("/analytics", protect, authorizeRoles("supplier"), getSupplierAnalytics); // Payments Management
+
+router.get("/payout-methods", protect, authorizeRoles("supplier"), getPayoutMethods // This is for fetching methods, not a combined endpoint
+);
+router.get("/payout-history", // Separate endpoint for history
+protect, authorizeRoles("supplier"), getPayoutHistory);
+router.post("/payout-methods", protect, authorizeRoles("supplier"), addPayoutMethod);
+router.put("/payout-methods/:id", // For updating a method (e.g., setting default)
+protect, authorizeRoles("supplier"), updatePayoutMethod);
+router["delete"]("/payout-methods/:id", protect, authorizeRoles("supplier"), deletePayoutMethod); // Placeholder for License and Certificates route
 // router.get('/license-and-certificates', protect, authorizeRoles('supplier'), getLicensesAndCertificates);
 
 module.exports = router;
