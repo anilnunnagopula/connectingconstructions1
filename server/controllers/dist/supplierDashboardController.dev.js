@@ -1,28 +1,28 @@
 "use strict";
 
 // server/controllers/supplierDashboardController.js
-var Product = require("../models/Product");
+var Product = require("../models/ProductModel"); // Make sure this path is correct
 
-var Order = require("../models/Order");
 
-var Review = require("../models/Review");
+var Order = require("../models/OrderModel"); // Make sure this path is correct
 
-var mongoose = require("mongoose"); // Needed for mongoose.Types.ObjectId in aggregation
-// @desc    Get aggregated data for the supplier dashboard
+
+var User = require("../models/User"); // Make sure this path is correct (for supplier profile if needed)
+// @desc    Get summary dashboard data for authenticated supplier
 // @route   GET /api/supplier/dashboard
 // @access  Private (Supplier only)
 
 
 exports.getSupplierDashboardData = function _callee(req, res) {
-  var supplierId, totalProducts, totalOrdersResult, totalOrders, earningsResult, totalEarnings, averageRatingResult, averageRating, recentOrders, filteredRecentOrders;
+  var supplierId, totalProducts, orderAggregationResult, dashboardSummary, averageRating, sevenDaysAgo, weeklySalesData, dailyEarningsMap, labels, data, i, date, dateString;
   return regeneratorRuntime.async(function _callee$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
-          // The 'authorizeRoles("supplier")' middleware ensures only suppliers can hit this endpoint
-          supplierId = req.user.id; // Get the supplier's ID from the authenticated user
+          _context.prev = 0;
+          supplierId = req.user.id; // Get supplier's _id from authenticated user
+          // --- 1. Total Products ---
 
-          _context.prev = 1;
           _context.next = 4;
           return regeneratorRuntime.awrap(Product.countDocuments({
             supplier: supplierId
@@ -32,148 +32,162 @@ exports.getSupplierDashboardData = function _callee(req, res) {
           totalProducts = _context.sent;
           _context.next = 7;
           return regeneratorRuntime.awrap(Order.aggregate([{
-            $unwind: "$orderItems"
-          }, // Deconstruct the orderItems array
-          {
             $match: {
-              "orderItems.supplier": new mongoose.Types.ObjectId(supplierId),
-              // Match items belonging to this supplier
-              isPaid: true // Only count paid orders
+              'products.supplier': supplierId,
+              // Match orders with products from this supplier
+              orderStatus: 'Delivered' // Consider only delivered orders for these metrics
 
             }
           }, {
-            $group: {
-              _id: "$user",
-              count: {
-                $addToSet: "$_id"
-              }
-            }
-          }, // Group by user to count unique orders they made
-          {
-            $count: "totalOrders"
-          } // Count the final number of unique orders
-          ]));
+            $unwind: '$products' // Deconstruct products array
 
-        case 7:
-          totalOrdersResult = _context.sent;
-          totalOrders = totalOrdersResult.length > 0 ? totalOrdersResult[0].totalOrders : 0; // 3. Earnings (sum of price*qty for items sold by this supplier)
-
-          _context.next = 11;
-          return regeneratorRuntime.awrap(Order.aggregate([{
-            $unwind: "$orderItems"
-          }, // Deconstruct the array
-          {
+          }, {
             $match: {
-              "orderItems.supplier": new mongoose.Types.ObjectId(supplierId),
-              // Filter for this supplier's items
-              isPaid: true // Only consider paid items
+              'products.supplier': supplierId // Filter again for current supplier's products after unwind
 
             }
           }, {
             $group: {
               _id: null,
-              // Group all matching items together
+              // Group all
               totalEarnings: {
                 $sum: {
-                  $multiply: ["$orderItems.qty", "$orderItems.price"]
-                }
-              } // Sum up qty * price
-
-            }
-          }]));
-
-        case 11:
-          earningsResult = _context.sent;
-          totalEarnings = earningsResult.length > 0 ? earningsResult[0].totalEarnings : 0; // 4. Average Rating (overall average rating for this supplier's products)
-          // This calculates the average of averageRating from all products owned by this supplier
-
-          _context.next = 15;
-          return regeneratorRuntime.awrap(Product.aggregate([{
-            $match: {
-              supplier: new mongoose.Types.ObjectId(supplierId),
-              // Filter for this supplier's products
-              numReviews: {
-                $gt: 0
-              } // Only consider products that actually have reviews
-
-            }
-          }, {
-            $group: {
-              _id: null,
-              totalRatingSum: {
-                $sum: {
-                  $multiply: ["$averageRating", "$numReviews"]
+                  $multiply: ['$products.price', '$products.quantity']
                 }
               },
-              totalReviewsCount: {
-                $sum: "$numReviews"
-              }
+              totalProductsSold: {
+                $sum: '$products.quantity'
+              },
+              orderIds: {
+                $addToSet: '$_id'
+              } // Get unique order IDs
+
             }
           }, {
             $project: {
               _id: 0,
-              overallAverageRating: {
-                $divide: ["$totalRatingSum", "$totalReviewsCount"]
-              }
+              totalEarnings: 1,
+              totalOrders: {
+                $size: '$orderIds'
+              },
+              // Count unique orders
+              totalProductsSold: 1
             }
           }]));
 
-        case 15:
-          averageRatingResult = _context.sent;
-          averageRating = averageRatingResult.length > 0 ? parseFloat(averageRatingResult[0].overallAverageRating.toFixed(1)) : 0; // Format to one decimal place
-          // 5. Recent Orders (e.g., top 5 most recent paid orders involving this supplier's products)
-          // This query fetches orders and then filters their items for the specific supplier on the backend.
+        case 7:
+          orderAggregationResult = _context.sent;
+          dashboardSummary = orderAggregationResult.length > 0 ? orderAggregationResult[0] : {
+            totalEarnings: 0,
+            totalOrders: 0,
+            totalProductsSold: 0
+          }; // --- 3. Average Rating (requires Product model to store ratings or aggregate from Reviews) ---
+          // This is a placeholder. If you have a separate Reviews model, you'd aggregate from there.
+          // Assuming for now product model might have a simple average rating
+          // const productsWithRatings = await Product.find({ supplier: supplierId, averageRating: { $exists: true } });
+          // let totalRating = 0;
+          // let ratedProductsCount = 0;
+          // productsWithRatings.forEach(p => {
+          //   totalRating += p.averageRating;
+          //   ratedProductsCount++;
+          // });
+          // const averageRating = ratedProductsCount > 0 ? (totalRating / ratedProductsCount) : 0;
+          // Using a dummy value for now if no concrete rating system is implemented.
 
-          _context.next = 19;
-          return regeneratorRuntime.awrap(Order.find({
-            "orderItems.supplier": supplierId,
-            isPaid: true
-          }).sort({
-            createdAt: -1
-          }) // Sort by most recent
-          .limit(5) // Get top 5 orders
-          .populate("user", "name email") // Populate customer's name and email
-          .select("orderItems totalPrice createdAt"));
+          averageRating = 4.5; // Placeholder
+          // --- 4. Weekly Earnings for Chart ---
 
-        case 19:
-          recentOrders = _context.sent;
-          // Select relevant order fields
-          // Filter orderItems to only show those from the current supplier
-          filteredRecentOrders = recentOrders.map(function (order) {
-            return {
-              _id: order._id,
-              user: order.user,
-              totalPrice: order.totalPrice,
-              // This totalPrice is for the whole order, not just supplier's items
-              createdAt: order.createdAt,
-              orderItems: order.orderItems.filter(function (item) {
-                return item.supplier.equals(supplierId);
-              })
-            };
+          sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          sevenDaysAgo.setHours(0, 0, 0, 0); // Start from the beginning of the day
+
+          _context.next = 14;
+          return regeneratorRuntime.awrap(Order.aggregate([{
+            $match: {
+              'products.supplier': supplierId,
+              orderStatus: 'Delivered',
+              // Only count delivered sales
+              createdAt: {
+                $gte: sevenDaysAgo
+              }
+            }
+          }, {
+            $unwind: '$products'
+          }, {
+            $match: {
+              'products.supplier': supplierId // Match supplier's products after unwind
+
+            }
+          }, {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: '$createdAt'
+                }
+              },
+              // Group by date string
+              dailyEarnings: {
+                $sum: {
+                  $multiply: ['$products.price', '$products.quantity']
+                }
+              }
+            }
+          }, {
+            $sort: {
+              _id: 1
+            } // Sort by date ascending
+
+          }]));
+
+        case 14:
+          weeklySalesData = _context.sent;
+          // Format data for the last 7 days, including days with no sales
+          dailyEarningsMap = new Map();
+          weeklySalesData.forEach(function (item) {
+            dailyEarningsMap.set(item._id, item.dailyEarnings);
           });
-          res.json({
+          labels = [];
+          data = [];
+
+          for (i = 0; i < 7; i++) {
+            date = new Date(sevenDaysAgo);
+            date.setDate(date.getDate() + i);
+            dateString = date.toISOString().split('T')[0];
+            labels.push(date.toLocaleDateString('en-US', {
+              weekday: 'short'
+            })); // E.g., 'Mon', 'Tue'
+
+            data.push(dailyEarningsMap.get(dateString) || 0); // Push 0 if no sales for that day
+          }
+
+          res.status(200).json({
             totalProducts: totalProducts,
-            totalEarnings: totalEarnings,
-            totalOrders: totalOrders,
+            totalEarnings: dashboardSummary.totalEarnings,
+            totalOrders: dashboardSummary.totalOrders,
             averageRating: averageRating,
-            recentOrders: filteredRecentOrders
+            // Use calculated or placeholder
+            weeklyEarnings: {
+              // NEW: Data for the graph
+              labels: labels,
+              data: data
+            }
           });
-          _context.next = 28;
+          _context.next = 27;
           break;
 
-        case 24:
-          _context.prev = 24;
-          _context.t0 = _context["catch"](1);
+        case 23:
+          _context.prev = 23;
+          _context.t0 = _context["catch"](0);
           console.error("Error fetching supplier dashboard data:", _context.t0);
           res.status(500).json({
-            message: "Failed to fetch dashboard data.",
-            error: _context.t0.message
+            error: "Failed to fetch dashboard data",
+            details: _context.t0.message
           });
 
-        case 28:
+        case 27:
         case "end":
           return _context.stop();
       }
     }
-  }, null, null, [[1, 24]]);
+  }, null, null, [[0, 23]]);
 };

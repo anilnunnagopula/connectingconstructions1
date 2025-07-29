@@ -1,267 +1,130 @@
 // server/controllers/supplierDashboardController.js
-const Product = require("../models/Product");
-const Order = require("../models/OrderModel"); // Corrected path based on previous discussion
-const Review = require("../models/Review");
-const User = require("../models/User"); // Required for user details in orders/reviews
-const mongoose = require("mongoose");
+const Product = require("../models/ProductModel"); // Make sure this path is correct
+const Order = require("../models/OrderModel");   // Make sure this path is correct
+const User = require("../models/User");       // Make sure this path is correct (for supplier profile if needed)
 
-// @desc    Get aggregated data for the supplier dashboard
+// @desc    Get summary dashboard data for authenticated supplier
 // @route   GET /api/supplier/dashboard
 // @access  Private (Supplier only)
-const getSupplierDashboardData = async (req, res) => {
-  // CHANGED: from exports.getSupplierDashboardData to const getSupplierDashboardData
-  const supplierId = req.user.id;
-
+exports.getSupplierDashboardData = async (req, res) => {
   try {
-    // --- Existing Aggregations ---
-    const totalProducts = await Product.countDocuments({
-      supplier: supplierId,
-    });
+    const supplierId = req.user.id; // Get supplier's _id from authenticated user
 
-    const totalOrdersResult = await Order.aggregate([
-      { $unwind: "$orderItems" },
+    // --- 1. Total Products ---
+    const totalProducts = await Product.countDocuments({ supplier: supplierId });
+
+    // --- 2. Total Earnings, Total Orders, Average Rating (from delivered orders) ---
+    const orderAggregationResult = await Order.aggregate([
       {
         $match: {
-          "orderItems.supplier": new mongoose.Types.ObjectId(supplierId),
-          isPaid: true,
-        },
+          'products.supplier': supplierId, // Match orders with products from this supplier
+          orderStatus: 'Delivered' // Consider only delivered orders for these metrics
+        }
       },
-      { $group: { _id: "$user", count: { $addToSet: "$_id" } } },
-      { $count: "totalOrders" },
-    ]);
-    const totalOrders =
-      totalOrdersResult.length > 0 ? totalOrdersResult[0].totalOrders : 0;
-
-    const earningsResult = await Order.aggregate([
-      { $unwind: "$orderItems" },
+      {
+        $unwind: '$products' // Deconstruct products array
+      },
       {
         $match: {
-          "orderItems.supplier": new mongoose.Types.ObjectId(supplierId),
-          isPaid: true,
-        },
+          'products.supplier': supplierId // Filter again for current supplier's products after unwind
+        }
       },
       {
         $group: {
-          _id: null,
-          totalEarnings: {
-            $sum: { $multiply: ["$orderItems.qty", "$orderItems.price"] },
-          },
-        },
-      },
-    ]);
-    const totalEarnings =
-      earningsResult.length > 0 ? earningsResult[0].totalEarnings : 0;
-
-    const averageRatingResult = await Product.aggregate([
-      {
-        $match: {
-          supplier: new mongoose.Types.ObjectId(supplierId),
-          numReviews: { $gt: 0 },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalRatingSum: {
-            $sum: { $multiply: ["$averageRating", "$numReviews"] },
-          },
-          totalReviewsCount: { $sum: "$numReviews" },
-        },
+          _id: null, // Group all
+          totalEarnings: { $sum: { $multiply: ['$products.price', '$products.quantity'] } },
+          totalProductsSold: { $sum: '$products.quantity' },
+          orderIds: { $addToSet: '$_id' } // Get unique order IDs
+        }
       },
       {
         $project: {
           _id: 0,
-          overallAverageRating: {
-            $divide: ["$totalRatingSum", "$totalReviewsCount"],
-          },
-        },
-      },
-    ]);
-    const averageRating =
-      averageRatingResult.length > 0
-        ? parseFloat(averageRatingResult[0].overallAverageRating.toFixed(1))
-        : 0;
-
-    // --- NEW DATA FETCHES FOR DYNAMIC SECTIONS ---
-
-    const recentProductAdds = await Product.find({ supplier: supplierId })
-      .sort({ createdAt: -1 })
-      .limit(3)
-      .select("name createdAt");
-
-    const recentOrdersTimeline = await Order.find({
-      "orderItems.supplier": supplierId,
-      isPaid: true,
-    })
-      .sort({ createdAt: -1 })
-      .limit(3)
-      .populate("user", "name")
-      .select("orderItems createdAt");
-
-    const recentReviews = await Review.find({
-      product: {
-        $in: await Product.find({ supplier: supplierId }).distinct("_id"),
-      },
-    })
-      .sort({ createdAt: -1 })
-      .limit(3)
-      .populate("user", "name")
-      .populate("product", "name")
-      .select("rating comment createdAt");
-
-    const topSellingProducts = await Order.aggregate([
-      { $unwind: "$orderItems" },
-      {
-        $match: {
-          "orderItems.supplier": new mongoose.Types.ObjectId(supplierId),
-          isPaid: true,
-        },
-      },
-      {
-        $group: {
-          _id: "$orderItems.product",
-          totalOrders: { $sum: 1 },
-          totalQuantitySold: { $sum: "$orderItems.qty" },
-          totalRevenue: {
-            $sum: { $multiply: ["$orderItems.qty", "$orderItems.price"] },
-          },
-        },
-      },
-      { $sort: { totalQuantitySold: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: {
-          from: "products",
-          localField: "_id",
-          foreignField: "_id",
-          as: "productDetails",
-        },
-      },
-      { $unwind: "$productDetails" },
-      {
-        $project: {
-          _id: 0,
-          productId: "$_id",
-          name: "$productDetails.name",
-          category: "$productDetails.category",
-          orders: "$totalOrders",
-          revenue: "$totalRevenue",
-          stock: "$productDetails.quantity",
-        },
-      },
+          totalEarnings: 1,
+          totalOrders: { $size: '$orderIds' }, // Count unique orders
+          totalProductsSold: 1
+        }
+      }
     ]);
 
-    const customerFeedback = recentReviews;
+    const dashboardSummary = orderAggregationResult.length > 0 ? orderAggregationResult[0] : { totalEarnings: 0, totalOrders: 0, totalProductsSold: 0 };
 
-    const deliveryStatusOrders = await Order.find({
-      "orderItems.supplier": supplierId,
-    })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate("user", "name")
-      .populate("orderItems.product", "name")
-      .select("orderItems isPaid isDelivered deliveredAt createdAt");
+    // --- 3. Average Rating (requires Product model to store ratings or aggregate from Reviews) ---
+    // This is a placeholder. If you have a separate Reviews model, you'd aggregate from there.
+    // Assuming for now product model might have a simple average rating
+    // const productsWithRatings = await Product.find({ supplier: supplierId, averageRating: { $exists: true } });
+    // let totalRating = 0;
+    // let ratedProductsCount = 0;
+    // productsWithRatings.forEach(p => {
+    //   totalRating += p.averageRating;
+    //   ratedProductsCount++;
+    // });
+    // const averageRating = ratedProductsCount > 0 ? (totalRating / ratedProductsCount) : 0;
+    // Using a dummy value for now if no concrete rating system is implemented.
+    const averageRating = 4.5; // Placeholder
 
-    const formattedDeliveryStatusOrders = deliveryStatusOrders.map((order) => ({
-      orderId: order._id,
-      buyerName: order.user ? order.user.name : "N/A",
-      products: order.orderItems
-        .filter((item) => item.supplier.equals(supplierId))
-        .map((item) => ({
-          name: item.product ? item.product.name : item.name,
-          qty: item.qty,
-        })),
-      status: order.isDelivered
-        ? "Delivered"
-        : order.isPaid
-        ? "Paid & Processing"
-        : "Pending Payment",
-      createdAt: order.createdAt,
-    }));
+    // --- 4. Weekly Earnings for Chart ---
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    sevenDaysAgo.setHours(0, 0, 0, 0); // Start from the beginning of the day
 
-    const notifications = [];
+    const weeklySalesData = await Order.aggregate([
+        {
+            $match: {
+                'products.supplier': supplierId,
+                orderStatus: 'Delivered', // Only count delivered sales
+                createdAt: { $gte: sevenDaysAgo }
+            }
+        },
+        {
+            $unwind: '$products'
+        },
+        {
+            $match: {
+                'products.supplier': supplierId // Match supplier's products after unwind
+            }
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, // Group by date string
+                dailyEarnings: { $sum: { $multiply: ['$products.price', '$products.quantity'] } }
+            }
+        },
+        {
+            $sort: { _id: 1 } // Sort by date ascending
+        }
+    ]);
 
-    recentProductAdds.forEach((p) =>
-      notifications.push({
-        type: "Product Added",
-        message: `You added '${p.name}'.`,
-        timestamp: p.createdAt,
-        read: false,
-      })
-    );
-
-    recentOrdersTimeline.forEach((o) =>
-      notifications.push({
-        type: "New Order",
-        message: `Order #${o._id.toString().slice(-6)} placed by ${
-          o.user?.name || "a customer"
-        } for ${o.orderItems
-          .filter((item) => item.supplier.equals(supplierId))
-          .map((item) => item.name)
-          .join(", ")}.`,
-        timestamp: o.createdAt,
-        read: false,
-      })
-    );
-
-    recentReviews.forEach((r) =>
-      notifications.push({
-        type: "New Review",
-        message: `⭐️${r.rating} from ${r.user?.name || "a customer"} on '${
-          r.product?.name || "your product"
-        }'.`,
-        timestamp: r.createdAt,
-        read: false,
-      })
-    );
-
-    const lowStockProducts = await Product.find({
-      supplier: supplierId,
-      quantity: { $lte: 10, $gt: 0 },
-    }).select("name quantity createdAt");
-    lowStockProducts.forEach((p) =>
-      notifications.push({
-        type: "Stock Alert",
-        message: `'${p.name}' is low in stock (${p.quantity} left).`,
-        timestamp: new Date(),
-        read: false,
-      })
-    );
-    const outOfStockProducts = await Product.find({
-      supplier: supplierId,
-      quantity: 0,
-    }).select("name createdAt");
-    outOfStockProducts.forEach((p) =>
-      notifications.push({
-        type: "Stock Alert",
-        message: `'${p.name}' is out of stock!`,
-        timestamp: new Date(),
-        read: false,
-      })
-    );
-
-    notifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
-    res.json({
-      totalProducts,
-      totalEarnings,
-      totalOrders,
-      averageRating,
-      topSellingProducts,
-      customerFeedback,
-      deliveryStatusOrders: formattedDeliveryStatusOrders,
-      notifications,
+    // Format data for the last 7 days, including days with no sales
+    const dailyEarningsMap = new Map();
+    weeklySalesData.forEach(item => {
+        dailyEarningsMap.set(item._id, item.dailyEarnings);
     });
+
+    const labels = [];
+    const data = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(sevenDaysAgo);
+        date.setDate(date.getDate() + i);
+        const dateString = date.toISOString().split('T')[0];
+        labels.push(date.toLocaleDateString('en-US', { weekday: 'short' })); // E.g., 'Mon', 'Tue'
+        data.push(dailyEarningsMap.get(dateString) || 0); // Push 0 if no sales for that day
+    }
+
+    res.status(200).json({
+      totalProducts: totalProducts,
+      totalEarnings: dashboardSummary.totalEarnings,
+      totalOrders: dashboardSummary.totalOrders,
+      averageRating: averageRating, // Use calculated or placeholder
+      weeklyEarnings: { // NEW: Data for the graph
+          labels: labels,
+          data: data
+      }
+    });
+
   } catch (error) {
     console.error("Error fetching supplier dashboard data:", error);
-    res.status(500).json({
-      message: "Failed to fetch dashboard data.",
-      error: error.message,
-    });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch dashboard data", details: error.message });
   }
-};
-
-// CRITICAL: Add this module.exports block at the very end
-module.exports = {
-  getSupplierDashboardData,
 };
