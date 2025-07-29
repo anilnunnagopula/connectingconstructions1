@@ -557,9 +557,9 @@ var getProductByIdPublic = function getProductByIdPublic(req, res) {
 // @access  Private (Supplier only)
 
 
-exports.exportProductsToCSV = function _callee(req, res) {
+var exportProductsToCSV = function exportProductsToCSV(req, res) {
   var supplierId, products, fields, csv;
-  return regeneratorRuntime.async(function _callee$(_context8) {
+  return regeneratorRuntime.async(function exportProductsToCSV$(_context8) {
     while (1) {
       switch (_context8.prev = _context8.next) {
         case 0:

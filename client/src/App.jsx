@@ -53,6 +53,8 @@ import LicenseAndCertificatesPage from "./pages/supplier/LicenseAndCertificatesP
 import PaymentsPage from "./pages/supplier/PaymentsPage.jsx";
 import AnalyticsPage from "./pages/supplier/AnalyticsPage.jsx";
 import SyncInventoryPage from "./pages/supplier/SyncInventoryPage.jsx";
+import ManageOffersPage from "./pages/supplier/ManageOffersPage.jsx";
+import OfferFormPage from "./pages/supplier/OfferFormPage.jsx";
 
 import ActivityLogsPage from "./pages/supplier/ActivityLogsPage";
 import CustomerFeedbackPage from "./pages/supplier/CustomerFeedbackPage";
@@ -409,7 +411,32 @@ function App() {
                             <SyncInventoryPage />
                           </ProtectedRoute>
                         }
-                      />  
+                      />
+                      <Route
+                        path="/supplier/create-offer"
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <OfferFormPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/supplier/offers/:id/edit"
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <OfferFormPage />
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/supplier/offers"
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <ManageOffersPage />
+                          </ProtectedRoute>
+                        }
+                      />
                       <Route
                         path="/category/:category"
                         element={<CategoryPage />}

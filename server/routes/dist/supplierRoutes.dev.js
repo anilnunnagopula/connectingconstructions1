@@ -7,8 +7,12 @@ var router = express.Router();
 
 var _require = require("../middleware/authMiddleware"),
     protect = _require.protect,
-    authorizeRoles = _require.authorizeRoles; // NEW: Import multer for file uploads
+    authorizeRoles = _require.authorizeRoles;
 
+var MAX_FILE_SIZE_MB = 10; // Max 10MB for the CSV/Excel file
+
+var MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024; // Convert MB to bytes
+// NEW: Import multer for file uploads
 
 var multer = require('multer');
 
@@ -80,7 +84,15 @@ var _require10 = require("../controllers/paymentController"),
 
 
 var _require11 = require("../controllers/syncInventoryController"),
-    syncInventory = _require11.syncInventory; // Export Products to CSV
+    syncInventory = _require11.syncInventory;
+
+var _require12 = require("../controllers/offerController"),
+    createOffer = _require12.createOffer,
+    getOffers = _require12.getOffers,
+    getOfferById = _require12.getOfferById,
+    updateOffer = _require12.updateOffer,
+    deleteOffer = _require12.deleteOffer; // Import offer controller functions
+// Export Products to CSV
 
 
 router.get("/products/export-csv", // <--- NEW ROUTE
@@ -114,7 +126,6 @@ router.put("/orders/:id/status", protect, authorizeRoles("supplier"), updateOrde
 router.get("/license-and-certificates", protect, authorizeRoles("supplier"), getLicenses);
 router.post("/license-and-certificates", protect, authorizeRoles("supplier"), addLicense);
 router["delete"]("/license-and-certificates/:id", protect, authorizeRoles("supplier"), deleteLicense); // Analytics Data
-// Analytics Data
 
 router.get("/analytics", protect, authorizeRoles("supplier"), getSupplierAnalytics); // Payments Management
 
@@ -126,5 +137,11 @@ router.post("/payout-methods", protect, authorizeRoles("supplier"), addPayoutMet
 router.put("/payout-methods/:id", // For updating a method (e.g., setting default)
 protect, authorizeRoles("supplier"), updatePayoutMethod);
 router["delete"]("/payout-methods/:id", protect, authorizeRoles("supplier"), deletePayoutMethod);
-router.post("/inventory/sync", protect, authorizeRoles("supplier"), upload.single("inventoryFile"), syncInventory);
+router.post("/inventory/sync", protect, authorizeRoles("supplier"), upload.single("inventoryFile"), syncInventory); // Offer Management
+
+router.get("/offers", protect, authorizeRoles("supplier"), getOffers);
+router.post("/offers", protect, authorizeRoles("supplier"), createOffer);
+router.get("/offers/:id", protect, authorizeRoles("supplier"), getOfferById);
+router.put("/offers/:id", protect, authorizeRoles("supplier"), updateOffer);
+router["delete"]("/offers/:id", protect, authorizeRoles("supplier"), deleteOffer);
 module.exports = router;

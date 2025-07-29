@@ -2,6 +2,9 @@
 const express = require("express");
 const router = express.Router();
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
+const MAX_FILE_SIZE_MB = 10; // Max 10MB for the CSV/Excel file
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024; // Convert MB to bytes
+
 // NEW: Import multer for file uploads
 const multer = require('multer');
 const upload = multer({
@@ -75,6 +78,15 @@ const {
 } = require("../controllers/paymentController"); // Import payment controller functions
 
 const { syncInventory } = require("../controllers/syncInventoryController");
+
+const {
+  createOffer,
+  getOffers,
+  getOfferById,
+  updateOffer,
+  deleteOffer,
+} = require("../controllers/offerController"); // Import offer controller functions
+
 // Export Products to CSV
 router.get(
     "/products/export-csv", // <--- NEW ROUTE
@@ -198,7 +210,6 @@ router.delete(
 );
 
 // Analytics Data
-// Analytics Data
 router.get(
     "/analytics",
     protect,
@@ -245,4 +256,37 @@ router.post(
   upload.single("inventoryFile"), 
   syncInventory
 );
+
+// Offer Management
+router.get(
+    "/offers",
+    protect,
+    authorizeRoles("supplier"),
+    getOffers
+);
+router.post(
+    "/offers",
+    protect,
+    authorizeRoles("supplier"),
+    createOffer
+);
+router.get(
+  "/offers/:id",
+  protect,
+  authorizeRoles("supplier"),
+  getOfferById
+);
+router.put(
+    "/offers/:id",
+    protect,
+    authorizeRoles("supplier"),
+    updateOffer
+);
+router.delete(
+    "/offers/:id",
+    protect,
+    authorizeRoles("supplier"),
+    deleteOffer
+);
+
 module.exports = router;

@@ -2,7 +2,7 @@
 
 // server/controllers/orderController.js
 var Order = require("../models/OrderModel"); // Assuming your Mongoose Order model
-const Product = require('../models/ProductModel'); // Might need this if filtering by product.supplier
+const Product = require('../models/Product'); // Might need this if filtering by product.supplier
 // @desc    Get all orders for the authenticated supplier
 // @route   GET /api/supplier/orders
 // @access  Private (Supplier only)

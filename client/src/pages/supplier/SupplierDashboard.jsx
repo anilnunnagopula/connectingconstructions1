@@ -1,13 +1,12 @@
 // SupplierDashboard.jsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import StatCard from "../../components/StatCard";
 import { Box, DollarSign, ShoppingCart, Star } from "lucide-react";
-import SalesChart from "./components/SalesChart";
-
+import SalesChart from "./components/SalesChart"
 // No longer importing these directly into SupplierDashboard.jsx's render
 // import ActivityTimeline from "./components/ActivityTimeline";
 // import TopProductsTable from "./components/TopProductsTable";
@@ -20,35 +19,94 @@ import ProfileWidget from "../../components/ProfileWidget";
 const baseURL = process.env.REACT_APP_API_URL;
 
 const SupplierDashboard = () => {
-  const navigate = useNavigate();
-
-  // State for the authenticated supplier's data (from localStorage and API)
-  const [supplierData, setSupplierData] = useState(null);
-
-  // State for primary dynamic dashboard metrics
+  // 1. --- ALL useState HOOKS FIRST (Strict Order) ---
+  const navigate = useNavigate(); // useNavigate is also a hook
+  const [supplierData, setSupplierData] = useState(null); // Moved up
   const [dashboardStats, setDashboardStats] = useState({
+    // Moved up
     totalProducts: 0,
     totalEarnings: 0,
     totalOrders: 0,
     averageRating: 0,
   });
-
-  // NEW: State for weekly earnings chart data
   const [weeklyEarningsChartData, setWeeklyEarningsChartData] = useState({
+    // Moved up
     labels: [],
     data: [],
   });
+  const [loading, setLoading] = useState(true); // Moved up
+  const [error, setError] = useState(null); // Moved up
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
 
-  // We no longer need separate states for these if they are not rendered directly on dashboard
-  // const [recentActivity, setRecentActivity] = useState([]);
-  // const [topSellingProducts, setTopSellingProducts] = useState([]);
-  // const [customerFeedback, setCustomerFeedback] = useState([]);
-  // const [deliveryStatus, setDeliveryStatus] = useState([]);
-  // const [notifications, setNotifications] = useState([]);
+  // 2. --- ALL useCallback HOOKS SECOND (after all useState hooks) ---
+  // Ensure getToken is defined BEFORE handleExportCSV, as handleExportCSV uses getToken
+  const getToken = useCallback(() => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      return storedUser ? JSON.parse(storedUser).token : null;
+    } catch (err) {
+      console.error("Error parsing user from localStorage:", err);
+      return null;
+    }
+  }, []);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // --- MODIFIED: Wrap handleExportCSV in useCallback ---
+  const handleExportCSV = useCallback(async () => {
+    setMessage("Generating CSV... Please wait.");
+    setMessageType("info");
+    const token = getToken();
 
+    if (!token) {
+      setMessage("Authentication required to export data.");
+      setMessageType("error");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await axios.get(
+        `${baseURL}/api/supplier/products/export-csv`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "my_products.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setMessage("Products exported successfully to CSV!");
+      setMessageType("success");
+    } catch (err) {
+      console.error("Error exporting CSV:", err);
+      let errorMessage = "Failed to export data.";
+      if (err.response && err.response.data instanceof Blob) {
+        const errorText = await err.response.data.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } catch (parseErr) {
+          // If not JSON, use generic message
+        }
+      } else if (err.response) {
+        errorMessage =
+          err.response.data.message || err.response.data.error || errorMessage;
+      } else {
+        errorMessage = err.message;
+      }
+      setMessage(errorMessage);
+      setMessageType("error");
+    }
+  }, [getToken, navigate, setMessage, setMessageType]); // Dependencies are correct
+
+  // 3. --- ALL useEffect HOOKS LAST (after useCallback hooks) ---
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
@@ -139,36 +197,16 @@ const SupplierDashboard = () => {
     fetchDashboardData();
   }, [navigate]);
 
-  // Render loading/error states
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center">
-        <p className="text-lg">Loading dashboard data...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center p-4">
-        <div className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 p-4 rounded-lg">
-          <p className="text-xl font-semibold mb-2">Error Loading Dashboard</p>
-          <p>{error}</p>
-          <button
-            onClick={() => navigate("/login")}
-            className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!supplierData) {
-    navigate("/login");
-    return null;
-  }
+  // useEffect for message timeout
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage("");
+        setMessageType("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
   // UPDATED `cards` array with new entries and their respective links
   const cards = [
@@ -248,63 +286,12 @@ const SupplierDashboard = () => {
       desc: "Payment methods and Details.",
       link: "/supplier/payments",
     },
+    {
+      title: "💰 Manage Offers",
+      desc: "View, edit, and manage your active promotions.",
+      link: "/supplier/offers", 
+    },
   ];
-  // NEW: Handle Export CSV
-  const handleExportCSV = async () => {
-    setMessage("Generating CSV... Please wait.");
-    setMessageType("info");
-    const token = getToken(); // Assuming getToken is available from a parent context or defined in this component
-
-    if (!token) {
-      setMessage("Authentication required to export data.");
-      setMessageType("error");
-      navigate("/login");
-      return;
-    }
-
-    try {
-      // Assuming backend endpoint /api/supplier/products/export-csv
-      const response = await axios.get(
-        `${baseURL}/api/supplier/products/export-csv`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: "blob", // Important: tell axios to expect a binary response
-        }
-      ); // Create a blob from the response
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "my_products.csv"); // Set the file name
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url); // Clean up the URL object
-
-      setMessage("Products exported successfully to CSV!");
-      setMessageType("success");
-    } catch (err) {
-      console.error("Error exporting CSV:", err);
-      let errorMessage = "Failed to export data.";
-      if (err.response && err.response.data instanceof Blob) {
-        // If backend sends a JSON error in a blob, read it as text
-        const errorText = await err.response.data.text();
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.message || errorJson.error || errorMessage;
-        } catch (parseErr) {
-          // If not JSON, use generic message
-        }
-      } else if (err.response) {
-        errorMessage =
-          err.response.data.message || err.response.data.error || errorMessage;
-      } else {
-        errorMessage = err.message;
-      }
-      setMessage(errorMessage);
-      setMessageType("error");
-    }
-  };
 
   return (
     <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen transition-colors duration-300">
@@ -329,16 +316,14 @@ const SupplierDashboard = () => {
             </div>
           ))}
         </div>
-        {/* ⚡ Shortcuts */}
-        {/* <ActionShortcuts /> */}
         {/* ⚡ Shortcuts (updated buttons) */}
         <div className="flex justify-center flex-wrap gap-5 my-8">
-          <button
+          {/* <button
             onClick={() => navigate("/supplier/sync-inventory")}
             className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors duration-200 font-semibold"
           >
             🔄 Sync Inventory
-          </button>
+          </button> */}
           <button
             onClick={handleExportCSV}
             className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors duration-200 font-semibold"
@@ -346,15 +331,13 @@ const SupplierDashboard = () => {
             ⬇️ Export Products CSV
           </button>
           <button
-            onClick={() =>
-              setMessage("Create Offer functionality coming soon!")
-            }
-            className="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors duration-200 font-semibold disabled:opacity-50"
+            onClick={() =>navigate("/supplier/create-offer")}
+            className="bg-yellow-600 text-white px-12 py-3 rounded-lg hover:bg-yellow-700 transition-colors duration-200 font-semibold disabled:opacity-50"
           >
             ✨ Create Offer
           </button>
         </div>
-        
+
         {/* 📊 Dynamic Stats (remain on dashboard summary) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
           <StatCard
@@ -412,12 +395,6 @@ const SupplierDashboard = () => {
             data={weeklyEarningsChartData.data}
           />
         </div>
-        {/* REMOVED direct rendering of the other components */}
-        {/* <div className="my-10"><ActivityTimeline events={recentActivity} /></div> */}
-        {/* <div className="my-10"><TopProductsTable products={topSellingProducts} /></div> */}
-        {/* <div className="my-10"><RatingsTable reviews={customerFeedback} /></div> */}
-        {/* <div className="my-10"><DeliveryStatusTable orders={deliveryStatus} /></div> */}
-        {/* <div className="my-10"><NotificationFeed notifications={notifications} /></div> */}
       </div>
     </div>
   );

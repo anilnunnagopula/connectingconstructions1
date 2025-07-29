@@ -1,5 +1,5 @@
 // server/controllers/syncInventoryController.js
-const Product = require("../models/ProductModel"); // Your Product model
+const Product = require("../models/Product"); // Your Product model
 const csv = require("csv-parser"); // For CSV parsing
 const xlsx = require("xlsx"); // For Excel parsing
 const stream = require("stream"); // Node.js stream module

@@ -322,7 +322,7 @@ const getProductByIdPublic = async (req, res) => {
 // @desc    Export all products for authenticated supplier to CSV
 // @route   GET /api/supplier/products/export-csv
 // @access  Private (Supplier only)
-exports.exportProductsToCSV = async (req, res) => {
+const exportProductsToCSV = async (req, res) => {
     try {
         const supplierId = req.user.id; // Get supplier's _id from authenticated user
 

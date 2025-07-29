@@ -1,7 +1,7 @@
 "use strict";
 
 // server/controllers/syncInventoryController.js
-var Product = require("../models/ProductModel"); // Your Product model
+var Product = require("../models/Product"); // Your Product model
 
 
 var csv = require("csv-parser"); // For CSV parsing
