@@ -1,11 +1,10 @@
-// models/User.js
+// server/models/User.js
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs"); // Important for the pre-save hook
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
   {
     username: {
-      // Added username for better identity or login options
       type: String,
       required: true,
       unique: true,
@@ -14,8 +13,8 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       required: true,
-      enum: ["customer", "supplier"], // Ensure only these roles are accepted
-      default: "customer", // Set a default if not explicitly provided during registration
+      enum: ["customer", "supplier", "admin"], // Added 'admin' role if you use it
+      default: "customer",
     },
     email: {
       type: String,
@@ -23,15 +22,14 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       lowercase: true,
-      match: [/.+@.+\..+/, "Please enter a valid email address"], // Added regex for email format
+      match: [/.+@.+\..+/, "Please enter a valid email address"],
     },
     password: {
       type: String,
       required: true,
-      minlength: 6, // Good practice to enforce minimum length
+      minlength: 6,
     },
     name: {
-      // Consider splitting into firstName and lastName if needed
       type: String,
       required: true,
       trim: true,
@@ -40,7 +38,6 @@ const userSchema = new mongoose.Schema(
       code: String,
       expiresAt: Date,
     },
-    // Optional additional fields for user profiles (as discussed previously)
     phoneNumber: {
       type: String,
       trim: true,
@@ -49,10 +46,49 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
+    location: {
+      // Nested object for geographic location (lat/lng)
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
     },
+    profilePictureUrl: {
+      // NEW: URL for user's profile image
+      type: String,
+      default: "", // Default to empty string if no image
+    },
+    // --- Customer-specific fields ---
+    cart: [
+      // Array of items in the customer's cart
+      {
+        productId: {
+          type: mongoose.Schema.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        // Could also store name, price, image directly for faster cart loading
+      },
+    ],
+    wishlist: [
+      // Array of product IDs in the customer's wishlist
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Product",
+      },
+    ],
+    notifications: [
+      // Array of notifications for the user
+      {
+        message: { type: String, required: true },
+        read: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now },
+        link: String, // Optional link for the notification
+      },
+    ],
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt
@@ -73,7 +109,7 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-// NEW: Method to compare entered password with hashed password
+// Method to compare entered password with hashed password
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

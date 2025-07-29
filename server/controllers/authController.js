@@ -57,6 +57,7 @@ const registerUser = async (req, res) => {
       email: newUser.email,
       role: newUser.role,
       token, // Send the token
+      profilePictureUrl: newUser.profilePictureUrl || null,
     });
   } catch (err) {
     console.error("Registration error:", err);
@@ -115,6 +116,7 @@ const loginUser = async (req, res) => {
       email: user.email,
       role: user.role,
       token, // Send the token
+      profilePictureUrl: user.profilePictureUrl || null,
     });
   } catch (err) {
     console.error("Login error:", err);

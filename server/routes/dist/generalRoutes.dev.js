@@ -5,10 +5,13 @@ var express = require("express");
 
 var router = express.Router();
 
-var axios = require("axios"); // Ensure axios is installed in server directory (npm install axios)
-// @desc    Proxy endpoint for Nominatim reverse geocoding
-// @route   GET /geocode-proxy?lat=:lat&lon=:lon
-// @access  Public
+var axios = require("axios"); // --- Import Public Product Controller Functions ---
+
+
+var _require = require("../controllers/productController"),
+    getAllProductsPublic = _require.getAllProductsPublic,
+    getProductByIdPublic = _require.getProductByIdPublic; // --- Public Routes ---
+// Proxy endpoint for Nominatim reverse geocoding
 
 
 router.get("/geocode-proxy", function _callee(req, res) {
@@ -37,6 +40,10 @@ router.get("/geocode-proxy", function _callee(req, res) {
               lat: lat,
               lon: lon,
               format: "json"
+            },
+            // Add a user-agent header as Nominatim requests it for non-trivial use
+            headers: {
+              "User-Agent": "YourAppName/1.0 (your-email@example.com)"
             }
           }));
 
@@ -60,5 +67,8 @@ router.get("/geocode-proxy", function _callee(req, res) {
       }
     }
   }, null, null, [[3, 10]]);
-});
+}); // NEW: Public route for fetching products
+
+router.get("/products", getAllProductsPublic);
+router.get("/products/:id", getProductByIdPublic);
 module.exports = router;

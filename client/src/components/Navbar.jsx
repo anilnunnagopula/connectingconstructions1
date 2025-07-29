@@ -7,9 +7,9 @@ import VoiceCommand from "../ai/VoiceCommand";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [mobileDropdown, setMobileDropdown] = useState(false);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false); // Desktop Categories Dropdown
+  const [mobileDropdown, setMobileDropdown] = useState(false); // Mobile Categories Dropdown
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false); // New: Profile Dropdown
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,7 +53,7 @@ const Navbar = () => {
     if (e.key === "Escape") {
       setShowDropdown(false);
       setMobileDropdown(false);
-      setShowProfileDropdown(false);
+      setShowProfileDropdown(false); // Close profile dropdown on Escape
     }
   }, []);
 
@@ -96,7 +96,7 @@ const Navbar = () => {
               onMouseEnter={() => setShowDropdown(true)}
               onMouseLeave={() => setShowDropdown(false)}
               onKeyDown={handleKeyDown}
-              tabIndex="0"
+              tabIndex="0" // Make focusable
             >
               <button
                 className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-300 transition focus:outline-none"
@@ -180,7 +180,7 @@ const Navbar = () => {
               isActive("/contact") ? "text-blue-600" : ""
             }`}
           >
-            Contact
+            ContactUs
           </Link>
 
           {/* Grouping Action Icons/Buttons: Voice, Notifications, Add Product, Theme Toggle, Profile */}
@@ -189,14 +189,16 @@ const Navbar = () => {
             <VoiceCommand />
 
             {/* Notifications (Placeholder) */}
-            {isLoggedIn && (
+            {isLoggedIn && ( // Only show notifications if logged in
               <button
-                onClick={() => navigate("/supplier/notifications")}
+                onClick={() => navigate("/supplier/notifications")} // Link to notifications page
                 className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm relative"
                 title="Notifications"
                 aria-label="Notifications"
               >
                 <Bell size={18} className="text-gray-700 dark:text-white" />
+                {/* Add notification badge here if you have a count */}
+                {/* <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">3</span> */}
               </button>
             )}
 
@@ -233,17 +235,14 @@ const Navbar = () => {
                 onMouseEnter={() => setShowProfileDropdown(true)}
                 onMouseLeave={() => setShowProfileDropdown(false)}
                 onKeyDown={handleKeyDown}
-                tabIndex="0"
+                tabIndex="0" // Make focusable
               >
                 <button
-                  onClick={() => setShowProfileDropdown(!showProfileDropdown)} // Toggle on click
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-700 text-white hover:bg-blue-800 transition focus:outline-none focus:ring-2 focus:ring-blue-500" // Only icon, make it same size as others
-                  title={user?.name || "User Profile"} // Title for hover
+                  className="px-3 py-1 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   aria-haspopup="true"
                   aria-expanded={showProfileDropdown}
-                  aria-label="User Profile Menu"
                 >
-                  <UserCircle size={20} /> {/* Only show icon */}
+                  <UserCircle size={20} /> {user?.name || "User"}
                 </button>
                 <div
                   className={`absolute top-full right-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-48 z-50 transform transition-all duration-200 ease-in-out origin-top-right ${
@@ -257,7 +256,7 @@ const Navbar = () => {
                       userRole === "customer"
                         ? "/customer-dashboard"
                         : "/supplier-dashboard"
-                    }
+                    } // Link to specific dashboard
                     className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
                     onClick={() => {
                       setShowProfileDropdown(false);
@@ -267,7 +266,7 @@ const Navbar = () => {
                     My Dashboard
                   </Link>
                   <Link
-                    to="/supplier/settings" // Corrected to supplier-specific settings
+                    to="/profile" // Link to general profile/settings page
                     className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
                     onClick={() => {
                       setShowProfileDropdown(false);
@@ -421,18 +420,18 @@ const Navbar = () => {
 
             {isLoggedIn ? (
               <div className="relative">
+                {" "}
+                {/* Wrap for mobile profile dropdown */}
                 <button
                   onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-700 text-white hover:bg-blue-800 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  title={user?.name || "User Profile"}
+                  className="px-3 py-1 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   aria-haspopup="true"
                   aria-expanded={showProfileDropdown}
-                  aria-label="User Profile Menu"
                 >
-                  <UserCircle size={20} />
+                  <UserCircle size={20} /> {user?.name || "User"}
                 </button>
                 {showProfileDropdown && (
-                  <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-48 z-50 transform transition-all duration-200 ease-in-out origin-top-right">
+                  <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-48 z-50">
                     <Link
                       to={
                         userRole === "customer"
@@ -448,7 +447,7 @@ const Navbar = () => {
                       My Dashboard
                     </Link>
                     <Link
-                      to="/supplier/settings"
+                      to="/profile"
                       className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
                       onClick={() => {
                         setShowProfileDropdown(false);

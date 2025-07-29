@@ -116,8 +116,9 @@ var registerUser = function registerUser(req, res) {
             name: newUser.name,
             email: newUser.email,
             role: newUser.role,
-            token: token // Send the token
-
+            token: token,
+            // Send the token
+            profilePictureUrl: newUser.profilePictureUrl || null
           });
           _context.next = 23;
           break;
@@ -204,8 +205,9 @@ var loginUser = function loginUser(req, res) {
             name: user.name,
             email: user.email,
             role: user.role,
-            token: token // Send the token
-
+            token: token,
+            // Send the token
+            profilePictureUrl: user.profilePictureUrl || null
           });
           _context2.next = 27;
           break;

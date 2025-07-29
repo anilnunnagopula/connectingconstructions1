@@ -451,23 +451,33 @@ var getMyProducts = function getMyProducts(req, res) {
 
 
 var getAllProductsPublic = function getAllProductsPublic(req, res) {
-  var products;
+  var category, query, products;
   return regeneratorRuntime.async(function getAllProductsPublic$(_context6) {
     while (1) {
       switch (_context6.prev = _context6.next) {
         case 0:
           _context6.prev = 0;
-          _context6.next = 3;
-          return regeneratorRuntime.awrap(Product.find({}));
+          category = req.query.category; // Get category from query parameter (e.g., ?category=Cement)
 
-        case 3:
+          query = {};
+
+          if (category) {
+            query.category = category; // Add category filter to the query
+          } // Fetch products, and crucially, populate the supplier's name and profilePictureUrl
+
+
+          _context6.next = 6;
+          return regeneratorRuntime.awrap(Product.find(query).populate("supplier", "name username profilePictureUrl"));
+
+        case 6:
           products = _context6.sent;
+          // Populate supplier's name and profile picture URL
           res.status(200).json(products);
-          _context6.next = 11;
+          _context6.next = 14;
           break;
 
-        case 7:
-          _context6.prev = 7;
+        case 10:
+          _context6.prev = 10;
           _context6.t0 = _context6["catch"](0);
           console.error("Error fetching all public products:", _context6.t0);
           res.status(500).json({
@@ -475,12 +485,12 @@ var getAllProductsPublic = function getAllProductsPublic(req, res) {
             details: _context6.t0.message
           });
 
-        case 11:
+        case 14:
         case "end":
           return _context6.stop();
       }
     }
-  }, null, null, [[0, 7]]);
+  }, null, null, [[0, 10]]);
 }; // --- NEW: Get single product by ID (public, for customer Browse) ---
 // @desc    Get a single product by ID (publicly visible)
 // @route   GET /api/products/:id
@@ -507,7 +517,8 @@ var getProductByIdPublic = function getProductByIdPublic(req, res) {
 
         case 4:
           _context7.next = 6;
-          return regeneratorRuntime.awrap(Product.findById(productId).populate("supplier", "name email phoneNumber location.text"));
+          return regeneratorRuntime.awrap(Product.findById(productId).populate("supplier", "name username email phoneNumber location.text profilePictureUrl" // Added profilePictureUrl
+          ));
 
         case 6:
           product = _context7.sent;

@@ -1,10 +1,13 @@
 // server/controllers/customerController.js
+const User = require("../models/User");
 const Order = require("../models/OrderModel");
-const Product = require("../models/Product");
-const Wishlist = require("../models/Wishlist");
-const ViewHistory = require("../models/ViewHistory");
-const SupportRequest = require("../models/SupportRequest");
-const mongoose = require("mongoose"); // For ObjectId comparisons
+// Ensure these are imported if you are using separate models for Wishlist, ViewHistory, SupportRequest
+const Wishlist = require("../models/Wishlist"); // Assuming separate Wishlist model
+const ViewHistory = require("../models/ViewHistory"); // Assuming separate ViewHistory model
+const SupportRequest = require("../models/SupportRequest"); // Assuming separate SupportRequest model
+const Product = require("../models/Product"); // Needed for populating cart/wishlist items
+
+const mongoose = require("mongoose"); // For ObjectId if needed for complex aggregations
 
 // Helper for basic input validation (can be reused)
 const validateRequiredFields = (data, fields) => {
@@ -15,14 +18,81 @@ const validateRequiredFields = (data, fields) => {
   }
 };
 
-// --- Order Management ---
+// @desc    Get customer dashboard summary data
+// @route   GET /api/customer/dashboard
+// @access  Private (Customer only)
+const getCustomerDashboardData = async (req, res) => {
+  try {
+    const customerId = req.user.id; // ID of the authenticated customer
+
+    // 1. Total Orders
+    const totalOrders = await Order.countDocuments({
+      user: customerId,
+      isPaid: true,
+    });
+
+    // 2. Total Spent (Corrected using totalAmount from Order model)
+    const totalSpentResult = await Order.aggregate([
+      {
+        $match: {
+          user: customerId,
+          isPaid: true,
+          orderStatus: { $in: ["Delivered", "Completed"] },
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } }, // Sums the 'totalAmount' field from each matching order
+    ]);
+    const totalSpent =
+      totalSpentResult.length > 0 ? totalSpentResult[0].total : 0;
+
+    // 3. Recent Orders (top 5 most recent paid orders)
+    const recentOrders = await Order.find({ user: customerId, isPaid: true })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("products.productId", "name price imageUrls"); // Populate product details
+
+    // 4. Wishlist Items Count, Cart Items Count, Unread Notifications Count
+    // Assuming these are separate models or arrays on the User model.
+    // If on User model: const user = await User.findById(customerId).select('cart wishlist notifications');
+    // If separate models, use their respective counts:
+    const wishlistItemsCount = await Wishlist.countDocuments({
+      user: customerId,
+    }); // Assuming separate Wishlist model
+    const user = await User.findById(customerId).select(
+      "cart notifications profilePictureUrl"
+    ); // Fetch user for cart/notifications/profile pic
+    const cartItemsCount = user?.cart?.length || 0; // Assuming cart is an array on User model
+    const unreadNotificationsCount =
+      user?.notifications?.filter((n) => !n.read).length || 0; // Assuming notifications array on User model with 'read' field
+    const customerProfilePictureUrl = user?.profilePictureUrl || null; // Get profile picture URL from User model
+
+    res.status(200).json({
+      message: "Customer dashboard data fetched successfully",
+      totalOrders: totalOrders,
+      totalSpent: totalSpent,
+      recentOrders: recentOrders,
+      wishlistItemsCount: wishlistItemsCount,
+      cartItemsCount: cartItemsCount,
+      unreadNotificationsCount: unreadNotificationsCount,
+      profilePictureUrl: customerProfilePictureUrl, // Include profile picture URL in response
+      recommendedProducts: [], // Placeholder
+      customerOffers: [], // Placeholder
+    });
+  } catch (error) {
+    console.error("Error fetching customer dashboard data:", error);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch customer dashboard data",
+        error: error.message,
+      });
+  }
+};
 
 // @desc    Create a new order
 // @route   POST /api/customer/orders
 // @access  Private (Customer only)
 const createOrder = async (req, res) => {
-  // CHANGED: from exports.createOrder to const createOrder
-  // req.user is populated by 'protect' middleware and 'authorizeRoles("customer")'
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -52,7 +122,6 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: "No order items provided." });
     }
 
-    // Validate order items and enrich with product details and supplier ID
     const itemsFromDb = await Promise.all(
       orderItems.map(async (item) => {
         const product = await Product.findById(item.product);
@@ -65,32 +134,37 @@ const createOrder = async (req, res) => {
           );
         }
 
-        // Decrement product stock (important for inventory management)
-        product.quantity -= item.qty;
+        product.quantity -= item.qty; // Decrement product stock
         await product.save();
 
         return {
-          product: product._id,
+          productId: product._id, // Use productId, not just product
           name: product.name,
-          qty: item.qty,
+          qty: item.qty, // Corrected from 'item.qty'
           image:
             product.imageUrls && product.imageUrls.length > 0
               ? product.imageUrls[0]
               : "",
           price: product.price,
-          supplier: product.supplier, // Store supplier ID for each item
+          supplier: product.supplier,
         };
       })
     );
 
+    // Calculate total amount based on itemsFromDb
+    const calculatedTotalAmount = itemsFromDb.reduce(
+      (acc, item) => acc + item.price * item.qty,
+      0
+    );
+
     const order = new Order({
-      user: req.user.id, // Assign to the authenticated customer
-      orderItems: itemsFromDb,
+      user: req.user.id,
+      orderItems: itemsFromDb, // Corrected from 'orderItems'
       shippingAddress,
       paymentMethod,
       taxPrice: taxPrice || 0,
       shippingPrice: shippingPrice || 0,
-      // totalPrice will be calculated by the pre-save hook in Order model
+      totalAmount: calculatedTotalAmount, // Set totalAmount based on calculated value
     });
 
     const createdOrder = await order.save();
@@ -105,20 +179,16 @@ const createOrder = async (req, res) => {
   }
 };
 
-// @desc    Get all orders for the authenticated customer
-// @route   GET /api/customer/orders/my
-// @access  Private (Customer only)
 const getMyOrders = async (req, res) => {
-  // CHANGED: from exports.getMyOrders to const getMyOrders
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
 
   try {
     const orders = await Order.find({ user: req.user.id }).populate(
-      "orderItems.product",
+      "products.productId", // Corrected to products.productId
       "name price imageUrls"
-    ); // Populate product details
+    );
     res.json(orders);
   } catch (error) {
     console.error("Error fetching customer orders:", error);
@@ -128,11 +198,7 @@ const getMyOrders = async (req, res) => {
   }
 };
 
-// @desc    Get a single order by ID for the authenticated customer
-// @route   GET /api/customer/orders/:id
-// @access  Private (Customer only)
 const getOrderById = async (req, res) => {
-  // CHANGED: from exports.getOrderById to const getOrderById
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -141,7 +207,7 @@ const getOrderById = async (req, res) => {
     const order = await Order.findOne({
       _id: req.params.id,
       user: req.user.id,
-    }).populate("orderItems.product", "name price imageUrls");
+    }).populate("products.productId", "name price imageUrls"); // Corrected to products.productId
 
     if (!order) {
       return res
@@ -160,13 +226,7 @@ const getOrderById = async (req, res) => {
   }
 };
 
-// --- Wishlist Management ---
-
-// @desc    Add product to wishlist
-// @route   POST /api/customer/wishlist
-// @access  Private (Customer only)
 const addToWishlist = async (req, res) => {
-  // CHANGED: from exports.addToWishlist to const addToWishlist
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -176,13 +236,11 @@ const addToWishlist = async (req, res) => {
   try {
     validateRequiredFields(req.body, ["productId"]);
 
-    // Check if product exists
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found." });
     }
 
-    // Check if already in wishlist
     const existingWishlistItem = await Wishlist.findOne({
       user: req.user.id,
       product: productId,
@@ -208,11 +266,7 @@ const addToWishlist = async (req, res) => {
   }
 };
 
-// @desc    Get customer's wishlist
-// @route   GET /api/customer/wishlist/my
-// @access  Private (Customer only)
 const getMyWishlist = async (req, res) => {
-  // CHANGED: from exports.getMyWishlist to const getMyWishlist
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -221,8 +275,7 @@ const getMyWishlist = async (req, res) => {
     const wishlist = await Wishlist.find({ user: req.user.id }).populate(
       "product",
       "name price imageUrls category supplier"
-    ); // Populate product details
-
+    );
     res.json(wishlist);
   } catch (error) {
     console.error("Error fetching wishlist:", error);
@@ -232,11 +285,7 @@ const getMyWishlist = async (req, res) => {
   }
 };
 
-// @desc    Remove product from wishlist
-// @route   DELETE /api/customer/wishlist/:id
-// @access  Private (Customer only)
 const removeFromWishlist = async (req, res) => {
-  // CHANGED: from exports.removeFromWishlist to const removeFromWishlist
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -269,13 +318,7 @@ const removeFromWishlist = async (req, res) => {
   }
 };
 
-// --- View History Management ---
-
-// @desc    Record a product view (or update existing view)
-// @route   POST /api/customer/view-history
-// @access  Private (Customer only) - this might be called on product page load
 const recordProductView = async (req, res) => {
-  // CHANGED: from exports.recordProductView to const recordProductView
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -285,11 +328,10 @@ const recordProductView = async (req, res) => {
   try {
     validateRequiredFields(req.body, ["productId"]);
 
-    // Find and update if exists, otherwise create new
     const viewHistoryItem = await ViewHistory.findOneAndUpdate(
       { user: req.user.id, product: productId },
-      { $set: { viewedAt: Date.now() } }, // Update timestamp
-      { upsert: true, new: true, setDefaultsOnInsert: true } // Create if not exists, return new doc
+      { $set: { viewedAt: Date.now() } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     res
@@ -303,19 +345,15 @@ const recordProductView = async (req, res) => {
   }
 };
 
-// @desc    Get customer's view history
-// @route   GET /api/customer/view-history/my
-// @access  Private (Customer only)
 const getMyViewHistory = async (req, res) => {
-  // CHANGED: from exports.getMyViewHistory to const getMyViewHistory
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
 
   try {
     const viewHistory = await ViewHistory.find({ user: req.user.id })
-      .populate("product", "name price imageUrls category") // Populate product details
-      .sort({ viewedAt: -1 }); // Most recent views first
+      .populate("product", "name price imageUrls category")
+      .sort({ viewedAt: -1 });
     res.json(viewHistory);
   } catch (error) {
     console.error("Error fetching view history:", error);
@@ -325,13 +363,7 @@ const getMyViewHistory = async (req, res) => {
   }
 };
 
-// --- Support Request Management ---
-
-// @desc    Create a new support request
-// @route   POST /api/customer/support-requests
-// @access  Private (Customer only)
 const createSupportRequest = async (req, res) => {
-  // CHANGED: from exports.createSupportRequest to const createSupportRequest
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -349,10 +381,12 @@ const createSupportRequest = async (req, res) => {
     });
 
     await supportRequest.save();
-    res.status(201).json({
-      message: "Support request submitted successfully!",
-      supportRequest,
-    });
+    res
+      .status(201)
+      .json({
+        message: "Support request submitted successfully!",
+        supportRequest,
+      });
   } catch (error) {
     console.error("Error creating support request:", error);
     res
@@ -361,11 +395,7 @@ const createSupportRequest = async (req, res) => {
   }
 };
 
-// @desc    Get customer's support requests
-// @route   GET /api/customer/support-requests/my
-// @access  Private (Customer only)
 const getMySupportRequests = async (req, res) => {
-  // CHANGED: from exports.getMySupportRequests to const getMySupportRequests
   if (req.user.role !== "customer") {
     return res.status(403).json({ message: "Not authorized as a customer." });
   }
@@ -373,19 +403,21 @@ const getMySupportRequests = async (req, res) => {
   try {
     const supportRequests = await SupportRequest.find({
       user: req.user.id,
-    }).sort({ createdAt: -1 }); // Most recent first
+    }).sort({ createdAt: -1 });
     res.json(supportRequests);
   } catch (error) {
     console.error("Error fetching support requests:", error);
-    res.status(500).json({
-      message: "Failed to fetch support requests.",
-      error: error.message,
-    });
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch support requests.",
+        error: error.message,
+      });
   }
 };
 
-// CRITICAL: Add this module.exports block at the very end
 module.exports = {
+  getCustomerDashboardData,
   createOrder,
   getMyOrders,
   getOrderById,

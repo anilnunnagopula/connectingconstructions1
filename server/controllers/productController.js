@@ -278,8 +278,19 @@ const getMyProducts = async (req, res) => {
 // @access  Public
 const getAllProductsPublic = async (req, res) => {
   try {
-    // You might want to add filters, pagination, sorting here for a real e-commerce search
-    const products = await Product.find({});
+    const { category } = req.query; // Get category from query parameter (e.g., ?category=Cement)
+
+    let query = {};
+    if (category) {
+      query.category = category; // Add category filter to the query
+    }
+
+    // Fetch products, and crucially, populate the supplier's name and profilePictureUrl
+    const products = await Product.find(query).populate(
+      "supplier",
+      "name username profilePictureUrl"
+    ); // Populate supplier's name and profile picture URL
+
     res.status(200).json(products);
   } catch (error) {
     console.error("Error fetching all public products:", error);
@@ -299,10 +310,11 @@ const getProductByIdPublic = async (req, res) => {
     if (!productId) {
       return res.status(400).json({ error: "Product ID is required." });
     }
+    // Populate supplier info including profilePictureUrl
     const product = await Product.findById(productId).populate(
       "supplier",
-      "name email phoneNumber location.text"
-    ); // Populate supplier info
+      "name username email phoneNumber location.text profilePictureUrl" // Added profilePictureUrl
+    );
 
     if (!product) {
       return res.status(404).json({ error: "Product not found." });

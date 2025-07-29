@@ -38,7 +38,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use("/api/auth", authRoutes);
 app.use("/api/supplier", supplierRoutes);
 app.use("/api/customer", customerRoutes); // NEW: Mount customer routes
-app.use("/", generalRoutes);
+app.use("/api", generalRoutes);
 // Basic route for testing server
 app.get("/", (req, res) => {
   res.send("API is running...");

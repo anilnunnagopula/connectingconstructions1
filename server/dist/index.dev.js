@@ -49,7 +49,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/supplier", supplierRoutes);
 app.use("/api/customer", customerRoutes); // NEW: Mount customer routes
 
-app.use("/", generalRoutes); // Basic route for testing server
+app.use("/api", generalRoutes); // Basic route for testing server
 
 app.get("/", function (req, res) {
   res.send("API is running...");
