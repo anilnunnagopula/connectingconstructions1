@@ -15,7 +15,6 @@ import SalesChart from "./components/SalesChart";
 // import DeliveryStatusTable from "./components/DeliveryStatusTable";
 // import NotificationFeed from "./components/NotificationFeed";
 // These remain as they are generic components
-import ActionShortcuts from "../../components/ActionShortcuts";
 import ProfileWidget from "../../components/ProfileWidget";
 
 const baseURL = process.env.REACT_APP_API_URL;
@@ -250,6 +249,62 @@ const SupplierDashboard = () => {
       link: "/supplier/payments",
     },
   ];
+  // NEW: Handle Export CSV
+  const handleExportCSV = async () => {
+    setMessage("Generating CSV... Please wait.");
+    setMessageType("info");
+    const token = getToken(); // Assuming getToken is available from a parent context or defined in this component
+
+    if (!token) {
+      setMessage("Authentication required to export data.");
+      setMessageType("error");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      // Assuming backend endpoint /api/supplier/products/export-csv
+      const response = await axios.get(
+        `${baseURL}/api/supplier/products/export-csv`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob", // Important: tell axios to expect a binary response
+        }
+      ); // Create a blob from the response
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "my_products.csv"); // Set the file name
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url); // Clean up the URL object
+
+      setMessage("Products exported successfully to CSV!");
+      setMessageType("success");
+    } catch (err) {
+      console.error("Error exporting CSV:", err);
+      let errorMessage = "Failed to export data.";
+      if (err.response && err.response.data instanceof Blob) {
+        // If backend sends a JSON error in a blob, read it as text
+        const errorText = await err.response.data.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } catch (parseErr) {
+          // If not JSON, use generic message
+        }
+      } else if (err.response) {
+        errorMessage =
+          err.response.data.message || err.response.data.error || errorMessage;
+      } else {
+        errorMessage = err.message;
+      }
+      setMessage(errorMessage);
+      setMessageType("error");
+    }
+  };
 
   return (
     <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen transition-colors duration-300">
@@ -275,7 +330,31 @@ const SupplierDashboard = () => {
           ))}
         </div>
         {/* ⚡ Shortcuts */}
-        <ActionShortcuts />
+        {/* <ActionShortcuts /> */}
+        {/* ⚡ Shortcuts (updated buttons) */}
+        <div className="flex justify-center flex-wrap gap-5 my-8">
+          <button
+            onClick={() => navigate("/supplier/sync-inventory")}
+            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors duration-200 font-semibold"
+          >
+            🔄 Sync Inventory
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors duration-200 font-semibold"
+          >
+            ⬇️ Export Products CSV
+          </button>
+          <button
+            onClick={() =>
+              setMessage("Create Offer functionality coming soon!")
+            }
+            className="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors duration-200 font-semibold disabled:opacity-50"
+          >
+            ✨ Create Offer
+          </button>
+        </div>
+        
         {/* 📊 Dynamic Stats (remain on dashboard summary) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
           <StatCard

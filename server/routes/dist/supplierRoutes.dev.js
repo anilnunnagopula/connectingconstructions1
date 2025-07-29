@@ -7,9 +7,19 @@ var router = express.Router();
 
 var _require = require("../middleware/authMiddleware"),
     protect = _require.protect,
-    authorizeRoles = _require.authorizeRoles; // --- Import All Controller Functions ---
-// Product Controllers
+    authorizeRoles = _require.authorizeRoles; // NEW: Import multer for file uploads
 
+
+var multer = require('multer');
+
+var upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: MAX_FILE_SIZE_BYTES
+  } // Use the same limit as frontend
+
+}); // --- Import All Controller Functions ---
+// Product Controllers
 
 var _require2 = require("../controllers/productController"),
     addProduct = _require2.addProduct,
@@ -18,7 +28,8 @@ var _require2 = require("../controllers/productController"),
     updateProduct = _require2.updateProduct,
     deleteProduct = _require2.deleteProduct,
     getAllProductsPublic = _require2.getAllProductsPublic,
-    getProductByIdPublic = _require2.getProductByIdPublic; // Category Controllers
+    getProductByIdPublic = _require2.getProductByIdPublic,
+    exportProductsToCSV = _require2.exportProductsToCSV; // Category Controllers
 
 
 var _require3 = require("../controllers/categoryController"),
@@ -66,8 +77,14 @@ var _require10 = require("../controllers/paymentController"),
     updatePayoutMethod = _require10.updatePayoutMethod,
     deletePayoutMethod = _require10.deletePayoutMethod,
     getPayoutHistory = _require10.getPayoutHistory; // Import payment controller functions
-// --- Public Routes (Accessible by anyone) ---
 
+
+var _require11 = require("../controllers/syncInventoryController"),
+    syncInventory = _require11.syncInventory; // Export Products to CSV
+
+
+router.get("/products/export-csv", // <--- NEW ROUTE
+protect, authorizeRoles("supplier"), exportProductsToCSV); // --- Public Routes (Accessible by anyone) ---
 
 router.get("/products", getAllProductsPublic);
 router.get("/products/:id", getProductByIdPublic); // --- Supplier-specific Protected Routes (Require 'supplier' role) ---
@@ -108,7 +125,6 @@ protect, authorizeRoles("supplier"), getPayoutHistory);
 router.post("/payout-methods", protect, authorizeRoles("supplier"), addPayoutMethod);
 router.put("/payout-methods/:id", // For updating a method (e.g., setting default)
 protect, authorizeRoles("supplier"), updatePayoutMethod);
-router["delete"]("/payout-methods/:id", protect, authorizeRoles("supplier"), deletePayoutMethod); // Placeholder for License and Certificates route
-// router.get('/license-and-certificates', protect, authorizeRoles('supplier'), getLicensesAndCertificates);
-
+router["delete"]("/payout-methods/:id", protect, authorizeRoles("supplier"), deletePayoutMethod);
+router.post("/inventory/sync", protect, authorizeRoles("supplier"), upload.single("inventoryFile"), syncInventory);
 module.exports = router;

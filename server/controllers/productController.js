@@ -1,7 +1,7 @@
 // server/controllers/productController.js
 const Product = require("../models/Product");
-const User = require("../models/User"); // To ensure the supplier exists and potentially get their details
-
+const User = require("../models/User"); 
+const json2csv = require('json2csv').parse; // Import json2csv library
 // --- Helper for input validation (can be shared or put in utils) ---
 const validateProductInput = (data) => {
   const { name, category, price, quantity, location, contact, description } =
@@ -319,6 +319,52 @@ const getProductByIdPublic = async (req, res) => {
   }
 };
 
+// @desc    Export all products for authenticated supplier to CSV
+// @route   GET /api/supplier/products/export-csv
+// @access  Private (Supplier only)
+exports.exportProductsToCSV = async (req, res) => {
+    try {
+        const supplierId = req.user.id; // Get supplier's _id from authenticated user
+
+        const products = await Product.find({ supplier: supplierId }).select('-__v -supplier'); // Exclude some fields
+
+        if (!products || products.length === 0) {
+            return res.status(404).json({ message: "No products found for this supplier to export." });
+        }
+
+        // Define fields for the CSV
+        // Customize this to include only the fields you want in the CSV
+        const fields = [
+            { label: 'Product ID', value: '_id' },
+            { label: 'Name', value: 'name' },
+            { label: 'Category', value: 'category' },
+            { label: 'Description', value: 'description' },
+            { label: 'Price', value: 'price' },
+            { label: 'Quantity', value: 'quantity' },
+            { label: 'Availability', value: 'availability' },
+            { label: 'Location Text', value: 'location.text' },
+            { label: 'Location Lat', value: 'location.lat' },
+            { label: 'Location Lng', value: 'location.lng' },
+            { label: 'Contact Mobile', value: 'contact.mobile' },
+            { label: 'Contact Email', value: 'contact.email' },
+            { label: 'Contact Address', value: 'contact.address' },
+            // If you want image URLs, they might be an array, so handling is more complex or you pick the first one
+            // { label: 'Image URL', value: row => row.imageUrls && row.imageUrls.length > 0 ? row.imageUrls[0] : '' },
+            { label: 'Created At', value: 'createdAt' },
+        ];
+
+        const csv = json2csv(products.map(p => p.toObject()), { fields }); // Convert Mongoose docs to plain objects
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment('my_products.csv'); // Set the download filename
+        res.send(csv);
+
+    } catch (error) {
+        console.error("Error exporting products to CSV:", error);
+        res.status(500).json({ message: "Failed to export products to CSV", error: error.message });
+    }
+};
+
 module.exports = {
   addProduct,
   getProductById, // CHANGED: Renamed the exported function
@@ -327,4 +373,5 @@ module.exports = {
   getMyProducts,
   getAllProductsPublic,
   getProductByIdPublic,
+  exportProductsToCSV,
 };

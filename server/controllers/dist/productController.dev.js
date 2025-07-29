@@ -3,7 +3,9 @@
 // server/controllers/productController.js
 var Product = require("../models/Product");
 
-var User = require("../models/User"); // To ensure the supplier exists and potentially get their details
+var User = require("../models/User");
+
+var json2csv = require('json2csv').parse; // Import json2csv library
 // --- Helper for input validation (can be shared or put in utils) ---
 
 
@@ -550,6 +552,113 @@ var getProductByIdPublic = function getProductByIdPublic(req, res) {
       }
     }
   }, null, null, [[0, 12]]);
+}; // @desc    Export all products for authenticated supplier to CSV
+// @route   GET /api/supplier/products/export-csv
+// @access  Private (Supplier only)
+
+
+exports.exportProductsToCSV = function _callee(req, res) {
+  var supplierId, products, fields, csv;
+  return regeneratorRuntime.async(function _callee$(_context8) {
+    while (1) {
+      switch (_context8.prev = _context8.next) {
+        case 0:
+          _context8.prev = 0;
+          supplierId = req.user.id; // Get supplier's _id from authenticated user
+
+          _context8.next = 4;
+          return regeneratorRuntime.awrap(Product.find({
+            supplier: supplierId
+          }).select('-__v -supplier'));
+
+        case 4:
+          products = _context8.sent;
+
+          if (!(!products || products.length === 0)) {
+            _context8.next = 7;
+            break;
+          }
+
+          return _context8.abrupt("return", res.status(404).json({
+            message: "No products found for this supplier to export."
+          }));
+
+        case 7:
+          // Define fields for the CSV
+          // Customize this to include only the fields you want in the CSV
+          fields = [{
+            label: 'Product ID',
+            value: '_id'
+          }, {
+            label: 'Name',
+            value: 'name'
+          }, {
+            label: 'Category',
+            value: 'category'
+          }, {
+            label: 'Description',
+            value: 'description'
+          }, {
+            label: 'Price',
+            value: 'price'
+          }, {
+            label: 'Quantity',
+            value: 'quantity'
+          }, {
+            label: 'Availability',
+            value: 'availability'
+          }, {
+            label: 'Location Text',
+            value: 'location.text'
+          }, {
+            label: 'Location Lat',
+            value: 'location.lat'
+          }, {
+            label: 'Location Lng',
+            value: 'location.lng'
+          }, {
+            label: 'Contact Mobile',
+            value: 'contact.mobile'
+          }, {
+            label: 'Contact Email',
+            value: 'contact.email'
+          }, {
+            label: 'Contact Address',
+            value: 'contact.address'
+          }, // If you want image URLs, they might be an array, so handling is more complex or you pick the first one
+          // { label: 'Image URL', value: row => row.imageUrls && row.imageUrls.length > 0 ? row.imageUrls[0] : '' },
+          {
+            label: 'Created At',
+            value: 'createdAt'
+          }];
+          csv = json2csv(products.map(function (p) {
+            return p.toObject();
+          }), {
+            fields: fields
+          }); // Convert Mongoose docs to plain objects
+
+          res.header('Content-Type', 'text/csv');
+          res.attachment('my_products.csv'); // Set the download filename
+
+          res.send(csv);
+          _context8.next = 18;
+          break;
+
+        case 14:
+          _context8.prev = 14;
+          _context8.t0 = _context8["catch"](0);
+          console.error("Error exporting products to CSV:", _context8.t0);
+          res.status(500).json({
+            message: "Failed to export products to CSV",
+            error: _context8.t0.message
+          });
+
+        case 18:
+        case "end":
+          return _context8.stop();
+      }
+    }
+  }, null, null, [[0, 14]]);
 };
 
 module.exports = {
@@ -560,5 +669,6 @@ module.exports = {
   deleteProduct: deleteProduct,
   getMyProducts: getMyProducts,
   getAllProductsPublic: getAllProductsPublic,
-  getProductByIdPublic: getProductByIdPublic
+  getProductByIdPublic: getProductByIdPublic,
+  exportProductsToCSV: exportProductsToCSV
 };

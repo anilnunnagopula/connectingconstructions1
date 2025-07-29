@@ -52,7 +52,7 @@ import OrdersPage from "./pages/supplier/OrdersPage.jsx";
 import LicenseAndCertificatesPage from "./pages/supplier/LicenseAndCertificatesPage";
 import PaymentsPage from "./pages/supplier/PaymentsPage.jsx";
 import AnalyticsPage from "./pages/supplier/AnalyticsPage.jsx";
-
+import SyncInventoryPage from "./pages/supplier/SyncInventoryPage.jsx";
 
 import ActivityLogsPage from "./pages/supplier/ActivityLogsPage";
 import CustomerFeedbackPage from "./pages/supplier/CustomerFeedbackPage";
@@ -402,6 +402,14 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
+                      <Route
+                        path="/supplier/sync-inventory" // <--- NEW ROUTE
+                        element={
+                          <ProtectedRoute allowedRole="supplier">
+                            <SyncInventoryPage />
+                          </ProtectedRoute>
+                        }
+                      />  
                       <Route
                         path="/category/:category"
                         element={<CategoryPage />}

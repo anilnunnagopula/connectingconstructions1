@@ -2,7 +2,12 @@
 const express = require("express");
 const router = express.Router();
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
-
+// NEW: Import multer for file uploads
+const multer = require('multer');
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_SIZE_BYTES }, // Use the same limit as frontend
+});
 // --- Import All Controller Functions ---
 // Product Controllers
 const {
@@ -13,6 +18,7 @@ const {
   deleteProduct,
   getAllProductsPublic,
   getProductByIdPublic,
+  exportProductsToCSV,
 } = require("../controllers/productController");
 
 // Category Controllers
@@ -67,6 +73,15 @@ const {
     deletePayoutMethod,
     getPayoutHistory,
 } = require("../controllers/paymentController"); // Import payment controller functions
+
+const { syncInventory } = require("../controllers/syncInventoryController");
+// Export Products to CSV
+router.get(
+    "/products/export-csv", // <--- NEW ROUTE
+    protect,
+    authorizeRoles("supplier"),
+    exportProductsToCSV
+);
 
 // --- Public Routes (Accessible by anyone) ---
 router.get("/products", getAllProductsPublic);
@@ -223,8 +238,11 @@ router.delete(
     deletePayoutMethod
 );
 
-
-// Placeholder for License and Certificates route
-// router.get('/license-and-certificates', protect, authorizeRoles('supplier'), getLicensesAndCertificates);
-
+router.post(
+  "/inventory/sync",
+  protect,
+  authorizeRoles("supplier"),
+  upload.single("inventoryFile"), 
+  syncInventory
+);
 module.exports = router;
