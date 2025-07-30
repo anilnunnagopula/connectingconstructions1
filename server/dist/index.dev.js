@@ -9,20 +9,17 @@ var cors = require("cors");
 
 var mongoose = require("mongoose");
 
-var authRoutes = require("./routes/auth"); // const supplierRoutes = require("./routes/supplierRoutes");
-
+var authRoutes = require("./routes/auth");
 
 var supplierRoutes = require("./routes/supplierRoutes");
 
-var customerRoutes = require("./routes/customerRoutes"); // NEW: Import customer routes
+var customerRoutes = require("./routes/customerRoutes");
+
+var generalRoutes = require("./routes/generalRoutes"); // THIS LINE IS NOW REMOVED
+// require('express-async-errors');
 
 
-var generalRoutes = require("./routes/generalRoutes"); // NEW: Import general routes
-
-
-var app = express(); // console.log("✅ MONGO_URI =", process.env.MONGO_URI);
-// Connect to MongoDB
-
+var app = express();
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -47,8 +44,7 @@ app.use(express.urlencoded({
 
 app.use("/api/auth", authRoutes);
 app.use("/api/supplier", supplierRoutes);
-app.use("/api/customer", customerRoutes); // NEW: Mount customer routes
-
+app.use("/api/customer", customerRoutes);
 app.use("/api", generalRoutes); // Basic route for testing server
 
 app.get("/", function (req, res) {

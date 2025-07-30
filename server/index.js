@@ -4,14 +4,15 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/auth");
-// const supplierRoutes = require("./routes/supplierRoutes");
-const supplierRoutes = require("./routes/supplierRoutes"); 
-const customerRoutes = require("./routes/customerRoutes"); // NEW: Import customer routes
-const generalRoutes = require("./routes/generalRoutes"); // NEW: Import general routes
+const supplierRoutes = require("./routes/supplierRoutes");
+const customerRoutes = require("./routes/customerRoutes");
+const generalRoutes = require("./routes/generalRoutes");
+
+// THIS LINE IS NOW REMOVED
+// require('express-async-errors');
 
 const app = express();
-// console.log("✅ MONGO_URI =", process.env.MONGO_URI);
-// Connect to MongoDB
+
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -37,8 +38,9 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/supplier", supplierRoutes);
-app.use("/api/customer", customerRoutes); // NEW: Mount customer routes
+app.use("/api/customer", customerRoutes);
 app.use("/api", generalRoutes);
+
 // Basic route for testing server
 app.get("/", (req, res) => {
   res.send("API is running...");

@@ -256,7 +256,7 @@
        title: "⚙️ Settings",
        desc: "Update your profile and account preferences.",
        icon: <Settings size={32} />,
-       link: "/profile",
+       link: "/customer/settings",
      },
      {
        title: "🧾 Invoices / Billing",

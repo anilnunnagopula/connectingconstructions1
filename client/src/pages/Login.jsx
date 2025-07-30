@@ -25,35 +25,6 @@ const Login = () => {
       return;
     }
 
-    // --- IMPORTANT: Remove or disable these hardcoded test credentials in production ---
-    // They bypass your actual backend authentication.
-    // For development, they can be useful, but ensure they are not deployed.
-    if (
-      (formData.role === "customer" &&
-        formData.email === "customer@gmail.com" &&
-        formData.password === "customer") ||
-      (formData.role === "supplier" &&
-        formData.email === "supplier@gmail.com" &&
-        formData.password === "supplier")
-    ) {
-      // For these test credentials, you'd also need to mock a token if you plan to use them for protected routes.
-      // For now, if you use this, protected routes will still fail without a real token.
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          name: formData.email.split("@")[0],
-          email: formData.email,
-          role: formData.role,
-          // Mock a token here IF you still want to use these for testing protected routes,
-          // but it's better to just use real user registrations for that.
-          // token: "mock-token-for-testing-only"
-        })
-      );
-      navigate(`/${formData.role}-dashboard`);
-      return;
-    }
-    // --- End of hardcoded test credentials block ---
-
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/api/auth/login`,
@@ -115,12 +86,6 @@ const Login = () => {
               {r}
             </button>
           ))}
-        </div>
-
-        <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-800 rounded text-sm">
-          <p className="font-semibold mb-1">Test Credentials</p>
-          <p>👤 Customer: customer@gmail.com | password: customer</p>
-          <p>🏭 Supplier: supplier@gmail.com | password: supplier</p>
         </div>
 
         {error && (

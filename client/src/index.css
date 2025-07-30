@@ -2,5 +2,5 @@
 @tailwind components;
 @tailwind utilities;
 body {
-  background-color: rgb(255, 255, 255); /* optional: light gray bg */
+  background-color: rgb(255, 255, 255); 
 }

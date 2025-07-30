@@ -1,38 +1,50 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, Sun, Moon, Bell, Plus, UserCircle } from "lucide-react";
+import {
+  Menu,
+  X,
+  Sun,
+  Moon,
+  Bell,
+  Plus,
+  UserCircle,
+  LogOut,
+  ShoppingCart,
+  Package,
+} from "lucide-react";
 import categories from "../utils/Categories";
 import { useDarkMode } from "../context/DarkModeContext";
 import VoiceCommand from "../ai/VoiceCommand";
+import { useAuth } from "../context/AuthContext"; // Import the useAuth hook
 
 const Navbar = () => {
+  // Use the global authentication state from AuthContext
+  const { user, logout } = useAuth();
+
   const [isOpen, setIsOpen] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false); // Desktop Categories Dropdown
-  const [mobileDropdown, setMobileDropdown] = useState(false); // Mobile Categories Dropdown
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false); // New: Profile Dropdown
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [mobileDropdown, setMobileDropdown] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
   const { darkMode, setDarkMode } = useDarkMode();
 
-  const user = JSON.parse(localStorage.getItem("user")) || null;
   const isLoggedIn = !!user;
   const userRole = user?.role;
   const memoizedCategories = useMemo(() => categories, []);
 
-  const scrollToTopSection = useCallback(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  // No need for useEffect to listen to localStorage anymore
+  // The AuthContext handles it globally.
 
   const navigateToRoleDashboard = useCallback(() => {
-    if (!isLoggedIn) {
-      scrollToTopSection();
-      return navigate("/");
-    }
-    if (userRole === "customer") return navigate("/customer-dashboard");
-    if (userRole === "supplier") return navigate("/supplier-dashboard");
-    if (userRole === "admin") return navigate("/admin/dashboard");
-  }, [isLoggedIn, userRole, navigate, scrollToTopSection]);
+    const role = user?.role;
+    if (!isLoggedIn || role === "customer")
+      return navigate("/customer-dashboard");
+    if (role === "supplier") return navigate("/supplier-dashboard");
+    if (role === "admin") return navigate("/admin-dashboard");
+    navigate("/");
+  }, [isLoggedIn, user, navigate]);
 
   const handleCategoryClick = useCallback(
     (category) => {
@@ -44,16 +56,16 @@ const Navbar = () => {
     [navigate]
   );
 
+  // Use the logout function from AuthContext
   const handleLogout = useCallback(() => {
-    localStorage.clear();
-    navigate("/login");
-  }, [navigate]);
+    logout();
+  }, [logout]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === "Escape") {
       setShowDropdown(false);
       setMobileDropdown(false);
-      setShowProfileDropdown(false); // Close profile dropdown on Escape
+      setShowProfileDropdown(false);
     }
   }, []);
 
@@ -61,16 +73,53 @@ const Navbar = () => {
     (path) => {
       return (
         location.pathname === path ||
-        (path.includes("dashboard") && location.pathname.includes("dashboard"))
+        (path !== "/" && location.pathname.startsWith(path))
       );
     },
     [location.pathname]
   );
 
+  const ProfileDropdown = ({ onClose }) => (
+    <div
+      className={`absolute top-full right-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-48 z-50 transform transition-all duration-200 ease-in-out origin-top-right ${
+        showProfileDropdown
+          ? "opacity-100 scale-100 visible"
+          : "opacity-0 scale-95 invisible"
+      }`}
+    >
+      <Link
+        to={
+          userRole === "customer"
+            ? "/customer-dashboard"
+            : "/supplier-dashboard"
+        }
+        className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
+        onClick={onClose}
+      >
+        My Dashboard
+      </Link>
+      <Link
+        to={`/${userRole}/settings`}
+        className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
+        onClick={onClose}
+      >
+        Settings
+      </Link>
+      <button
+        onClick={() => {
+          handleLogout();
+          onClose();
+        }}
+        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-700"
+      >
+        <LogOut size={16} className="inline mr-2" /> Logout
+      </button>
+    </div>
+  );
+
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-lg dark:shadow-xl px-2 py-2 sticky top-0 z-50 text-black dark:text-white transition-all">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-        {/* Logo */}
         <button
           onClick={navigateToRoleDashboard}
           className="text-xl md:text-2xl font-bold text-blue-700 dark:text-blue-400"
@@ -78,7 +127,6 @@ const Navbar = () => {
           ConnectingConstructions
         </button>
 
-        {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-6 relative">
           <button
             onClick={navigateToRoleDashboard}
@@ -89,20 +137,15 @@ const Navbar = () => {
             Home
           </button>
 
-          {/* Hoverable Categories - Only show if NOT logged in or if customer */}
-          {!isLoggedIn || userRole === "customer" ? (
+          {userRole !== "supplier" && userRole !== "admin" && (
             <div
-              className="relative group"
+              className="relative"
               onMouseEnter={() => setShowDropdown(true)}
               onMouseLeave={() => setShowDropdown(false)}
               onKeyDown={handleKeyDown}
-              tabIndex="0" // Make focusable
+              tabIndex="0"
             >
-              <button
-                className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-300 transition focus:outline-none"
-                aria-haspopup="true"
-                aria-expanded={showDropdown}
-              >
+              <button className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-300 transition focus:outline-none">
                 Categories <Menu className="w-5 h-5" />
               </button>
               <div
@@ -123,55 +166,35 @@ const Navbar = () => {
                 ))}
               </div>
             </div>
-          ) : (
-            // New Supplier-specific Desktop Links
-            userRole === "supplier" && (
-              <>
-                <Link
-                  to="/supplier/myproducts"
-                  className={`hover:text-blue-600 dark:hover:text-blue-300 ${
-                    isActive("/supplier/myproducts") ? "text-blue-600" : ""
-                  }`}
-                >
-                  My Products
-                </Link>
-                <Link
-                  to="/supplier/orders"
-                  className={`hover:text-blue-600 dark:hover:text-blue-300 ${
-                    isActive("/supplier/orders") ? "text-blue-600" : ""
-                  }`}
-                >
-                  Orders
-                </Link>
-                <Link
-                  to="/supplier/analytics"
-                  className={`hover:text-blue-600 dark:hover:text-blue-300 ${
-                    isActive("/supplier/analytics") ? "text-blue-600" : ""
-                  }`}
-                >
-                  Analytics
-                </Link>
-                <Link
-                  to="/supplier/payments"
-                  className={`hover:text-blue-600 dark:hover:text-blue-300 ${
-                    isActive("/supplier/payments") ? "text-blue-600" : ""
-                  }`}
-                >
-                  Payments
-                </Link>
-              </>
-            )
           )}
 
-          {!isLoggedIn && (
-            <Link
-              to="/about"
-              className={`hover:text-blue-600 dark:hover:text-blue-300 ${
-                isActive("/about") ? "text-blue-600" : ""
-              }`}
-            >
-              About
-            </Link>
+          {userRole === "supplier" && (
+            <>
+              <Link
+                to="/supplier/myproducts"
+                className={`hover:text-blue-600 dark:hover:text-blue-300 ${
+                  isActive("/supplier/myproducts") ? "text-blue-600" : ""
+                }`}
+              >
+                My Products
+              </Link>
+              <Link
+                to="/supplier/orders"
+                className={`hover:text-blue-600 dark:hover:text-blue-300 ${
+                  isActive("/supplier/orders") ? "text-blue-600" : ""
+                }`}
+              >
+                Orders
+              </Link>
+              <Link
+                to="/supplier/payments"
+                className={`hover:text-blue-600 dark:hover:text-blue-300 ${
+                  isActive("/supplier/payments") ? "text-blue-600" : ""
+                }`}
+              >
+                Payments
+              </Link>
+            </>
           )}
 
           <Link
@@ -183,38 +206,76 @@ const Navbar = () => {
             ContactUs
           </Link>
 
-          {/* Grouping Action Icons/Buttons: Voice, Notifications, Add Product, Theme Toggle, Profile */}
           <div className="flex items-center gap-4">
-            {/* Voice Command */}
             <VoiceCommand />
 
-            {/* Notifications (Placeholder) */}
-            {isLoggedIn && ( // Only show notifications if logged in
-              <button
-                onClick={() => navigate("/supplier/notifications")} // Link to notifications page
+            {userRole === "customer" && (
+              <>
+                <Link
+                  to="/customer/cart"
+                  className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm"
+                  title="My Cart"
+                  aria-label="My Cart"
+                >
+                  <ShoppingCart
+                    size={18}
+                    className="text-gray-700 dark:text-white"
+                  />
+                </Link>
+                <Link
+                  to="/customer/my-orders"
+                  className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm"
+                  title="My Orders"
+                  aria-label="My Orders"
+                >
+                  <Package
+                    size={18}
+                    className="text-gray-700 dark:text-white"
+                  />
+                </Link>
+                <Link
+                  to="/customer/notifications"
+                  className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm relative"
+                  title="Notifications"
+                  aria-label="Notifications"
+                >
+                  <Bell size={18} className="text-gray-700 dark:text-white" />
+                </Link>
+              </>
+            )}
+
+            {userRole === "supplier" && (
+              <>
+                <Link
+                  to="/supplier/notifications"
+                  className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm relative"
+                  title="Notifications"
+                  aria-label="Notifications"
+                >
+                  <Bell size={18} className="text-gray-700 dark:text-white" />
+                </Link>
+                <Link
+                  to="/supplier/add-product"
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-600 text-white text-xl hover:bg-blue-700 transition-all duration-300 shadow-sm"
+                  title="Add New Product"
+                  aria-label="Add New Product"
+                >
+                  <Plus size={18} />
+                </Link>
+              </>
+            )}
+
+            {!isLoggedIn && (
+              <Link
+                to="/notifications"
                 className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm relative"
                 title="Notifications"
                 aria-label="Notifications"
               >
                 <Bell size={18} className="text-gray-700 dark:text-white" />
-                {/* Add notification badge here if you have a count */}
-                {/* <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">3</span> */}
-              </button>
+              </Link>
             )}
 
-            {/* Add Product Quick Link */}
-            {isLoggedIn && userRole === "supplier" && (
-              <button
-                onClick={() => navigate("/supplier/add-product")}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-600 text-white text-xl hover:bg-blue-700 transition-all duration-300 shadow-sm"
-                title="Add New Product"
-                aria-label="Add New Product"
-              >
-                <Plus size={18} />
-              </button>
-            )}
-
-            {/* Theme Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm"
@@ -228,64 +289,20 @@ const Navbar = () => {
               )}
             </button>
 
-            {/* User Profile/Logout Dropdown */}
             {isLoggedIn ? (
               <div
-                className="relative group"
+                className="relative"
                 onMouseEnter={() => setShowProfileDropdown(true)}
                 onMouseLeave={() => setShowProfileDropdown(false)}
                 onKeyDown={handleKeyDown}
-                tabIndex="0" // Make focusable
+                tabIndex="0"
               >
-                <button
-                  className="px-3 py-1 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  aria-haspopup="true"
-                  aria-expanded={showProfileDropdown}
-                >
+                <button className="px-3 py-1 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <UserCircle size={20} /> {user?.name || "User"}
                 </button>
-                <div
-                  className={`absolute top-full right-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-48 z-50 transform transition-all duration-200 ease-in-out origin-top-right ${
-                    showProfileDropdown
-                      ? "opacity-100 scale-100 visible"
-                      : "opacity-0 scale-95 invisible"
-                  }`}
-                >
-                  <Link
-                    to={
-                      userRole === "customer"
-                        ? "/customer-dashboard"
-                        : "/supplier-dashboard"
-                    } // Link to specific dashboard
-                    className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
-                    onClick={() => {
-                      setShowProfileDropdown(false);
-                      setIsOpen(false);
-                    }}
-                  >
-                    My Dashboard
-                  </Link>
-                  <Link
-                    to="/profile" // Link to general profile/settings page
-                    className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
-                    onClick={() => {
-                      setShowProfileDropdown(false);
-                      setIsOpen(false);
-                    }}
-                  >
-                    Settings
-                  </Link>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setShowProfileDropdown(false);
-                      setIsOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-700"
-                  >
-                    Logout
-                  </button>
-                </div>
+                <ProfileDropdown
+                  onClose={() => setShowProfileDropdown(false)}
+                />
               </div>
             ) : (
               <Link
@@ -298,9 +315,31 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Voice + Hamburger Icon */}
         <div className="md:hidden flex items-center gap-1">
           <VoiceCommand />
+
+          {userRole === "customer" && (
+            <>
+              <Link
+                to="/customer/cart"
+                className="p-1"
+                onClick={() => setIsOpen(false)}
+              >
+                <ShoppingCart
+                  size={22}
+                  className="text-gray-700 dark:text-white"
+                />
+              </Link>
+              <Link
+                to="/customer/my-orders"
+                className="p-1"
+                onClick={() => setIsOpen(false)}
+              >
+                <Package size={22} className="text-gray-700 dark:text-white" />
+              </Link>
+            </>
+          )}
+
           <button
             className="text-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-0.5"
             onClick={() => setIsOpen(!isOpen)}
@@ -311,7 +350,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Dropdown Menu */}
       {isOpen && (
         <div className="md:hidden mt-4 flex flex-col gap-3 px-2 pb-4 animate-fade-in-down">
           <button
@@ -319,13 +357,14 @@ const Navbar = () => {
               navigateToRoleDashboard();
               setIsOpen(false);
             }}
-            className="hover:text-blue-600 dark:hover:text-blue-300 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+            className={`hover:text-blue-600 dark:hover:text-blue-300 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1 ${
+              isActive("/") ? "text-blue-600" : ""
+            }`}
           >
             Home
           </button>
 
-          {/* Mobile Categories - Only show if NOT logged in or if customer */}
-          {!isLoggedIn || userRole === "customer" ? (
+          {userRole !== "supplier" && userRole !== "admin" && (
             <div>
               <button
                 className="w-full text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
@@ -348,59 +387,59 @@ const Navbar = () => {
                 </div>
               )}
             </div>
-          ) : (
-            // New Supplier-specific Mobile Links
-            userRole === "supplier" && (
-              <>
-                <Link
-                  to="/supplier/myproducts"
-                  className="block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
-                  onClick={() => setIsOpen(false)}
-                >
-                  My Products
-                </Link>
-                <Link
-                  to="/supplier/orders"
-                  className="block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Orders
-                </Link>
-                <Link
-                  to="/supplier/analytics"
-                  className="block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Analytics
-                </Link>
-                <Link
-                  to="/supplier/payments"
-                  className="block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Payments
-                </Link>
-              </>
-            )
           )}
 
-          {!isLoggedIn && (
-            <Link
-              to="/about"
-              onClick={() => setIsOpen(false)}
-              className="hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
-            >
-              About
-            </Link>
+          {userRole === "supplier" && (
+            <>
+              <Link
+                to="/supplier/myproducts"
+                onClick={() => setIsOpen(false)}
+                className={`block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1 ${
+                  isActive("/supplier/myproducts") ? "text-blue-600" : ""
+                }`}
+              >
+                My Products
+              </Link>
+              <Link
+                to="/supplier/orders"
+                onClick={() => setIsOpen(false)}
+                className={`block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1 ${
+                  isActive("/supplier/orders") ? "text-blue-600" : ""
+                }`}
+              >
+                Orders
+              </Link>
+              <Link
+                to="/supplier/payments"
+                onClick={() => setIsOpen(false)}
+                className={`block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1 ${
+                  isActive("/supplier/payments") ? "text-blue-600" : ""
+                }`}
+              >
+                Payments
+              </Link>
+            </>
           )}
 
           <Link
             to="/contact"
             onClick={() => setIsOpen(false)}
-            className="hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+            className={`hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1 ${
+              isActive("/contact") ? "text-blue-600" : ""
+            }`}
           >
             Contact
           </Link>
+
+          {isLoggedIn && (
+            <Link
+              to={`/${userRole}/notifications`}
+              onClick={() => setIsOpen(false)}
+              className="block text-left hover:text-blue-600 dark:hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+            >
+              Notifications
+            </Link>
+          )}
 
           <div className="flex justify-between items-center mt-4">
             <button
@@ -420,53 +459,19 @@ const Navbar = () => {
 
             {isLoggedIn ? (
               <div className="relative">
-                {" "}
-                {/* Wrap for mobile profile dropdown */}
                 <button
                   onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                   className="px-3 py-1 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  aria-haspopup="true"
-                  aria-expanded={showProfileDropdown}
                 >
                   <UserCircle size={20} /> {user?.name || "User"}
                 </button>
                 {showProfileDropdown && (
-                  <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-xl w-48 z-50">
-                    <Link
-                      to={
-                        userRole === "customer"
-                          ? "/customer-dashboard"
-                          : "/supplier-dashboard"
-                      }
-                      className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        setIsOpen(false);
-                      }}
-                    >
-                      My Dashboard
-                    </Link>
-                    <Link
-                      to="/profile"
-                      className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        setIsOpen(false);
-                      }}
-                    >
-                      Settings
-                    </Link>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setShowProfileDropdown(false);
-                        setIsOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-700"
-                    >
-                      Logout
-                    </button>
-                  </div>
+                  <ProfileDropdown
+                    onClose={() => {
+                      setShowProfileDropdown(false);
+                      setIsOpen(false);
+                    }}
+                  />
                 )}
               </div>
             ) : (

@@ -72,6 +72,7 @@ import MyOrders from "./pages/customer/MyOrders";
 import Cart from "./pages/customer/Cart";
 import Checkout from "./pages/customer/Checkout";
 import HelpAndSupport from "./components/HelpAndSupport";
+import CustomerSettingsPage from "./pages/customer/CustomerSettingsPage.jsx";
 //legal pages
 import CorePolicies from "./pages/legal/CorePolicies";
 import SmartPlatform from "./pages/legal/SmartPlatform";
@@ -167,6 +168,9 @@ function App() {
                       <Route path="/about" element={<About />} />
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/support" element={<HelpAndSupport />} />
+                      {/* Customer routes  */}
+                      <Route path="/customer/settings" element={<CustomerSettingsPage/>}/>
+                      
                       {/* legal routes  */}
                       <Route
                         path="/legal/supplier-partner"
