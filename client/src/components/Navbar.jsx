@@ -19,7 +19,8 @@ import { useAuth } from "../context/AuthContext"; // Import the useAuth hook
 
 const Navbar = () => {
   // Use the global authentication state from AuthContext
-  const { user, logout } = useAuth();
+  // Now user.role will be a string (e.g., "customer", "supplier")
+  const { user, logout, getUserRole } = useAuth(); // Destructure getUserRole
 
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -31,20 +32,21 @@ const Navbar = () => {
   const { darkMode, setDarkMode } = useDarkMode();
 
   const isLoggedIn = !!user;
-  const userRole = user?.role;
+  const userRole = getUserRole(); // Get the role string using the helper
   const memoizedCategories = useMemo(() => categories, []);
 
-  // No need for useEffect to listen to localStorage anymore
-  // The AuthContext handles it globally.
-
   const navigateToRoleDashboard = useCallback(() => {
-    const role = user?.role;
-    if (!isLoggedIn || role === "customer")
-      return navigate("/customer-dashboard");
-    if (role === "supplier") return navigate("/supplier-dashboard");
-    if (role === "admin") return navigate("/admin-dashboard");
-    navigate("/");
-  }, [isLoggedIn, user, navigate]);
+    if (!isLoggedIn) {
+      // If not logged in, default to customer dashboard or login
+      navigate("/"); // Or navigate("/customer-dashboard");
+      return;
+    }
+    // Use the userRole string directly
+    if (userRole === "customer") return navigate("/customer-dashboard");
+    if (userRole === "supplier") return navigate("/supplier-dashboard");
+    if (userRole === "admin") return navigate("/admin-dashboard"); // If you have an admin role
+    navigate("/"); // Fallback
+  }, [isLoggedIn, userRole, navigate]); // userRole is now a direct dependency
 
   const handleCategoryClick = useCallback(
     (category) => {
@@ -99,7 +101,7 @@ const Navbar = () => {
         My Dashboard
       </Link>
       <Link
-        to={`/${userRole}/settings`}
+        to={`/${userRole}/settings`} // Use userRole directly
         className="block px-4 py-2 text-sm hover:bg-blue-100 dark:hover:bg-gray-700"
         onClick={onClose}
       >
@@ -137,6 +139,7 @@ const Navbar = () => {
             Home
           </button>
 
+          {/* Conditional rendering based on userRole string */}
           {userRole !== "supplier" && userRole !== "admin" && (
             <div
               className="relative"
@@ -263,17 +266,6 @@ const Navbar = () => {
                   <Plus size={18} />
                 </Link>
               </>
-            )}
-
-            {!isLoggedIn && (
-              <Link
-                to="/notifications"
-                className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm relative"
-                title="Notifications"
-                aria-label="Notifications"
-              >
-                <Bell size={18} className="text-gray-700 dark:text-white" />
-              </Link>
             )}
 
             <button

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext"; // IMPORT useAuth
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  // CALL the useAuth hook to get the login function from context
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,26 +39,17 @@ const Login = () => {
         }
       );
 
-      const data = await response.json(); // Always parse JSON for error details
+      const data = await response.json();
       if (!response.ok) {
-        // If response.ok is false, it's an HTTP error (e.g., 400, 401, 500)
-        // The backend sends { error: "Invalid credentials" } or similar
         throw new Error(data.error || "Login failed.");
       }
 
-      // --- CRUCIAL CHANGE HERE: Store the token and _id from the backend response ---
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          _id: data._id, // Store the user's MongoDB ID
-          name: data.name, // The backend now sends the user's name
-          email: data.email,
-          role: data.role,
-          token: data.token, // Store the JWT token from the backend
-          username: data.username, // Store username if returned and needed on client-side
-        })
-      );
-      // --- End of CRUCIAL CHANGE ---
+      // --- CRITICAL FIX ---
+      // Instead of writing to localStorage directly, call the login function from AuthContext.
+      // The login function in AuthContext is responsible for both writing to localStorage AND
+      // updating the global state. This will trigger the Navbar to re-render.
+      login(data);
+      // --- END CRITICAL FIX ---
 
       // Navigate to the correct dashboard based on the role returned from the server
       navigate(`/${data.role}-dashboard`);

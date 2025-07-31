@@ -5,7 +5,8 @@ import { useNavigate } from "react-router-dom";
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // Stores user object from localStorage
+  // user state will now directly reflect the object stored in localStorage/received from backend
+  const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const navigate = useNavigate();
@@ -13,22 +14,28 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem("user");
-      if (storedUser) {
+      if (storedUser && storedUser !== "undefined") {
         const parsedUser = JSON.parse(storedUser);
-        // Ensure parsedUser and parsedUser.token exist
-        if (parsedUser && parsedUser.token) {
-          // Correctly set the user object, including roles and currentSelectedRole
+
+        // Ensure parsedUser and parsedUser.token exist and it's a valid structure
+        // The structure from backend/Login.jsx is: { _id, name, email, role, username, token }
+        if (
+          parsedUser &&
+          parsedUser.token &&
+          parsedUser._id &&
+          parsedUser.role
+        ) {
           setUser({
-            id: parsedUser.userId, // Assuming userId is Firebase UID or MongoDB _id
+            _id: parsedUser._id, // Use _id as provided by backend/localStorage
             name: parsedUser.name,
             email: parsedUser.email,
-            roles: parsedUser.roles || [], // Ensure roles is an array, even if missing
-            currentSelectedRole: parsedUser.currentSelectedRole || null, // Ensure this is set
+            role: parsedUser.role, // Use 'role' as a string, as provided by backend
+            username: parsedUser.username,
             token: parsedUser.token,
           });
           setIsAuthenticated(true);
         } else {
-          // If user data exists but no token, clear it
+          // If user data exists but is incomplete/invalid, clear it
           localStorage.removeItem("user");
           setUser(null);
           setIsAuthenticated(false);
@@ -46,14 +53,17 @@ export const AuthProvider = ({ children }) => {
 
   // Login function to be called from Login.jsx
   const login = (userData) => {
+    // userData is expected to be the object received from backend login:
+    // { _id, name, email, role, username, token }
     localStorage.setItem("user", JSON.stringify(userData));
-    // When setting user in context, ensure it matches the structure expected by consumers
+
+    // Directly set the user object from userData, which should match the backend response
     setUser({
-      id: userData.userId, // Assuming userId is Firebase UID or MongoDB _id
+      _id: userData._id,
       name: userData.name,
       email: userData.email,
-      roles: userData.roles || [],
-      currentSelectedRole: userData.currentSelectedRole || null,
+      role: userData.role,
+      username: userData.username,
       token: userData.token,
     });
     setIsAuthenticated(true);
@@ -67,21 +77,19 @@ export const AuthProvider = ({ children }) => {
     navigate("/login"); // Redirect to login page on logout
   };
 
-  // Helper to get user roles
-  const getUserRoles = () => user?.roles || [];
-
-  // Helper to check if user has a specific role
-  const hasRole = (role) => getUserRoles().includes(role);
+  // Helper to get user role (now a single string)
+  // This replaces getUserRoles and hasRole for simplicity as role is a single string
+  const getUserRole = () => user?.role || null;
 
   // Value provided to consumers of this context
   const value = {
-    user, // This user object will now correctly contain roles and currentSelectedRole
+    user, // This user object will now consistently contain _id, name, email, role (string), username, token
     isAuthenticated,
     isAuthLoading,
     login,
     logout,
-    getUserRoles,
-    hasRole,
+    getUserRole, // Provide the new helper
+    // hasRole is no longer needed as role is a single string, directly check user.role === 'supplier' etc.
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
