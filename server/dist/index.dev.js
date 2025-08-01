@@ -15,9 +15,7 @@ var supplierRoutes = require("./routes/supplierRoutes");
 
 var customerRoutes = require("./routes/customerRoutes");
 
-var generalRoutes = require("./routes/generalRoutes"); // THIS LINE IS NOW REMOVED
-// require('express-async-errors');
-
+var generalRoutes = require("./routes/generalRoutes");
 
 var app = express();
 mongoose.connect(process.env.MONGO_URI, {

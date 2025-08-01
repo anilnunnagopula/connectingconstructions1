@@ -20,7 +20,7 @@ import { useAuth } from "../context/AuthContext"; // Import the useAuth hook
 const Navbar = () => {
   // Use the global authentication state from AuthContext
   // Now user.role will be a string (e.g., "customer", "supplier")
-  const { user, logout, getUserRole } = useAuth(); // Destructure getUserRole
+  const { user, logout, getUserRole } = useAuth();  
 
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -32,20 +32,18 @@ const Navbar = () => {
   const { darkMode, setDarkMode } = useDarkMode();
 
   const isLoggedIn = !!user;
-  const userRole = getUserRole(); // Get the role string using the helper
+  const userRole = getUserRole(); c
   const memoizedCategories = useMemo(() => categories, []);
 
   const navigateToRoleDashboard = useCallback(() => {
-    if (!isLoggedIn) {
-      // If not logged in, default to customer dashboard or login
+    if (!isLoggedIn) { 
       navigate("/"); // Or navigate("/customer-dashboard");
       return;
-    }
-    // Use the userRole string directly
+    } 
     if (userRole === "customer") return navigate("/customer-dashboard");
     if (userRole === "supplier") return navigate("/supplier-dashboard");
-    if (userRole === "admin") return navigate("/admin-dashboard"); // If you have an admin role
-    navigate("/"); // Fallback
+    if (userRole === "admin") return navigate("/admin-dashboard");  
+    navigate("/");  
   }, [isLoggedIn, userRole, navigate]); // userRole is now a direct dependency
 
   const handleCategoryClick = useCallback(

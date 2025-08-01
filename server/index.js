@@ -8,9 +8,6 @@ const supplierRoutes = require("./routes/supplierRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const generalRoutes = require("./routes/generalRoutes");
 
-// THIS LINE IS NOW REMOVED
-// require('express-async-errors');
-
 const app = express();
 
 mongoose
