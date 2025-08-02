@@ -32,7 +32,7 @@ const Navbar = () => {
   const { darkMode, setDarkMode } = useDarkMode();
 
   const isLoggedIn = !!user;
-  const userRole = getUserRole(); c
+  const userRole = getUserRole();
   const memoizedCategories = useMemo(() => categories, []);
 
   const navigateToRoleDashboard = useCallback(() => {
