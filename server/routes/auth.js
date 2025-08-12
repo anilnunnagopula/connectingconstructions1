@@ -3,10 +3,12 @@ const router = express.Router();
 const {
   registerUser,
   loginUser,
+  googleLogin,
   sendOtp,
   resetPassword,
-  getUserProfile, // NEW: Imported
-  updateUserProfile, // NEW: Imported
+  getUserProfile, 
+  updateUserProfile, 
+  completeUserProfile,
 } = require("../controllers/authController");
 
 const { protect } = require("../middleware/authMiddleware"); // NEW: Import protect middleware
@@ -14,13 +16,14 @@ const { protect } = require("../middleware/authMiddleware"); // NEW: Import prot
 // Define public routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/google", googleLogin);
 router.post("/send-otp", sendOtp);
 router.post("/reset-password", resetPassword);
 
 // NEW: Private routes for user profile management
 router
   .route("/profile")
-  .get(protect, getUserProfile) // GET /api/auth/profile - Get current user's profile, requires authentication
-  .put(protect, updateUserProfile); // PUT /api/auth/profile - Update current user's profile, requires authentication
-
+  .get(protect, getUserProfile) 
+  .put(protect, updateUserProfile);
+router.post("/complete-profile", protect, completeUserProfile);
 module.exports = router;

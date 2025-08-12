@@ -1,11 +1,15 @@
 "use strict";
 
-// server/models/User.js
 var mongoose = require("mongoose");
 
 var bcrypt = require("bcryptjs");
 
 var userSchema = new mongoose.Schema({
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
   username: {
     type: String,
     required: true,
@@ -16,8 +20,11 @@ var userSchema = new mongoose.Schema({
     type: String,
     required: true,
     "enum": ["customer", "supplier", "admin"],
-    // Added 'admin' role if you use it
     "default": "customer"
+  },
+  isProfileComplete: {
+    type: Boolean,
+    "default": false
   },
   email: {
     type: String,
@@ -29,7 +36,9 @@ var userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    // CHANGE: password is no longer required for OAuth users
+    required: false,
+    // Changed from true to false
     minlength: 6
   },
   name: {
@@ -50,7 +59,6 @@ var userSchema = new mongoose.Schema({
     trim: true
   },
   location: {
-    // Nested object for geographic location (lat/lng)
     lat: {
       type: Number,
       "default": null
@@ -61,14 +69,10 @@ var userSchema = new mongoose.Schema({
     }
   },
   profilePictureUrl: {
-    // NEW: URL for user's profile image
     type: String,
-    "default": "" // Default to empty string if no image
-
+    "default": ""
   },
-  // --- Customer-specific fields ---
-  cart: [// Array of items in the customer's cart
-  {
+  cart: [{
     productId: {
       type: mongoose.Schema.ObjectId,
       ref: "Product",
@@ -78,16 +82,13 @@ var userSchema = new mongoose.Schema({
       type: Number,
       required: true,
       min: 1
-    } // Could also store name, price, image directly for faster cart loading
-
+    }
   }],
-  wishlist: [// Array of product IDs in the customer's wishlist
-  {
+  wishlist: [{
     type: mongoose.Schema.ObjectId,
     ref: "Product"
   }],
-  notifications: [// Array of notifications for the user
-  {
+  notifications: [{
     message: {
       type: String,
       required: true
@@ -100,12 +101,10 @@ var userSchema = new mongoose.Schema({
       type: Date,
       "default": Date.now
     },
-    link: String // Optional link for the notification
-
+    link: String
   }]
 }, {
-  timestamps: true // Automatically adds createdAt and updatedAt
-
+  timestamps: true
 }); // Mongoose pre-save hook to hash password before saving
 
 userSchema.pre("save", function _callee(next) {
@@ -114,40 +113,38 @@ userSchema.pre("save", function _callee(next) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
-          if (this.isModified("password")) {
-            _context.next = 2;
+          if (!(this.isModified("password") && this.password)) {
+            _context.next = 14;
             break;
           }
 
-          return _context.abrupt("return", next());
-
-        case 2:
-          _context.prev = 2;
-          _context.next = 5;
+          _context.prev = 1;
+          _context.next = 4;
           return regeneratorRuntime.awrap(bcrypt.genSalt(10));
 
-        case 5:
+        case 4:
           salt = _context.sent;
-          _context.next = 8;
+          _context.next = 7;
           return regeneratorRuntime.awrap(bcrypt.hash(this.password, salt));
 
-        case 8:
+        case 7:
           this.password = _context.sent;
-          next();
-          _context.next = 15;
-          break;
+          return _context.abrupt("return", next());
 
-        case 12:
-          _context.prev = 12;
-          _context.t0 = _context["catch"](2);
-          next(_context.t0);
+        case 11:
+          _context.prev = 11;
+          _context.t0 = _context["catch"](1);
+          return _context.abrupt("return", next(_context.t0));
+
+        case 14:
+          next();
 
         case 15:
         case "end":
           return _context.stop();
       }
     }
-  }, null, this, [[2, 12]]);
+  }, null, this, [[1, 11]]);
 }); // Method to compare entered password with hashed password
 
 userSchema.methods.matchPassword = function _callee2(enteredPassword) {
@@ -155,13 +152,21 @@ userSchema.methods.matchPassword = function _callee2(enteredPassword) {
     while (1) {
       switch (_context2.prev = _context2.next) {
         case 0:
-          _context2.next = 2;
-          return regeneratorRuntime.awrap(bcrypt.compare(enteredPassword, this.password));
+          if (this.password) {
+            _context2.next = 2;
+            break;
+          }
+
+          return _context2.abrupt("return", false);
 
         case 2:
+          _context2.next = 4;
+          return regeneratorRuntime.awrap(bcrypt.compare(enteredPassword, this.password));
+
+        case 4:
           return _context2.abrupt("return", _context2.sent);
 
-        case 3:
+        case 5:
         case "end":
           return _context2.stop();
       }

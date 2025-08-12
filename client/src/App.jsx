@@ -26,6 +26,7 @@ import {
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import CompleteProfile from "./pages/CompleteProfile.jsx";
 import Contact from "./pages/Contact";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -156,6 +157,10 @@ function App() {
                       <Route path="/login" element={<Login />} />
                       <Route path="/register" element={<Register />} />
                       <Route
+                        path="/complete-profile"
+                        element={<CompleteProfile />}
+                      />
+                      <Route
                         path="/forgot-password"
                         element={<ForgotPassword />}
                       />
@@ -169,8 +174,10 @@ function App() {
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/support" element={<HelpAndSupport />} />
                       {/* Customer routes  */}
-                      <Route path="/customer/settings" element={<CustomerSettingsPage/>}/>
-                      
+                      <Route
+                        path="/customer/settings"
+                        element={<CustomerSettingsPage />}
+                      />
                       {/* legal routes  */}
                       <Route
                         path="/legal/supplier-partner"
@@ -432,7 +439,6 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
-
                       <Route
                         path="/supplier/offers"
                         element={

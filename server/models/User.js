@@ -1,9 +1,13 @@
-// server/models/User.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
   {
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     username: {
       type: String,
       required: true,
@@ -13,8 +17,12 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       required: true,
-      enum: ["customer", "supplier", "admin"], // Added 'admin' role if you use it
+      enum: ["customer", "supplier", "admin"],
       default: "customer",
+    },
+    isProfileComplete: {
+      type: Boolean,
+      default: false,
     },
     email: {
       type: String,
@@ -26,7 +34,8 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      // CHANGE: password is no longer required for OAuth users
+      required: false, // Changed from true to false
       minlength: 6,
     },
     name: {
@@ -47,18 +56,14 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     location: {
-      // Nested object for geographic location (lat/lng)
       lat: { type: Number, default: null },
       lng: { type: Number, default: null },
     },
     profilePictureUrl: {
-      // NEW: URL for user's profile image
       type: String,
-      default: "", // Default to empty string if no image
+      default: "",
     },
-    // --- Customer-specific fields ---
     cart: [
-      // Array of items in the customer's cart
       {
         productId: {
           type: mongoose.Schema.ObjectId,
@@ -70,47 +75,49 @@ const userSchema = new mongoose.Schema(
           required: true,
           min: 1,
         },
-        // Could also store name, price, image directly for faster cart loading
       },
     ],
     wishlist: [
-      // Array of product IDs in the customer's wishlist
       {
         type: mongoose.Schema.ObjectId,
         ref: "Product",
       },
     ],
     notifications: [
-      // Array of notifications for the user
       {
         message: { type: String, required: true },
         read: { type: Boolean, default: false },
         createdAt: { type: Date, default: Date.now },
-        link: String, // Optional link for the notification
+        link: String,
       },
     ],
   },
   {
-    timestamps: true, // Automatically adds createdAt and updatedAt
+    timestamps: true,
   }
 );
 
 // Mongoose pre-save hook to hash password before saving
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
-    return next();
+  // Only hash if the password field is being modified and is not empty
+  if (this.isModified("password") && this.password) {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+      return next();
+    } catch (error) {
+      return next(error);
+    }
   }
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  next();
 });
 
 // Method to compare entered password with hashed password
 userSchema.methods.matchPassword = async function (enteredPassword) {
+  // Only try to compare if a password exists on the user object
+  if (!this.password) {
+    return false;
+  }
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

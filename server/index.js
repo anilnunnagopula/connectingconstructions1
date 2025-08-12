@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 const authRoutes = require("./routes/auth");
 const supplierRoutes = require("./routes/supplierRoutes");
 const customerRoutes = require("./routes/customerRoutes");
-const generalRoutes = require("./routes/generalRoutes");
+const generalRoutes = require("./routes/generalRoutes"); 
 
 const app = express();
 
@@ -33,7 +33,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authRoutes); 
 app.use("/api/supplier", supplierRoutes);
 app.use("/api/customer", customerRoutes);
 app.use("/api", generalRoutes);
