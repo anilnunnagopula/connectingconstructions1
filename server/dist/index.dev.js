@@ -29,7 +29,7 @@ mongoose.connect(process.env.MONGO_URI, {
 }); // Middleware
 
 app.use(cors({
-  origin: ["http://localhost:3000", "https://connectingconstructions1.netlify.app"],
+  origin: ["http://localhost:3000", "https://connectingconstructions1.netlify.app", "https://connectingconstructions1.vercel.app"],
   credentials: true
 }));
 app.use(express.json({

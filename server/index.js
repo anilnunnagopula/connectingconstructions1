@@ -25,6 +25,7 @@ app.use(
     origin: [
       "http://localhost:3000",
       "https://connectingconstructions1.netlify.app",
+      "https://connectingconstructions1.vercel.app",
     ],
     credentials: true,
   })
