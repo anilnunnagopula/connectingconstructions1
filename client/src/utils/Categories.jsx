@@ -34,7 +34,7 @@ const categories = [
   "Contractors",
   "Ground Improvement Works",
   "DPC Works",
-  // "GIT Works",
+  "GIT Works",
   "Roads & Pavements",
   "Morrum (Red sand)",
   "Dismantal",
@@ -74,3 +74,39 @@ const categories = [
 ];
 
 export default categories;
+// src/utils/categories.js
+// const categories = [
+//   { name: "Cement", type: "product" },
+//   { name: "Reinforcement Bars", type: "product" },
+//   { name: "Bricks", type: "product" },
+//   { name: "Sand", type: "product" },
+//   { name: "Paints & Works", type: "product" },
+//   { name: "Tiles & Marbles", type: "product" },
+//   { name: "Aggregates", type: "product" },
+//   { name: "Granite Stones", type: "product" },
+//   { name: "Dust", type: "product" },
+//   { name: "Admixtures", type: "product" },
+//   { name: "RMC", type: "product" },
+//   { name: "Water Tankers", type: "product" },
+
+//   { name: "Vastu", type: "service" },
+//   { name: "Surveyors", type: "service" },
+//   { name: "Legal Guidance", type: "service" },
+//   { name: "Labours", type: "service" },
+//   { name: "Mason", type: "service" },
+//   { name: "Contractors", type: "service" },
+//   { name: "Plumbing", type: "service" },
+//   { name: "Electricals", type: "service" },
+//   { name: "Interiors", type: "service" },
+//   { name: "Exteriors", type: "service" },
+//   { name: "Demolition Works", type: "service" },
+//   { name: "Renovation Works", type: "service" },
+//   { name: "Plan & Design", type: "service" },
+//   { name: "Health Monitoring", type: "service" },
+//   { name: "GIS", type: "service" },
+//   { name: "Portable Cabins", type: "service" },
+
+//   { name: "Others", type: "unknown" },
+// ];
+
+// export default categories;

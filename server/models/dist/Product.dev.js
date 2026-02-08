@@ -4,26 +4,19 @@
 var mongoose = require("mongoose");
 
 var productSchema = new mongoose.Schema({
-  // Renamed from supplierId to supplier for consistency with ref: 'User'
   supplier: {
     type: mongoose.Schema.Types.ObjectId,
-    // Use ObjectId to link to the User model
     required: true,
-    ref: "User" // This creates a reference to your User model
-
+    ref: "User"
   },
   name: {
     type: String,
     required: true,
-    trim: true // Consider unique: true with supplier to allow different suppliers to have same product name
-    // unique: true, // If product names must be globally unique
-
+    trim: true
   },
   description: {
-    // Added description field
     type: String,
     required: true,
-    // Make description required
     trim: true
   },
   category: {
@@ -37,18 +30,15 @@ var productSchema = new mongoose.Schema({
     min: 0
   },
   quantity: {
-    // Renamed from 'stock' to 'quantity' to match your usage
     type: Number,
     required: true,
     min: 0
   },
   availability: {
-    // Based on quantity > 0, or manual override
     type: Boolean,
     "default": true
   },
   location: {
-    // Supplier's default location for this product
     text: {
       type: String,
       required: true
@@ -61,7 +51,6 @@ var productSchema = new mongoose.Schema({
     }
   },
   contact: {
-    // Supplier's contact for this product (can be derived from supplier user)
     mobile: {
       type: String,
       required: true
@@ -76,13 +65,10 @@ var productSchema = new mongoose.Schema({
     }
   },
   imageUrls: {
-    // This is now an array of strings as per your modification
     type: [String],
     required: false,
-    // Set to true if at least one image is mandatory
     "default": []
   },
-  // NEW: Fields for aggregated rating (from Review model)
   averageRating: {
     type: Number,
     "default": 0,
@@ -93,16 +79,150 @@ var productSchema = new mongoose.Schema({
     type: Number,
     "default": 0,
     min: 0
+  },
+  // ✨ NEW: Soft delete
+  isDeleted: {
+    type: Boolean,
+    "default": false
+  },
+  deletedAt: {
+    type: Date
   }
 }, {
   timestamps: true
-} // Automatically adds createdAt and updatedAt fields
-); // Add an index to prevent a supplier from having two products with the exact same name
+}); // ===== INDEXES (CRITICAL FOR PERFORMANCE) =====
+// Existing: Prevent duplicate product names per supplier
 
 productSchema.index({
   name: 1,
   supplier: 1
 }, {
   unique: true
-});
+}); // ✨ NEW: Performance indexes
+// Category filtering (most common query)
+
+productSchema.index({
+  category: 1,
+  isDeleted: 1,
+  availability: 1
+}); // Supplier products
+
+productSchema.index({
+  supplier: 1,
+  isDeleted: 1
+}); // Text search on name and description
+
+productSchema.index({
+  name: "text",
+  description: "text"
+}); // Price range queries
+
+productSchema.index({
+  price: 1
+}); // Top-rated products
+
+productSchema.index({
+  averageRating: -1
+}); // Compound index for category + price filtering
+
+productSchema.index({
+  category: 1,
+  price: 1,
+  isDeleted: 1
+}); // Recent products
+
+productSchema.index({
+  createdAt: -1,
+  isDeleted: 1
+}); // Location-based queries (if you add geo features later)
+
+productSchema.index({
+  "location.lat": 1,
+  "location.lng": 1
+}); // ===== VIRTUALS =====
+// Virtual to check if product is in stock
+
+productSchema.virtual("inStock").get(function () {
+  return this.quantity > 0 && this.availability && !this.isDeleted;
+}); // ===== METHODS =====
+// Soft delete method
+
+productSchema.methods.softDelete = function () {
+  this.isDeleted = true;
+  this.deletedAt = new Date();
+  this.availability = false; // Also mark as unavailable
+
+  return this.save();
+}; // Restore soft-deleted product
+
+
+productSchema.methods.restore = function () {
+  this.isDeleted = false;
+  this.deletedAt = null;
+  return this.save();
+}; // Update stock after order
+
+
+productSchema.methods.decreaseStock = function (quantity) {
+  if (this.quantity >= quantity) {
+    this.quantity -= quantity;
+
+    if (this.quantity === 0) {
+      this.availability = false;
+    }
+
+    return this.save();
+  }
+
+  throw new Error("Insufficient stock");
+}; // Increase stock (for cancellations/returns)
+
+
+productSchema.methods.increaseStock = function (quantity) {
+  this.quantity += quantity;
+
+  if (this.quantity > 0) {
+    this.availability = true;
+  }
+
+  return this.save();
+}; // Update rating (called when new review is added)
+
+
+productSchema.methods.updateRating = function (newAverage, newCount) {
+  this.averageRating = newAverage;
+  this.numReviews = newCount;
+  return this.save();
+}; // ===== MIDDLEWARE =====
+// Pre-save: Auto-update availability based on quantity
+
+
+productSchema.pre("save", function (next) {
+  if (this.isModified("quantity")) {
+    if (this.quantity === 0) {
+      this.availability = false;
+    }
+  }
+
+  next();
+}); // ===== QUERY HELPERS =====
+// Helper to exclude deleted products by default
+
+productSchema.query.notDeleted = function () {
+  return this.where({
+    isDeleted: false
+  });
+}; // Helper to get available products
+
+
+productSchema.query.available = function () {
+  return this.where({
+    isDeleted: false,
+    availability: true,
+    quantity: {
+      $gt: 0
+    }
+  });
+};
+
 module.exports = mongoose.model("Product", productSchema);

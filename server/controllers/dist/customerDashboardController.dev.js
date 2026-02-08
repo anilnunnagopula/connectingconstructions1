@@ -1,5 +1,13 @@
 "use strict";
 
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
 // server/controllers/customerDashboardController.js
 var Order = require("../models/OrderModel");
 
@@ -8,94 +16,85 @@ var Wishlist = require("../models/Wishlist");
 var ViewHistory = require("../models/ViewHistory");
 
 var SupportRequest = require("../models/SupportRequest");
-
-var mongoose = require("mongoose"); // For ObjectId if needed for complex aggregations
-// @desc    Get aggregated data for the customer dashboard
-// @route   GET /api/customer/dashboard
-// @access  Private (Customer only)
+/**
+ * @desc    Get aggregated data for customer dashboard
+ * @route   GET /api/customer/dashboard
+ * @access  Private (Customer only)
+ */
 
 
 var getCustomerDashboardData = function getCustomerDashboardData(req, res) {
-  var customerId, ordersMade, wishlistItems, historyViewed, supportRequests, recentOrders;
+  var customerId, _ref, _ref2, ordersMade, wishlistItems, historyViewed, supportRequests, recentOrders;
+
   return regeneratorRuntime.async(function getCustomerDashboardData$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
-          // CHANGED: from exports.getCustomerDashboardData to const getCustomerDashboardData
-          // The 'authorizeRoles("customer")' middleware ensures only customers can hit this endpoint
-          customerId = req.user.id; // Get the customer's ID from the authenticated user
+          _context.prev = 0;
+          customerId = req.user._id; // ✨ Use Promise.all for parallel execution (much faster)
 
-          _context.prev = 1;
           _context.next = 4;
-          return regeneratorRuntime.awrap(Order.countDocuments({
-            user: customerId,
-            isPaid: true
-          }));
-
-        case 4:
-          ordersMade = _context.sent;
-          _context.next = 7;
-          return regeneratorRuntime.awrap(Wishlist.countDocuments({
+          return regeneratorRuntime.awrap(Promise.all([// 1. Total orders
+          Order.countDocuments({
+            customer: customerId,
+            // Updated field name
+            isDeleted: false
+          }), // 2. Wishlist count
+          Wishlist.countDocuments({
             user: customerId
-          }));
-
-        case 7:
-          wishlistItems = _context.sent;
-          _context.next = 10;
-          return regeneratorRuntime.awrap(ViewHistory.countDocuments({
+          }), // 3. View history count
+          ViewHistory.countDocuments({
             user: customerId
-          }));
-
-        case 10:
-          historyViewed = _context.sent;
-          _context.next = 13;
-          return regeneratorRuntime.awrap(SupportRequest.countDocuments({
+          }), // 4. Support requests count
+          SupportRequest.countDocuments({
             user: customerId
-          }));
-
-        case 13:
-          supportRequests = _context.sent;
-          _context.next = 16;
-          return regeneratorRuntime.awrap(Order.find({
-            user: customerId,
-            isPaid: true
+          }), // 5. Recent orders (top 5)
+          Order.find({
+            customer: customerId,
+            isDeleted: false
           }).sort({
             createdAt: -1
-          }) // Most recent first
-          .limit(5) // Get top 5
-          .populate("orderItems.product", "name price imageUrls") // Populate product details
-          .select("orderItems totalPrice createdAt isPaid isDelivered"));
+          }).limit(5).populate("products.productId", "name price imageUrls").select("products totalAmount createdAt orderStatus").lean()]));
 
-        case 16:
-          recentOrders = _context.sent;
-          // Select relevant fields
+        case 4:
+          _ref = _context.sent;
+          _ref2 = _slicedToArray(_ref, 5);
+          ordersMade = _ref2[0];
+          wishlistItems = _ref2[1];
+          historyViewed = _ref2[2];
+          supportRequests = _ref2[3];
+          recentOrders = _ref2[4];
+          console.log("\uD83D\uDCCA Customer dashboard data fetched: ".concat(customerId));
           res.json({
-            ordersMade: ordersMade,
-            wishlistItems: wishlistItems,
-            historyViewed: historyViewed,
-            supportRequests: supportRequests,
-            recentOrders: recentOrders
+            success: true,
+            data: {
+              ordersMade: ordersMade,
+              wishlistItems: wishlistItems,
+              historyViewed: historyViewed,
+              supportRequests: supportRequests,
+              recentOrders: recentOrders
+            }
           });
-          _context.next = 24;
+          _context.next = 19;
           break;
 
-        case 20:
-          _context.prev = 20;
-          _context.t0 = _context["catch"](1);
-          console.error("Error fetching customer dashboard data:", _context.t0);
+        case 15:
+          _context.prev = 15;
+          _context.t0 = _context["catch"](0);
+          console.error("❌ Error fetching customer dashboard data:", _context.t0);
           res.status(500).json({
+            success: false,
             message: "Failed to fetch dashboard data.",
             error: _context.t0.message
           });
 
-        case 24:
+        case 19:
         case "end":
           return _context.stop();
       }
     }
-  }, null, null, [[1, 20]]);
-}; // CRITICAL: This module.exports block MUST be at the very end
-
+  }, null, null, [[0, 15]]);
+};
 
 module.exports = {
   getCustomerDashboardData: getCustomerDashboardData

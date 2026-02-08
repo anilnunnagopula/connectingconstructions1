@@ -1,74 +1,63 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
 
 const Login = () => {
-  // State for form data, including a default role
   const [formData, setFormData] = useState({
     role: "customer",
     email: "",
     password: "",
   });
-  // State for showing/hiding the password
   const [showPassword, setShowPassword] = useState(false);
-  // State for displaying form errors
   const [error, setError] = useState("");
-  // State for managing loading status during API calls
   const [loading, setLoading] = useState(false);
-  // Hook for programmatic navigation
   const navigate = useNavigate();
-
-  // Reference for the Google Sign-In button container, used by the Google SDK
-  const googleSignInButtonRef = useRef(null);
-
-  // Call the useAuth hook to get the login function from context
   const { login } = useAuth();
 
-  // Handles form input changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Function to handle the Google Sign-In callback
-  const handleGoogleCredentialResponse = async (response) => {
+  // Google OAuth Handler - Now receives credential (ID token)
+  const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     setError("");
 
     try {
-      // Send the ID token and selected role to your backend for verification
-      const apiResponse = await fetch(
+      const res = await fetch(
         `${process.env.REACT_APP_API_URL}/api/auth/google`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            idToken: response.credential,
-            role: formData.role, // Use the role selected by the user
+            idToken: credentialResponse.credential, // This is the ID token your backend expects
+            role: formData.role,
           }),
-        }
+        },
       );
 
-      const data = await apiResponse.json();
+      const data = await res.json();
 
-      if (!apiResponse.ok) {
-        throw new Error(data.error || "Google login failed.");
+      if (!res.ok) {
+        throw new Error(data.error || "Google sign-in failed.");
       }
 
-      // Call the login function from AuthContext to handle state and localStorage
       login(data);
-
-      // Navigate to the correct dashboard based on the role returned from the server
       navigate(`/${data.role}-dashboard`);
     } catch (err) {
       console.error("Google login error:", err);
-      setError(err.message || "Google login failed. Please try again.");
+      setError(err.message || "Google sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handles the standard email/password form submission
+  const handleGoogleError = () => {
+    setError("Google sign-in failed. Please try again.");
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -87,7 +76,7 @@ const Login = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(formData),
-        }
+        },
       );
 
       const data = await response.json();
@@ -95,10 +84,7 @@ const Login = () => {
         throw new Error(data.error || "Login failed.");
       }
 
-      // Call the login function from AuthContext
       login(data);
-
-      // Navigate to the correct dashboard based on the role
       navigate(`/${data.role}-dashboard`);
     } catch (err) {
       console.error("Login submission error:", err);
@@ -107,39 +93,6 @@ const Login = () => {
       setLoading(false);
     }
   };
-
-  // This useEffect hook handles loading the Google Identity Services script
-  // and rendering the Google Sign-In button on component mount.
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google) {
-        // Initialize the Google Identity Services client
-        window.google.accounts.id.initialize({
-          // TODO: Replace with your actual Google Client ID from your .env file
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredentialResponse,
-        });
-
-        // Render the Google Sign-In button inside our ref container
-        if (googleSignInButtonRef.current) {
-          window.google.accounts.id.renderButton(
-            googleSignInButtonRef.current,
-            { theme: "outline", size: "large", text: "signin_with" }
-          );
-        }
-      }
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      // Clean up the script when the component unmounts
-      document.body.removeChild(script);
-    };
-  }, [formData.role]); // Rerun the effect if the user's selected role changes
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
@@ -231,7 +184,7 @@ const Login = () => {
           </button>
         </form>
 
-        {/* OR divider and Google Sign-In button */}
+        {/* OR divider */}
         <div className="relative flex items-center justify-center my-4">
           <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
           <span className="flex-shrink mx-4 text-gray-500 dark:text-gray-400">
@@ -240,11 +193,19 @@ const Login = () => {
           <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
         </div>
 
-        {/* This div is where the Google Sign-In button will be rendered by the SDK */}
-        <div
-          ref={googleSignInButtonRef}
-          className="w-full flex justify-center"
-        ></div>
+        {/* Google Sign-In Button */}
+        <div className="w-full flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            useOneTap
+            text="signin_with"
+            shape="rectangular"
+            theme="outline"
+            size="large"
+            width="100%"
+          />
+        </div>
 
         {/* Registration link */}
         <p className="text-center text-sm mt-4 dark:text-gray-300">

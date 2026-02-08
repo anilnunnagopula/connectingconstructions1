@@ -1,62 +1,73 @@
-// middleware/authMiddleware.js
-const jwt = require("jsonwebtoken");
+// server/middleware/authMiddleware.js
+const { verifyAccessToken } = require("../utils/tokenUtils");
 const User = require("../models/User");
 
-// @desc    Middleware to protect routes, verify JWT, and attach user to req
+// Protect routes - verify access token from Authorization header
 const protect = async (req, res, next) => {
-  let token;
+  try {
+    let token;
 
-  // Check if authorization header exists and starts with 'Bearer'
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      // Extract the token (e.g., "Bearer XXX.YYY.ZZZ" -> "XXX.YYY.ZZZ")
+    // Extract token from Authorization header
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
       token = req.headers.authorization.split(" ")[1];
-
-      // Verify the token using your JWT_SECRET from .env
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Find the user by ID from the decoded token payload
-      // .select('-password') prevents sending the hashed password back
-      req.user = await User.findById(decoded.id).select("-password");
-      req.user.role = decoded.role; // Attach the role from the token to req.user for convenience
-
-      next(); // Proceed to the next middleware or route handler
-    } catch (error) {
-      console.error("Authentication token error:", error.message);
-      // Respond with 401 Unauthorized if token is invalid or expired
-      return res
-        .status(401)
-        .json({ message: "Not authorized, token failed or expired." });
     }
-  }
 
-  // If no token was provided in the request
-  if (!token) {
-    return res
-      .status(401)
-      .json({ message: "Not authorized, no token provided." });
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized, no token provided",
+      });
+    }
+
+    // Verify token
+    const decoded = verifyAccessToken(token);
+
+    // Fetch user from database
+    req.user = await User.findById(decoded.id).select("-password");
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Attach role for convenience
+    req.user.role = decoded.role;
+
+    next();
+  } catch (error) {
+    console.error("Auth middleware error:", error.message);
+
+    // Handle specific JWT errors
+    if (error.message === "Invalid or expired access token") {
+      return res.status(401).json({
+        success: false,
+        message: "Token expired, please refresh",
+        code: "TOKEN_EXPIRED",
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: "Not authorized, token failed",
+    });
   }
 };
 
-// @desc    Middleware for role-based authorization
-// @param   {...string} roles - An array of roles allowed to access the route (e.g., 'admin', 'supplier')
+// Authorize specific roles
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {
-    // 'req.user' is populated by the 'protect' middleware
-    // Check if user is authenticated and if their role is among the allowed roles
-    if (!req.user || !req.user.role || !roles.includes(req.user.role)) {
-      // Respond with 403 Forbidden if the user's role is not authorized
-      return res
-        .status(403)
-        .json({
-          message:
-            "Not authorized to access this resource (insufficient role).",
-        });
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to access this resource",
+      });
     }
-    next(); // User is authorized, proceed
+    next();
   };
 };
 

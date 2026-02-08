@@ -1,109 +1,118 @@
 // server/controllers/supplierDashboardController.js
-const Product = require("../models/Product"); // Make sure this path is correct
-const Order = require("../models/OrderModel"); // Make sure this path is correct
-const User = require("../models/User"); // Make sure this path is correct (for supplier profile if needed)
+const Product = require("../models/Product");
+const Order = require("../models/OrderModel");
+const User = require("../models/User");
 
-// @desc    Get summary dashboard data for authenticated supplier
-// @route   GET /api/supplier/dashboard
-// @access  Private (Supplier only)
+/**
+ * @desc    Get supplier dashboard summary
+ * @route   GET /api/supplier/dashboard
+ * @access  Private (Supplier only)
+ */
 exports.getSupplierDashboardData = async (req, res) => {
   try {
-    const supplierId = req.user.id; // Get supplier's _id from authenticated user
+    const supplierId = req.user._id;
 
-    // --- 1. Total Products ---
-    const totalProducts = await Product.countDocuments({
-      supplier: supplierId,
-    });
+    // ✨ Use Promise.all for parallel execution
+    const [totalProducts, orderStats, weeklySalesData] = await Promise.all([
+      // 1. Total Products
+      Product.countDocuments({
+        supplier: supplierId,
+        isDeleted: false,
+      }),
 
-    // --- 2. Total Earnings, Total Orders, Average Rating (from delivered orders) ---
-    const orderAggregationResult = await Order.aggregate([
-      {
-        $match: {
-          "products.supplier": supplierId, // Match orders with products from this supplier
-          orderStatus: "Delivered", // Consider only delivered orders for these metrics
-        },
-      },
-      {
-        $unwind: "$products", // Deconstruct products array
-      },
-      {
-        $match: {
-          "products.supplier": supplierId, // Filter again for current supplier's products after unwind
-        },
-      },
-      {
-        $group: {
-          _id: null, // Group all
-          totalEarnings: {
-            $sum: { $multiply: ["$products.price", "$products.quantity"] },
+      // 2. Order Statistics (earnings, orders, products sold)
+      Order.aggregate([
+        {
+          $match: {
+            "products.supplier": supplierId,
+            orderStatus: "Delivered",
+            isDeleted: false,
           },
-          totalProductsSold: { $sum: "$products.quantity" },
-          orderIds: { $addToSet: "$_id" }, // Get unique order IDs
         },
-      },
-      {
-        $project: {
-          _id: 0,
-          totalEarnings: 1,
-          totalOrders: { $size: "$orderIds" }, // Count unique orders
-          totalProductsSold: 1,
+        { $unwind: "$products" },
+        {
+          $match: {
+            "products.supplier": supplierId,
+          },
         },
-      },
+        {
+          $group: {
+            _id: null,
+            totalEarnings: {
+              $sum: { $multiply: ["$products.price", "$products.quantity"] },
+            },
+            totalProductsSold: { $sum: "$products.quantity" },
+            orderIds: { $addToSet: "$_id" },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            totalEarnings: 1,
+            totalOrders: { $size: "$orderIds" },
+            totalProductsSold: 1,
+          },
+        },
+      ]),
+
+      // 3. Weekly Sales Data
+      Order.aggregate([
+        {
+          $match: {
+            "products.supplier": supplierId,
+            orderStatus: "Delivered",
+            isDeleted: false,
+            createdAt: {
+              $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            },
+          },
+        },
+        { $unwind: "$products" },
+        {
+          $match: {
+            "products.supplier": supplierId,
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            dailyEarnings: {
+              $sum: { $multiply: ["$products.price", "$products.quantity"] },
+            },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
     ]);
 
     const dashboardSummary =
-      orderAggregationResult.length > 0
-        ? orderAggregationResult[0]
+      orderStats.length > 0
+        ? orderStats[0]
         : { totalEarnings: 0, totalOrders: 0, totalProductsSold: 0 };
 
-    // --- 3. Average Rating (requires Product model to store ratings or aggregate from Reviews) ---
-    // This is a placeholder. If you have a separate Reviews model, you'd aggregate from there.
-    // Assuming for now product model might have a simple average rating
-    // const productsWithRatings = await Product.find({ supplier: supplierId, averageRating: { $exists: true } });
-    // let totalRating = 0;
-    // let ratedProductsCount = 0;
-    // productsWithRatings.forEach(p => {
-    //   totalRating += p.averageRating;
-    //   ratedProductsCount++;
-    // });
-    // const averageRating = ratedProductsCount > 0 ? (totalRating / ratedProductsCount) : 0;
-    // Using a dummy value for now if no concrete rating system is implemented.
-    const averageRating = 4.5; // Placeholder
+    // ✨ Calculate average rating from products
+    const productsWithRatings = await Product.find({
+      supplier: supplierId,
+      isDeleted: false,
+      numReviews: { $gt: 0 },
+    })
+      .select("averageRating numReviews")
+      .lean();
 
-    // --- 4. Weekly Earnings for Chart ---
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    sevenDaysAgo.setHours(0, 0, 0, 0); // Start from the beginning of the day
+    let averageRating = 0;
+    if (productsWithRatings.length > 0) {
+      const totalRating = productsWithRatings.reduce(
+        (sum, p) => sum + p.averageRating * p.numReviews,
+        0,
+      );
+      const totalReviews = productsWithRatings.reduce(
+        (sum, p) => sum + p.numReviews,
+        0,
+      );
+      averageRating = totalReviews > 0 ? totalRating / totalReviews : 0;
+    }
 
-    const weeklySalesData = await Order.aggregate([
-      {
-        $match: {
-          "products.supplier": supplierId,
-          orderStatus: "Delivered", // Only count delivered sales
-          createdAt: { $gte: sevenDaysAgo },
-        },
-      },
-      {
-        $unwind: "$products",
-      },
-      {
-        $match: {
-          "products.supplier": supplierId, // Match supplier's products after unwind
-        },
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, // Group by date string
-          dailyEarnings: {
-            $sum: { $multiply: ["$products.price", "$products.quantity"] },
-          },
-        },
-      },
-      {
-        $sort: { _id: 1 }, // Sort by date ascending
-      },
-    ]);
-
-    // Format data for the last 7 days, including days with no sales
+    // Format weekly data for chart
     const dailyEarningsMap = new Map();
     weeklySalesData.forEach((item) => {
       dailyEarningsMap.set(item._id, item.dailyEarnings);
@@ -111,32 +120,37 @@ exports.getSupplierDashboardData = async (req, res) => {
 
     const labels = [];
     const data = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(sevenDaysAgo);
-      date.setDate(date.getDate() + i);
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
       const dateString = date.toISOString().split("T")[0];
-      labels.push(date.toLocaleDateString("en-US", { weekday: "short" })); // E.g., 'Mon', 'Tue'
-      data.push(dailyEarningsMap.get(dateString) || 0); // Push 0 if no sales for that day
+      labels.push(date.toLocaleDateString("en-US", { weekday: "short" }));
+      data.push(dailyEarningsMap.get(dateString) || 0);
     }
 
+    console.log(`📊 Supplier dashboard data fetched: ${supplierId}`);
+
     res.status(200).json({
-      totalProducts: totalProducts,
-      totalEarnings: dashboardSummary.totalEarnings,
-      totalOrders: dashboardSummary.totalOrders,
-      averageRating: averageRating, // Use calculated or placeholder
-      weeklyEarnings: {
-        // NEW: Data for the graph
-        labels: labels,
-        data: data,
+      success: true,
+      data: {
+        totalProducts,
+        totalEarnings: dashboardSummary.totalEarnings,
+        totalOrders: dashboardSummary.totalOrders,
+        averageRating: parseFloat(averageRating.toFixed(1)),
+        weeklyEarnings: {
+          labels,
+          data,
+        },
       },
     });
   } catch (error) {
-    console.error("Error fetching supplier dashboard data:", error);
-    res
-      .status(500)
-      .json({
-        error: "Failed to fetch dashboard data",
-        details: error.message,
-      });
+    console.error("❌ Error fetching supplier dashboard data:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch dashboard data",
+      details: error.message,
+    });
   }
 };

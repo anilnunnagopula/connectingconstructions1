@@ -1,3 +1,4 @@
+// server/models/User.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
@@ -34,10 +35,11 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      // CHANGE: password is no longer required for OAuth users
-      required: false, // Changed from true to false
+      required: false,
       minlength: 6,
     },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
     name: {
       type: String,
       required: true,
@@ -91,15 +93,43 @@ const userSchema = new mongoose.Schema(
         link: String,
       },
     ],
+    // ✨ NEW: Soft delete
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-// Mongoose pre-save hook to hash password before saving
+// ===== INDEXES (CRITICAL FOR PERFORMANCE) =====
+
+// Already indexed automatically: _id, email, username (unique fields)
+
+// Index for authentication queries
+userSchema.index({ email: 1, role: 1 });
+
+// Index for Google OAuth
+userSchema.index({ googleId: 1 });
+
+// Index for password reset
+userSchema.index({ resetPasswordToken: 1 });
+
+// Index for soft delete queries
+userSchema.index({ isDeleted: 1 });
+
+// Index for finding suppliers
+userSchema.index({ role: 1, isDeleted: 1 });
+
+// ===== MONGOOSE MIDDLEWARE =====
+
+// Pre-save: Hash password
 userSchema.pre("save", async function (next) {
-  // Only hash if the password field is being modified and is not empty
   if (this.isModified("password") && this.password) {
     try {
       const salt = await bcrypt.genSalt(10);
@@ -112,13 +142,36 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// Method to compare entered password with hashed password
+// ===== METHODS =====
+
+// Compare password
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  // Only try to compare if a password exists on the user object
   if (!this.password) {
     return false;
   }
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Generate password reset token
+userSchema.methods.getResetPasswordToken = function () {
+  const crypto = require("crypto");
+  const resetToken = crypto.randomBytes(20).toString("hex");
+
+  this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  return resetToken;
+};
+
+// Soft delete method
+userSchema.methods.softDelete = function () {
+  this.isDeleted = true;
+  this.deletedAt = new Date();
+  return this.save();
 };
 
 module.exports = mongoose.model("User", userSchema);

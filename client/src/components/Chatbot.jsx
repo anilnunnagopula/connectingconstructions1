@@ -322,7 +322,7 @@ const Chatbot = ({ isLoggedIn = false }) => {
   //   ));
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
+    <div className="fixed bottom-8 right-5 z-50">
       {isOpen ? (
         <div className="w-[90vw] md:w-[26rem] h-[85vh] md:h-[36rem] bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex flex-col border border-gray-200 dark:border-gray-700 transition-all duration-300">
           <div className="bg-blue-600 text-white px-4 py-3 rounded-t-xl flex justify-between items-center">

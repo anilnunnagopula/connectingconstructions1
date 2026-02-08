@@ -1,9 +1,10 @@
 "use strict";
 
-// middleware/authMiddleware.js
-var jwt = require("jsonwebtoken");
+// server/middleware/authMiddleware.js
+var _require = require("../utils/tokenUtils"),
+    verifyAccessToken = _require.verifyAccessToken;
 
-var User = require("../models/User"); // @desc    Middleware to protect routes, verify JWT, and attach user to req
+var User = require("../models/User"); // Protect routes - verify access token from Authorization header
 
 
 var protect = function protect(req, res, next) {
@@ -12,57 +13,79 @@ var protect = function protect(req, res, next) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
-          if (!(req.headers.authorization && req.headers.authorization.startsWith("Bearer"))) {
-            _context.next = 15;
+          _context.prev = 0;
+
+          // Extract token from Authorization header
+          if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+            token = req.headers.authorization.split(" ")[1];
+          }
+
+          if (token) {
+            _context.next = 4;
             break;
           }
 
-          _context.prev = 1;
-          // Extract the token (e.g., "Bearer XXX.YYY.ZZZ" -> "XXX.YYY.ZZZ")
-          token = req.headers.authorization.split(" ")[1]; // Verify the token using your JWT_SECRET from .env
+          return _context.abrupt("return", res.status(401).json({
+            success: false,
+            message: "Not authorized, no token provided"
+          }));
 
-          decoded = jwt.verify(token, process.env.JWT_SECRET); // Find the user by ID from the decoded token payload
-          // .select('-password') prevents sending the hashed password back
+        case 4:
+          // Verify token
+          decoded = verifyAccessToken(token); // Fetch user from database
 
-          _context.next = 6;
+          _context.next = 7;
           return regeneratorRuntime.awrap(User.findById(decoded.id).select("-password"));
 
-        case 6:
+        case 7:
           req.user = _context.sent;
-          req.user.role = decoded.role; // Attach the role from the token to req.user for convenience
 
-          next(); // Proceed to the next middleware or route handler
-
-          _context.next = 15;
-          break;
-
-        case 11:
-          _context.prev = 11;
-          _context.t0 = _context["catch"](1);
-          console.error("Authentication token error:", _context.t0.message); // Respond with 401 Unauthorized if token is invalid or expired
-
-          return _context.abrupt("return", res.status(401).json({
-            message: "Not authorized, token failed or expired."
-          }));
-
-        case 15:
-          if (token) {
-            _context.next = 17;
+          if (req.user) {
+            _context.next = 10;
             break;
           }
 
           return _context.abrupt("return", res.status(401).json({
-            message: "Not authorized, no token provided."
+            success: false,
+            message: "User not found"
           }));
 
-        case 17:
+        case 10:
+          // Attach role for convenience
+          req.user.role = decoded.role;
+          next();
+          _context.next = 20;
+          break;
+
+        case 14:
+          _context.prev = 14;
+          _context.t0 = _context["catch"](0);
+          console.error("Auth middleware error:", _context.t0.message); // Handle specific JWT errors
+
+          if (!(_context.t0.message === "Invalid or expired access token")) {
+            _context.next = 19;
+            break;
+          }
+
+          return _context.abrupt("return", res.status(401).json({
+            success: false,
+            message: "Token expired, please refresh",
+            code: "TOKEN_EXPIRED"
+          }));
+
+        case 19:
+          return _context.abrupt("return", res.status(401).json({
+            success: false,
+            message: "Not authorized, token failed"
+          }));
+
+        case 20:
         case "end":
           return _context.stop();
       }
     }
-  }, null, null, [[1, 11]]);
-}; // @desc    Middleware for role-based authorization
-// @param   {...string} roles - An array of roles allowed to access the route (e.g., 'admin', 'supplier')
+  }, null, null, [[0, 14]]);
+}; // Authorize specific roles
 
 
 var authorizeRoles = function authorizeRoles() {
@@ -71,16 +94,14 @@ var authorizeRoles = function authorizeRoles() {
   }
 
   return function (req, res, next) {
-    // 'req.user' is populated by the 'protect' middleware
-    // Check if user is authenticated and if their role is among the allowed roles
-    if (!req.user || !req.user.role || !roles.includes(req.user.role)) {
-      // Respond with 403 Forbidden if the user's role is not authorized
+    if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({
-        message: "Not authorized to access this resource (insufficient role)."
+        success: false,
+        message: "Not authorized to access this resource"
       });
     }
 
-    next(); // User is authorized, proceed
+    next();
   };
 };
 

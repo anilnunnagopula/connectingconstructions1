@@ -67,7 +67,7 @@ const Home = () => {
       <hr />
       
 
-      <CommonServices />
+      {/* <CommonServices /> */}
     </div>
   );
 };
