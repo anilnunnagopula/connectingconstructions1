@@ -50,7 +50,7 @@ apiClient.interceptors.response.use(
     // Handle 401 Unauthorized - Token expired
     if (error.response?.status === 401) {
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      // window.location.href = "/login";
     }
     return Promise.reject(error);
   },

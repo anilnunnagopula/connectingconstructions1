@@ -22,7 +22,7 @@ import {
  * - Dark mode support
  * - iOS safe area support
  */
-const SupplierBottomNav = ({ pendingOrders = 0, notifications = 0 }) => {
+const SupplierBottomNav = ({ children, pendingOrders = 0, notifications = 0 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isVisible, setIsVisible] = useState(true);
@@ -112,6 +112,7 @@ const SupplierBottomNav = ({ pendingOrders = 0, notifications = 0 }) => {
 
   return (
     <>
+      {children}
       {/* Bottom Navigation Container */}
       <nav
         className={`
