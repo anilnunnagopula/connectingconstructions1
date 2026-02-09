@@ -1,11 +1,27 @@
 import React, { useEffect, useState } from "react";
-import categories from "../utils/Categories";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import categories from "../utils/Categories";
 import Materials from "./Materials";
 import CommonServices from "../common-services/CommonServices";
+
 const Home = () => {
   const [showMobilePopup, setShowMobilePopup] = useState(false);
   const navigate = useNavigate();
+
+  // ✨ Get auth state
+  const { isAuthenticated, user, isAuthLoading } = useAuth();
+
+  // ✨ Redirect logged-in users to their dashboard
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated && user) {
+      if (user.role === "customer") {
+        navigate("/customer-dashboard", { replace: true });
+      } else if (user.role === "supplier") {
+        navigate("/supplier-dashboard", { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, isAuthLoading, navigate]);
 
   useEffect(() => {
     if (window.innerWidth < 768) {
@@ -20,6 +36,16 @@ const Home = () => {
     navigate(`/category/${encoded}`);
   };
 
+  // ✨ Show loading while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // ✨ Only show home page to non-authenticated users
   return (
     <div>
       {/* ✅ Mobile Warning Popup */}
@@ -40,6 +66,7 @@ const Home = () => {
           </div>
         </div>
       )}
+
       {/* 🔹 Hero Section */}
       <div
         className="w-full h-[95vh] bg-cover bg-center relative"
@@ -62,10 +89,10 @@ const Home = () => {
           </strong>
         </div>
       </div>
+
       {/* 🔹 Category Showcase */}
       <Materials />
       <hr />
-      
 
       {/* <CommonServices /> */}
     </div>

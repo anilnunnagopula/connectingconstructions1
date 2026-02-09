@@ -2,6 +2,9 @@
   "name": "connect-constructions-client",
   "version": "1.0.0",
   "private": true,
+  "resolutions": {
+    "@types/node": "20.11.0"
+  },
   "scripts": {
     "start": "react-scripts start",
     "dev": "react-scripts start",
