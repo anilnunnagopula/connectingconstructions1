@@ -11,7 +11,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 // server/controllers/supplierDashboardController.js
 var Product = require("../models/Product");
 
-var Order = require("../models/OrderModel");
+var Order = require("../models/Order");
 
 var User = require("../models/User");
 /**

@@ -20,7 +20,7 @@ const Footer = () => {
     "/reset-password",
     // "/materials",
     // "cart",
-    // "/my-orders",
+    // "orders",
   ];
   if (hiddenRoutes.includes(pathname)) return null;
 
@@ -71,7 +71,7 @@ const Footer = () => {
             </li>
             <li>
               <Link
-                to="/customer-dashboard/my-orders"
+                to="/customer-dashboard/orders"
                 className="hover:text-white"
               >
                 📜 Orders

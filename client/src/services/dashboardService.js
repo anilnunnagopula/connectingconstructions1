@@ -292,6 +292,11 @@ export const rejectOrder = async (orderId, reason) => {
  * @param {Object} filters - { category, status, page, limit, search, sort }
  * @returns {Promise<Object>} Products list
  */
+/**
+ * Fetch all products with filters
+ * @param {Object} filters - { category, status, page, limit, search, sort }
+ * @returns {Promise<Object>} Products list
+ */
 export const fetchProducts = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
@@ -303,13 +308,21 @@ export const fetchProducts = async (filters = {}) => {
     if (filters.sort) params.append("sort", filters.sort);
 
     const response = await apiClient.get(
-      `/api/supplier/products?${params.toString()}`,
+      `/api/supplier/myproducts?${params.toString()}`
     );
+    
+    console.log("✅ Products API Response:", response.data); // Debug log
+    
     return {
       success: true,
-      data: response.data,
+      data: {
+        products: response.data.data || response.data.products || response.data,
+        total: response.data.total || response.data.data?.length || 0,
+        totalPages: response.data.totalPages || 1,
+      },
     };
   } catch (error) {
+    console.error("❌ Fetch products error:", error);
     return handleError(error, "Failed to fetch products");
   }
 };

@@ -74,6 +74,13 @@ import Cart from "./pages/customer/Cart";
 import Checkout from "./pages/customer/Checkout";
 import HelpAndSupport from "./components/HelpAndSupport";
 import CustomerSettingsPage from "./pages/customer/CustomerSettingsPage.jsx";
+import OrderSuccess from "./pages/customer/OrderSuccess";
+import RequestQuote from "./pages/customer/RequestQuote";
+import MyQuotes from "./pages/customer/MyQuotes";
+import QuoteDetails from "./pages/customer/QuoteDetails";
+import QuoteRequests from "./pages/supplier/QuoteRequests";
+import RespondToQuote from "./pages/supplier/RespondToQuote";
+import Wishlist from "./pages/customer/Wishlist.jsx";
 //legal pages
 import CorePolicies from "./pages/legal/CorePolicies";
 import SmartPlatform from "./pages/legal/SmartPlatform";
@@ -182,8 +189,66 @@ function App() {
                           element={<CustomerNotifications />}
                         />
                         <Route
+                          path="/customer/order-success/:orderId"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <OrderSuccess />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/customer/wishlist"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <Wishlist />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
                           path="/customer/materials"
                           element={<Materials />}
+                        />
+                        {/* Customer Quote Routes */}
+                        <Route
+                          path="/customer/quotes/request"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <RequestQuote />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/customer/quotes"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <MyQuotes />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/customer/quotes/:id"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <QuoteDetails />
+                            </ProtectedRoute>
+                          }
+                        />
+                        {/* Supplier Quote Routes */}
+                        <Route
+                          path="/supplier/quotes"
+                          element={
+                            <ProtectedRoute allowedRole="supplier">
+                              <QuoteRequests />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/supplier/quotes/respond/:id"
+                          element={
+                            <ProtectedRoute allowedRole="supplier">
+                              <RespondToQuote />
+                            </ProtectedRoute>
+                          }
                         />
                         {/* legal routes  */}
                         <Route
@@ -381,7 +446,7 @@ function App() {
                           element={<EditProduct />}
                         />
                         <Route
-                          path="/supplier/product/:id"
+                          path="/supplier/products/:id"
                           element={
                             <ProtectedRoute allowedRole="supplier">
                               <ProductDetail />

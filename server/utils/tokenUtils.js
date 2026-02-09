@@ -7,7 +7,7 @@ const generateAccessToken = (userId, role) => {
   return jwt.sign(
     { id: userId, role },
     process.env.JWT_SECRET,
-    { expiresIn: "15m" }, // Changed from 1h to 15m
+    { expiresIn: "7d" }, 
   );
 };
 
@@ -16,7 +16,7 @@ const generateRefreshToken = (userId) => {
   const token = jwt.sign(
     { id: userId, type: "refresh" },
     process.env.JWT_REFRESH_SECRET,
-    { expiresIn: "7d" },
+    { expiresIn: "15d" },
   );
 
   // Generate a unique token ID for tracking

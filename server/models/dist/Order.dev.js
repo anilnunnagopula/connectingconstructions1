@@ -1,74 +1,171 @@
 "use strict";
 
-// server/models/OrderModel.js
+// server/models/Order.js
 var mongoose = require("mongoose");
 
-var orderSchema = new mongoose.Schema({
-  customer: {
-    // Link to Customer/User who placed the order
-    type: mongoose.Schema.ObjectId,
-    ref: "User",
-    // Assuming your User model contains customer data
+var orderItemSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
     required: true
   },
-  products: [// Array of products in this order
-  {
-    productId: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Product",
-      // Link to the Product model
-      required: true
-    },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  // Snapshot at time of order (in case product changes later)
+  productSnapshot: {
     name: String,
     price: Number,
-    quantity: Number,
-    // Crucial: Add supplierId here so you can filter orders by supplier
+    unit: String,
+    imageUrl: String,
     supplier: {
-      type: mongoose.Schema.ObjectId,
-      ref: "User",
-      // Reference to the supplier user
-      required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
     }
-  }],
+  },
+  priceAtOrder: {
+    type: Number,
+    required: true
+  },
+  totalPrice: {
+    type: Number,
+    required: true
+  }
+});
+var orderSchema = new mongoose.Schema({
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+  // Order items
+  items: [orderItemSchema],
+  // Pricing
+  subtotal: {
+    type: Number,
+    required: true
+  },
+  deliveryFee: {
+    type: Number,
+    "default": 0
+  },
+  tax: {
+    type: Number,
+    "default": 0
+  },
   totalAmount: {
     type: Number,
     required: true
   },
-  shippingAddress: {
-    address: String,
+  // Delivery details
+  deliveryAddress: {
+    fullName: String,
+    phone: String,
+    addressLine1: String,
+    addressLine2: String,
     city: String,
     state: String,
-    zipCode: String // Add any other relevant address fields
+    pincode: String,
+    landmark: String
+  },
+  deliverySlot: {
+    date: Date,
+    timeSlot: String // e.g., "9AM-12PM", "12PM-3PM"
 
   },
+  // Payment
+  paymentMethod: {
+    type: String,
+    "enum": ["cod", "upi", "card", "netbanking"],
+    "default": "cod"
+  },
+  paymentStatus: {
+    type: String,
+    "enum": ["pending", "paid", "failed", "refunded"],
+    "default": "pending"
+  },
+  // Order status
   orderStatus: {
     type: String,
-    "enum": ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Refunded"],
-    "default": "Pending"
+    "enum": ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"],
+    "default": "pending"
   },
-  // Optionally, for tracking history
-  statusHistory: [{
-    status: String,
-    timestamp: {
-      type: Date,
-      "default": Date.now
-    }
-  }],
-  createdAt: {
-    type: Date,
-    "default": Date.now
+  // Tracking
+  trackingInfo: {
+    trackingId: String,
+    carrier: String,
+    estimatedDelivery: Date
   },
-  updatedAt: {
-    type: Date,
-    "default": Date.now
-  }
+  // Notes
+  customerNotes: String,
+  supplierNotes: String,
+  // Cancellation
+  cancellationReason: String,
+  cancelledAt: Date,
+  // Timestamps for status changes
+  confirmedAt: Date,
+  shippedAt: Date,
+  deliveredAt: Date
 }, {
-  timestamps: true
-}); // Automatically adds createdAt and updatedAt
-// Update updatedAt on save
+  timestamps: true,
+  toJSON: {
+    virtuals: true
+  },
+  toObject: {
+    virtuals: true
+  }
+}); // ===== INDEXES =====
 
-orderSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
+orderSchema.index({
+  customer: 1,
+  createdAt: -1
+});
+orderSchema.index({
+  orderStatus: 1
+});
+orderSchema.index({
+  "items.product": 1
+});
+orderSchema.index({
+  createdAt: -1
+}); // ===== VIRTUALS =====
+
+orderSchema.virtual("orderNumber").get(function () {
+  return "ORD-".concat(this._id.toString().slice(-8).toUpperCase());
+}); // ===== METHODS =====
+// Update order status
+
+orderSchema.methods.updateStatus = function (status) {
+  this.orderStatus = status; // Set timestamps based on status
+
+  if (status === "confirmed") {
+    this.confirmedAt = new Date();
+  } else if (status === "shipped") {
+    this.shippedAt = new Date();
+  } else if (status === "delivered") {
+    this.deliveredAt = new Date();
+  }
+
+  return this.save();
+}; // Cancel order
+
+
+orderSchema.methods.cancel = function (reason) {
+  this.orderStatus = "cancelled";
+  this.cancellationReason = reason;
+  this.cancelledAt = new Date();
+  return this.save();
+}; // ===== MIDDLEWARE =====
+// Populate product and customer on find
+
+
+orderSchema.pre(/^find/, function (next) {
+  this.populate({
+    path: "customer",
+    select: "name email phone"
+  });
   next();
 });
 module.exports = mongoose.model("Order", orderSchema);

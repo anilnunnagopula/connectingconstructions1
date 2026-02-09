@@ -444,6 +444,7 @@ import {
  * - Optimized loading & error states
  * - Mobile-first responsive design
  */
+
 const SupplierDashboard = () => {
   const navigate = useNavigate();
 

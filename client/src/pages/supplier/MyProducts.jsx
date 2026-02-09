@@ -542,52 +542,38 @@ const ProductList = () => {
   ];
 
   // ==================== LOAD PRODUCTS ====================
-  const loadProducts = useCallback(async () => {
-    setLoading(true);
+ const loadProducts = useCallback(async () => {
+  setLoading(true);
 
-    try {
-      const filters = {
-        search: searchQuery,
-        category: selectedCategory !== "all" ? selectedCategory : undefined,
-        status: selectedStatus !== "all" ? selectedStatus : undefined,
-        sort: sortBy,
-        page: currentPage,
-        limit: 20,
-      };
+  try {
+    const filters = {
+      search: searchQuery,
+      category: selectedCategory !== "all" ? selectedCategory : undefined,
+      status: selectedStatus !== "all" ? selectedStatus : undefined,
+      sort: sortBy,
+      page: currentPage,
+      limit: 20,
+    };
 
-      // Update URL params
-      const params = new URLSearchParams();
-      if (searchQuery) params.set("search", searchQuery);
-      if (selectedCategory !== "all") params.set("category", selectedCategory);
-      if (selectedStatus !== "all") params.set("status", selectedStatus);
-      // if (sortBy) params.set("sort", sortBy);
-      if (currentPage > 1) params.set("page", currentPage.toString());
-      setSearchParams(params);
+    const response = await fetchProducts(filters);
+    
+    console.log("🔍 Products Response:", response); // ADD THIS
+    console.log("🔍 Products Data:", response.data); // ADD THIS
 
-      const response = await fetchProducts(filters);
-
-      if (!response.success) {
-        throw new Error(response.error);
-      }
-
-      setProducts(response.data.products || []);
-      setTotalPages(response.data.totalPages || 1);
-      setTotalProducts(response.data.total || 0);
-    } catch (error) {
-      console.error("Load products error:", error);
-      toast.error(error.message || "Failed to load products");
-    } finally {
-      setLoading(false);
+    if (!response.success) {
+      throw new Error(response.error);
     }
-  }, [
-    searchQuery,
-    selectedCategory,
-    selectedStatus,
-    sortBy,
-    currentPage,
-    setSearchParams,
-  ]);
 
+    setProducts(response.data.products || []);
+    setTotalPages(response.data.totalPages || 1);
+    setTotalProducts(response.data.total || 0);
+  } catch (error) {
+    console.error("Load products error:", error);
+    toast.error(error.message || "Failed to load products");
+  } finally {
+    setLoading(false);
+  }
+}, [searchQuery, selectedCategory, selectedStatus, sortBy, currentPage, setSearchParams]);
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);

@@ -2,7 +2,7 @@
 
 const Product = require("../models/Product");
 
-const Order = require("../models/OrderModel");
+const Order = require("../models/Order");
 
 const Review = require("../models/Review");
 

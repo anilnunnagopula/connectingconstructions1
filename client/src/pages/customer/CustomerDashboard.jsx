@@ -1,58 +1,210 @@
-// pages/customer/CustomerDashboard.jsx
-import React, { useState, useEffect, useCallback } from "react";
+// client/src/pages/customer/CustomerDashboard.jsx
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { toast } from "react-hot-toast";
-import StatCard from "../../components/StatCard";
-import RecentOrders from "../../components/RecentOrders";
-//  import CommonServices from "../../common-services/CommonServices";
 import {
-  ShoppingBag,
-  Heart,
-  History,
-  Headset,
-  MapPin,
-  CreditCard,
-  UserCircle,
-  Bell,
+  Package,
   ShoppingCart,
-  Truck,
+  Heart,
+  Bell,
+  TrendingUp,
+  Layers,
+  MessageSquare,
+  MapPin,
+  Clock,
+  ChevronRight,
+  Zap,
   Star,
-  Settings, // NEW: Added Settings icon
-  FileText, // NEW: Added FileText icon
-  Repeat, // NEW: Added Repeat icon
-  MessageSquare, // NEW: Added MessageSquare icon
-} from "lucide-react"; // Added all new icons
+  Settings,
+  Headset,
+  CreditCard,
+  FileText,
+  Repeat,
+} from "lucide-react";
+import CustomerLayout from "../../layout/CustomerLayout";
+import StatCard from "../../components/StatCard";
 
-// Base URL for API calls
 const baseURL = process.env.REACT_APP_API_URL;
 
-// Safe localStorage parse (already good)
-function getUserSafely() {
-  try {
-    const raw = localStorage.getItem("user");
-    if (!raw || raw === "undefined") return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
+// ===== FEATURE CARD COMPONENT =====
+const FeatureCard = ({ icon, title, description, color, badge, onClick }) => {
+  const colorClasses = {
+    blue: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30",
+    green:
+      "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30",
+    orange:
+      "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30",
+    purple:
+      "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30",
+    red: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30",
+    yellow:
+      "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30",
+    gray: "bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700",
+  };
 
-const CustomerDashboard = () => {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        relative p-4 rounded-xl transition-all duration-200
+        hover:scale-105 hover:shadow-lg
+        ${colorClasses[color]}
+        text-left
+      `}
+    >
+      {/* Badge */}
+      {badge > 0 && (
+        <span className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+          {badge}
+        </span>
+      )}
+
+      {/* Icon */}
+      <div className="mb-3">{icon}</div>
+
+      {/* Title */}
+      <h3 className="font-semibold text-sm mb-1 text-gray-900 dark:text-white">
+        {title}
+      </h3>
+
+      {/* Description */}
+      <p className="text-xs text-gray-600 dark:text-gray-400">{description}</p>
+    </button>
+  );
+};
+
+// ===== ORDER CARD COMPONENT =====
+const OrderCard = ({ order }) => {
   const navigate = useNavigate();
 
-  // User data state (reactive to localStorage)
-  const [currentUser, setCurrentUser] = useState(() => getUserSafely());
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setCurrentUser(getUserSafely());
+  const getStatusColor = (status) => {
+    const colors = {
+      Pending:
+        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      Processing:
+        "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+      Shipped:
+        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+      Delivered:
+        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      Cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
     };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+    return colors[status] || colors.Pending;
+  };
 
-  // Dashboard Data States
+  return (
+    <div
+      onClick={() => navigate(`/customer/orders/${order._id}`)}
+      className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-md transition cursor-pointer"
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <p className="font-semibold text-gray-900 dark:text-white">
+            Order #{order._id?.slice(-6)}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {new Date(order.createdAt).toLocaleDateString()}
+          </p>
+        </div>
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+            order.orderStatus,
+          )}`}
+        >
+          {order.orderStatus}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between mt-3">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          {order.products?.length || 0} items
+        </p>
+        <p className="font-bold text-gray-900 dark:text-white">
+          ₹{order.totalAmount?.toLocaleString("en-IN")}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ===== QUOTE CARD COMPONENT =====
+const QuoteCard = ({ quote }) => (
+  <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+    <div className="flex items-start justify-between">
+      <div className="flex-1">
+        <p className="font-medium text-sm text-gray-900 dark:text-white">
+          {quote.service || "Service Request"}
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {quote.quotesCount || 0} suppliers responded
+        </p>
+      </div>
+      {quote.bestPrice && (
+        <p className="text-sm font-bold text-green-600 dark:text-green-400">
+          ₹{quote.bestPrice.toLocaleString("en-IN")}
+        </p>
+      )}
+    </div>
+  </div>
+);
+
+// ===== PRODUCT CARD COMPONENT =====
+const ProductCard = ({ product }) => {
+  const navigate = useNavigate();
+
+  return (
+    <div
+      onClick={() => navigate(`/product/${product._id}`)}
+      className="flex gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition cursor-pointer"
+    >
+      <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 flex-shrink-0">
+        {product.imageUrls?.[0] ? (
+          <img
+            src={product.imageUrls[0]}
+            alt={product.name}
+            className="w-full h-full object-cover rounded-lg"
+          />
+        ) : (
+          <Layers size={24} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+          {product.name}
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          {product.category}
+        </p>
+        <p className="text-sm font-bold text-blue-600 dark:text-blue-400 mt-1">
+          ₹{product.price?.toLocaleString("en-IN")}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ===== EMPTY STATE COMPONENT =====
+const EmptyState = ({ icon, message, action, onAction }) => (
+  <div className="text-center py-12">
+    <div className="text-gray-300 dark:text-gray-600 mb-4 flex justify-center">
+      {icon}
+    </div>
+    <p className="text-gray-500 dark:text-gray-400 mb-4">{message}</p>
+    {action && (
+      <button
+        onClick={onAction}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition"
+      >
+        {action}
+      </button>
+    )}
+  </div>
+);
+
+// ===== MAIN CUSTOMER DASHBOARD COMPONENT =====
+const CustomerDashboard = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     totalOrders: 0,
     totalSpent: 0,
@@ -61,410 +213,411 @@ const CustomerDashboard = () => {
     unreadNotificationsCount: 0,
     recentOrders: [],
     recommendedProducts: [],
-    customerOffers: [],
-    profilePictureUrl: null, // Initialize it here for profile pic in Welcome section
+    quoteRequests: [],
+    profilePictureUrl: null,
   });
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
 
-  // Fetch Dashboard Data
-  const fetchDashboardData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    const user = getUserSafely();
-    if (!user || !user.token || user.role !== "customer") {
-      setError("Unauthorized: Please log in as a customer.");
-      setLoading(false);
-      navigate("/login");
-      toast.error("Please log in as a customer to view the dashboard.");
-      if (user) localStorage.removeItem("user");
-      setCurrentUser(null);
-      return;
-    }
-
+  // Fetch user from localStorage
+  useEffect(() => {
     try {
-      const response = await axios.get(`${baseURL}/api/customer/dashboard`, {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      });
+      const storedUser = localStorage.getItem("user");
+      if (storedUser && storedUser !== "undefined") {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error("Error parsing user:", error);
+    }
+  }, []);
 
-      const data = response.data;
-      setDashboardData({
-        totalOrders: data.totalOrders || 0,
-        totalSpent: data.totalSpent || 0,
-        wishlistItemsCount: data.wishlistItemsCount || 0,
-        cartItemsCount: data.cartItemsCount || 0,
-        unreadNotificationsCount: data.unreadNotificationsCount || 0,
-        recentOrders: data.recentOrders || [],
-        recommendedProducts: data.recommendedProducts || [],
-        customerOffers: data.customerOffers || [],
-        profilePictureUrl: data.profilePictureUrl || null, // Populate this from backend
-      });
-      toast.success("Customer dashboard data loaded!");
-    } catch (err) {
-      console.error("Error fetching customer dashboard data:", err);
-      let errorMessage = "Failed to load dashboard data.";
-      if (err.response) {
-        errorMessage =
-          err.response.data.message || err.response.data.error || errorMessage;
-        if (err.response.status === 401 || err.response.status === 403) {
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        if (!storedUser?.token) {
+          navigate("/login");
+          return;
+        }
+
+        const response = await axios.get(`${baseURL}/api/customer/dashboard`, {
+          headers: { Authorization: `Bearer ${storedUser.token}` },
+        });
+
+        setDashboardData(response.data.data || response.data);
+      } catch (error) {
+        console.error("Dashboard fetch error:", error);
+        if (error.response?.status === 401) {
           localStorage.removeItem("user");
           navigate("/login");
-          toast.error("Session expired or unauthorized. Please log in again.");
         }
-      } else if (err.request) {
-        errorMessage = "Network error or server is down.";
-      } else {
-        errorMessage = err.message;
+      } finally {
+        setLoading(false);
       }
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    fetchDashboard();
   }, [navigate]);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
-
-  // Conditional Rendering for Auth/Loading/Error
-  if (!currentUser || currentUser.role !== "customer") {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white transition-colors duration-300">
-        <h2 className="text-2xl font-bold mb-4 text-red-600">
-          ⚠️ Please Login as a Customer
-        </h2>
-        <p className="mb-6 text-center max-w-md">
-          You're not logged in as a customer or your session has expired. To
-          access your dashboard, please log in first.
-        </p>
-        <button
-          onClick={() => navigate("/login")}
-          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
-        >
-          🔐 Login Now
-        </button>
-      </div>
-    );
-  }
-
+  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center">
-        <p className="text-lg">Loading customer dashboard data...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center p-4">
-        <div className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 p-4 rounded-lg">
-          <p className="text-xl font-semibold mb-2">Error Loading Dashboard</p>
-          <p>{error}</p>
-          <button
-            onClick={() => navigate("/login")}
-            className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const actionCards = [
-    {
-      title: "💡 Browse Materials",
-      desc: "Search and shop for construction materials.",
-      icon: <ShoppingBag size={32} />,
-      link: "/materials",
-    },
-    {
-      title: "📦 My Orders",
-      desc: "Check your past & current orders.",
-      icon: <History size={32} />,
-      link: "/customer/orders", // CHANGED LINK
-    },
-    {
-      title: "❤️ My Wishlist",
-      desc: "Access your saved items anytime.",
-      icon: <Heart size={32} />,
-      link: "/customer/wishlist", // CHANGED LINK
-    },
-    {
-      title: "🛒 My Cart",
-      desc: "View all your selected materials.",
-      icon: <ShoppingCart size={32} />,
-      link: "/customer/cart", // CHANGED LINK
-    },
-    {
-      title: "⭐ Saved Items",
-      desc: "View all your interested materials.",
-      icon: <Star size={32} />,
-      link: "/customer/wishlist", // CHANGED LINK (duplicates My Wishlist - might want to remove one later)
-    },
-    {
-      title: "📍 Nearby Suppliers",
-      desc: "Find material suppliers near your location.",
-      icon: <MapPin size={32} />,
-      link: "/customer/nearby-suppliers",
-    },
-    {
-      title: "🔔 Notifications",
-      desc: "See your latest updates and alerts.",
-      icon: <Bell size={32} />,
-      link: "/customer/notifications",
-    },
-    {
-      title: "📞 Help & Support",
-      desc: "Get assistance and answers to your questions.",
-      icon: <Headset size={32} />,
-      link: "/support",
-    },
-    {
-      title: "🚚 Track My Order",
-      desc: "Monitor the delivery status of your purchases.",
-      icon: <Truck size={32} />,
-      link: "/customer/track-order",
-    },
-    {
-      title: "🎁 Offers & Deals",
-      desc: "View exclusive discounts and promotions.",
-      icon: <ShoppingBag size={32} />,
-      link: "/customer/offers",
-    },
-    {
-      title: "🏠 My Locations",
-      desc: "Add and manage your delivery addresses.",
-      icon: <MapPin size={32} />,
-      link: "/customer/location",
-    },
-    {
-      title: "💳 Payment Methods",
-      desc: "Manage your payment options for seamless checkout.",
-      icon: <CreditCard size={32} />,
-      link: "/customer/payments",
-    },
-    {
-      title: "⚙️ Settings",
-      desc: "Update your profile and account preferences.",
-      icon: <Settings size={32} />,
-      link: "/customer/settings",
-    },
-    {
-      title: "🧾 Invoices / Billing",
-      desc: "Access your purchase invoices and billing history.",
-      icon: <FileText size={32} />,
-      link: "/customer/invoice",
-    },
-    {
-      title: "🔁 Quick Reorder",
-      desc: "Easily reorder items from your past purchases.",
-      icon: <Repeat size={32} />,
-      link: "/customer/reorder",
-    },
-    {
-      title: "🔔 Product Alerts",
-      desc: "Items you're watching or interested in have updates.",
-      icon: <Bell size={32} />,
-      link: "/customer/product-alerts",
-    },
-    {
-      title: "💬 Talk to Supplier",
-      desc: "Directly communicate with your material suppliers.",
-      icon: <MessageSquare size={32} />,
-      link: "/customer/chat-with-supplier",
-    },
-  ];
-
-  const summaryStats = [
-    {
-      title: "Total Orders",
-      value: dashboardData.totalOrders.toLocaleString(),
-      icon: <ShoppingBag />,
-      link: "/customer/orders", // CHANGED LINK
-    },
-    {
-      title: "Total Spent",
-      value: `₹${dashboardData.totalSpent.toLocaleString("en-IN")}`,
-      icon: <ShoppingCart />,
-      link: "/customer/orders", // CHANGED LINK
-    },
-    {
-      title: "Wishlist Items",
-      value: dashboardData.wishlistItemsCount.toLocaleString(),
-      icon: <Heart />,
-      link: "/customer/wishlist", // CHANGED LINK
-    },
-    {
-      title: "Items in Cart",
-      value: dashboardData.cartItemsCount.toLocaleString(),
-      icon: <ShoppingCart />,
-      link: "/customer/cart", // CHANGED LINK
-    },
-    {
-      title: "Unread Notifications",
-      value: dashboardData.unreadNotificationsCount.toLocaleString(),
-      icon: <Bell />,
-      link: "/customer/notifications", // CHANGED LINK
-    },
-  ];
-
-  return (
-    <div className="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-white transition-colors duration-300">
-      <div className="max-w-7xl mx-auto py-10 px-4">
-        {/* 💬 Welcome Message & Profile Snapshot */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 mb-8 flex flex-col sm:flex-row items-center gap-4">
-          {dashboardData.profilePictureUrl ? (
-            <img
-              src={dashboardData.profilePictureUrl}
-              alt="Customer Profile"
-              className="w-16 h-16 rounded-full object-cover border-2 border-blue-500 dark:border-blue-400"
-            />
-          ) : (
-            <UserCircle
-              size={64}
-              className="text-blue-500 dark:text-blue-400"
-            />
-          )}
-          <div className="flex-grow text-center sm:text-left">
-            {/* Original Welcome line as requested */}
-            <h1 className="text-3xl md:text-3xl font-bold text-gray-900 dark:text-white">
-              👋 Welcome{" "}
-              {currentUser?.name || currentUser?.username || "Customer"}!
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1 text-lg">
-              What are you building today? Explore materials and services
-              tailored for you.
+      <CustomerLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">
+              Loading dashboard...
             </p>
           </div>
         </div>
+      </CustomerLayout>
+    );
+  }
 
-        {/* 📊 Dynamic Summary Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-10">
-          {" "}
-          {/* Adjusted to 5 columns */}
-          {/* Using StatCard for visual consistency with supplier dashboard */}
-          {summaryStats.map((stat, idx) => (
-            <StatCard
-              key={idx}
-              title={stat.title}
-              value={stat.value}
-              icon={stat.icon}
-              link={stat.link}
-            />
-          ))}
-        </div>
-
-        <hr className="border-gray-300 dark:border-gray-700 my-8" />
-
-        {/* 🚀 Quick Action Cards - Grid layout */}
-        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10">
-          {" "}
-          {/* 3-4 columns on larger screens */}
-          {actionCards.map((card, index) => (
-            <div
-              key={index}
-              onClick={() => card.link !== "#" && navigate(card.link)}
-              className="bg-white dark:bg-gray-800 shadow-xl hover:shadow-2xl transition p-6 rounded-lg cursor-pointer flex flex-col items-center text-center space-y-3"
-            >
-              <div className="text-blue-600 dark:text-blue-400">
-                {card.icon}
-              </div>{" "}
-              {/* Icon display */}
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {card.title}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                {card.desc}
+  return (
+    <CustomerLayout>
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        {/* Welcome Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 rounded-2xl p-6 md:p-8 text-white shadow-xl">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">
+                👋 Welcome back, {user?.name || "Customer"}!
+              </h1>
+              <p className="text-blue-100 text-sm md:text-base">
+                Ready to build something amazing today?
               </p>
             </div>
-          ))}
-        </div>
-
-        <hr className="border-gray-300 dark:border-gray-700 my-8" />
-
-        {/* 📈 Recent Orders & Recommended Products (Main Content Grid) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {" "}
-          {/* Example: Recent Orders on left (2/3), Recs on right (1/3) */}
-          {/* Recent Orders List - Reusing RecentOrders component */}
-          <div className="lg:col-span-2">
-            {" "}
-            {/* Spans 2 columns on large screens */}
-            <RecentOrders orders={dashboardData.recentOrders} />
-          </div>
-          {/* Recommended Products Card (Placeholder for now) */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 lg:col-span-1">
-            {" "}
-            {/* Spans 1 column on large screens */}
-            <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-              Recommended for You
-            </h2>
-            {dashboardData.recommendedProducts.length > 0 ? (
-              <div className="space-y-4">
-                {dashboardData.recommendedProducts.map((product, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    {/* Assuming recommendedProducts have name, image, price */}
-                    {/* Example placeholder for image */}
-                    {/* {product.imageUrl && <img src={product.imageUrl} alt={product.name} className="w-16 h-16 object-cover rounded-md" />} */}
-                    <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 text-xs">
-                      IMG
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {product.name || `Product ${index + 1}`}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        ₹{product.price?.toLocaleString("en-IN") || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400">
-                No recommendations right now. Start exploring!
-              </p>
+            {dashboardData.profilePictureUrl && (
+              <img
+                src={dashboardData.profilePictureUrl}
+                alt="Profile"
+                className="w-16 h-16 rounded-full border-4 border-white shadow-lg hidden md:block"
+              />
             )}
-            <button
-              onClick={() => navigate("/customer/materials")}
-              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition text-sm"
-            >
-              Explore Materials
-            </button>
+          </div>
+
+          {/* Quick Stats in Welcome Card */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+              <div className="text-2xl font-bold">
+                {dashboardData.totalOrders}
+              </div>
+              <div className="text-xs text-blue-100">Total Orders</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+              <div className="text-2xl font-bold">
+                {dashboardData.totalSpent > 0
+                  ? `₹${(dashboardData.totalSpent / 1000).toFixed(1)}K`
+                  : "₹0"}
+              </div>
+              <div className="text-xs text-blue-100">Total Spent</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+              <div className="text-2xl font-bold">
+                {dashboardData.cartItemsCount}
+              </div>
+              <div className="text-xs text-blue-100">In Cart</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+              <div className="text-2xl font-bold">
+                {dashboardData.wishlistItemsCount}
+              </div>
+              <div className="text-xs text-blue-100">Wishlist</div>
+            </div>
           </div>
         </div>
 
-        {/* 🛒 Start Shopping - kept as requested */}
-        <div className="mt-10 text-center">
-          <button
-            onClick={() => navigate("/customer/materials")}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition"
-          >
-            🛒 Start Shopping Now
-          </button>
+        {/* Main Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Active Orders"
+            value={dashboardData.totalOrders}
+            icon={<Package size={24} />}
+            trend={12}
+            trendLabel="vs last month"
+            color="blue"
+            onClick={() => navigate("/customer/orders")}
+          />
+          <StatCard
+            title="Cart Items"
+            value={dashboardData.cartItemsCount}
+            icon={<ShoppingCart size={24} />}
+            color="orange"
+            onClick={() => navigate("/customer/cart")}
+          />
+          <StatCard
+            title="Wishlist"
+            value={dashboardData.wishlistItemsCount}
+            icon={<Heart size={24} />}
+            color="red"
+            onClick={() => navigate("/customer/wishlist")}
+          />
+          <StatCard
+            title="Notifications"
+            value={dashboardData.unreadNotificationsCount}
+            icon={<Bell size={24} />}
+            color="purple"
+            onClick={() => navigate("/customer/notifications")}
+          />
         </div>
-        
-        {/* <hr className="mt-6 mb-6" /> */}
 
-        {/* Public & Government Services 🏛️ - kept as requested
-        <h1 className="text-center font-extrabold">
-          Future Integration Section
-        </h1>
-        <div className="mt-2">
-          <CommonServices />
-        </div> */}
+        {/* All Features - Comprehensive Grid */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+            <Zap className="text-yellow-500" size={24} />
+            All Features
+          </h2>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {/* Browse & Shop */}
+            <FeatureCard
+              icon={<Layers size={24} />}
+              title="Browse Materials"
+              description="Search construction materials"
+              color="blue"
+              onClick={() => navigate("/materials")}
+            />
+
+            {/* Orders & Tracking */}
+            <FeatureCard
+              icon={<Package size={24} />}
+              title="My Orders"
+              description="Past & current orders"
+              color="blue"
+              badge={dashboardData.totalOrders}
+              onClick={() => navigate("/customer/orders")}
+            />
+
+            <FeatureCard
+              icon={<Clock size={24} />}
+              title="Track Order"
+              description="Monitor delivery status"
+              color="purple"
+              onClick={() => navigate("/customer/track-order")}
+            />
+
+            {/* Cart & Wishlist */}
+            <FeatureCard
+              icon={<ShoppingCart size={24} />}
+              title="My Cart"
+              description="View selected materials"
+              color="orange"
+              badge={dashboardData.cartItemsCount}
+              onClick={() => navigate("/customer/cart")}
+            />
+
+            <FeatureCard
+              icon={<Heart size={24} />}
+              title="Wishlist"
+              description="Saved items"
+              color="red"
+              badge={dashboardData.wishlistItemsCount}
+              onClick={() => navigate("/customer/wishlist")}
+            />
+
+            <FeatureCard
+              icon={<Star size={24} />}
+              title="Saved Items"
+              description="Interested materials"
+              color="yellow"
+              onClick={() => navigate("/customer/wishlist")}
+            />
+
+            {/* Communication */}
+            <FeatureCard
+              icon={<MessageSquare size={24} />}
+              title="Talk to Supplier"
+              description="Direct communication"
+              color="green"
+              onClick={() => navigate("/customer/chat")}
+            />
+
+            <FeatureCard
+              icon={<Bell size={24} />}
+              title="Notifications"
+              description="Latest updates & alerts"
+              color="purple"
+              badge={dashboardData.unreadNotificationsCount}
+              onClick={() => navigate("/customer/notifications")}
+            />
+
+            <FeatureCard
+              icon={<Bell size={24} />}
+              title="Product Alerts"
+              description="Watched item updates"
+              color="blue"
+              onClick={() => navigate("/customer/product-alerts")}
+            />
+
+            {/* Location & Suppliers */}
+            <FeatureCard
+              icon={<MapPin size={24} />}
+              title="Nearby Suppliers"
+              description="Find local suppliers"
+              color="green"
+              onClick={() => navigate("/customer/suppliers")}
+            />
+
+            <FeatureCard
+              icon={<MapPin size={24} />}
+              title="My Locations"
+              description="Manage addresses"
+              color="blue"
+              onClick={() => navigate("/customer/addresses")}
+            />
+
+            {/* Offers & Deals */}
+            <FeatureCard
+              icon={<TrendingUp size={24} />}
+              title="Offers & Deals"
+              description="Exclusive discounts"
+              color="red"
+              onClick={() => navigate("/customer/offers")}
+            />
+
+            {/* Payments & Billing */}
+            <FeatureCard
+              icon={<CreditCard size={24} />}
+              title="Payment Methods"
+              description="Manage payment options"
+              color="purple"
+              onClick={() => navigate("/customer/payment-methods")}
+            />
+
+            <FeatureCard
+              icon={<FileText size={24} />}
+              title="Invoices"
+              description="Billing history"
+              color="gray"
+              onClick={() => navigate("/customer/invoices")}
+            />
+
+            {/* Quick Actions */}
+            <FeatureCard
+              icon={<Repeat size={24} />}
+              title="Quick Reorder"
+              description="Reorder past items"
+              color="orange"
+              onClick={() => navigate("/customer/reorder")}
+            />
+
+            {/* Support */}
+            <FeatureCard
+              icon={<Headset size={24} />}
+              title="Help & Support"
+              description="Get assistance"
+              color="blue"
+              onClick={() => navigate("/support")}
+            />
+
+            {/* Settings */}
+            <FeatureCard
+              icon={<Settings size={24} />}
+              title="Settings"
+              description="Profile & preferences"
+              color="gray"
+              onClick={() => navigate("/customer/settings")}
+            />
+          </div>
+        </div>
+
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Orders - Takes 2 columns */}
+          <div className="lg:col-span-2">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Package size={24} className="text-blue-600" />
+                  Recent Orders
+                </h2>
+                <button
+                  onClick={() => navigate("/customer/orders")}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                >
+                  View All <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {dashboardData.recentOrders.length > 0 ? (
+                <div className="space-y-3">
+                  {dashboardData.recentOrders.slice(0, 3).map((order) => (
+                    <OrderCard key={order._id} order={order} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={<Package size={48} />}
+                  message="No orders yet"
+                  action="Start Shopping"
+                  onAction={() => navigate("/materials")}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Quote Requests */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <MessageSquare size={20} className="text-purple-600" />
+                  Quote Requests
+                </h2>
+                <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-2 py-1 rounded-full text-xs font-bold">
+                  {dashboardData.quoteRequests?.length || 0}
+                </span>
+              </div>
+
+              {dashboardData.quoteRequests?.length > 0 ? (
+                <div className="space-y-2">
+                  {dashboardData.quoteRequests.slice(0, 2).map((quote, idx) => (
+                    <QuoteCard key={idx} quote={quote} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
+                  No active quotes
+                </p>
+              )}
+
+              <button
+                onClick={() => navigate("/customer/quotes")}
+                className="w-full mt-4 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 py-2 rounded-lg font-medium hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
+              >
+                Request New Quote
+              </button>
+            </div>
+
+            {/* Recommended Products */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Star size={20} className="text-yellow-500" />
+                Recommended
+              </h2>
+
+              {dashboardData.recommendedProducts?.length > 0 ? (
+                <div className="space-y-3">
+                  {dashboardData.recommendedProducts
+                    .slice(0, 3)
+                    .map((product, idx) => (
+                      <ProductCard key={idx} product={product} />
+                    ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
+                  Browse materials to get recommendations
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </CustomerLayout>
   );
 };
 

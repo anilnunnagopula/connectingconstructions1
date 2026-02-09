@@ -23,51 +23,112 @@ const productSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
+    // ===== PRODUCT TYPE SYSTEM =====
+    productType: {
+      type: String,
+      enum: ["material", "service", "product"],
+      default: "product",
+      required: true,
+    },
+
+    // For materials (bulk items)
+    unit: {
+      type: String,
+      enum: [
+        "bags",
+        "kg",
+        "tonnes",
+        "liters",
+        "cubic_ft",
+        "sq_ft",
+        "pieces",
+        "units",
+      ],
+      required: function () {
+        return this.productType === "material";
+      },
+    },
+
+    minOrderQuantity: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+
+    stepSize: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+
+    // For services (quote-based)
+    isQuoteOnly: {
+      type: Boolean,
+      default: false,
+    },
+
+    basePrice: {
+      type: Number, // For services: starting price
+      min: 0,
+    },
+
+    // ===== EXISTING FIELDS =====
     price: {
       type: Number,
       required: true,
       min: 0,
     },
+
     quantity: {
       type: Number,
-      required: true,
+      required: function () {
+        return this.productType !== "service"; // Services don't have quantity
+      },
       min: 0,
     },
+
     availability: {
       type: Boolean,
       default: true,
     },
+
     location: {
       text: { type: String, required: true },
       lat: { type: Number },
       lng: { type: Number },
     },
+
     contact: {
       mobile: { type: String, required: true },
       email: { type: String, required: true },
       address: { type: String, required: true },
     },
+
     imageUrls: {
       type: [String],
       required: false,
       default: [],
     },
+
     averageRating: {
       type: Number,
       default: 0,
       min: 0,
       max: 5,
     },
+
     numReviews: {
       type: Number,
       default: 0,
       min: 0,
     },
-    // ✨ NEW: Soft delete
+
     isDeleted: {
       type: Boolean,
       default: false,
     },
+
     deletedAt: {
       type: Date,
     },
@@ -75,62 +136,49 @@ const productSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// ===== INDEXES (CRITICAL FOR PERFORMANCE) =====
-
-// Existing: Prevent duplicate product names per supplier
+// ===== INDEXES =====
 productSchema.index({ name: 1, supplier: 1 }, { unique: true });
-
-// ✨ NEW: Performance indexes
-// Category filtering (most common query)
 productSchema.index({ category: 1, isDeleted: 1, availability: 1 });
-
-// Supplier products
+productSchema.index({ productType: 1, category: 1 });
 productSchema.index({ supplier: 1, isDeleted: 1 });
-
-// Text search on name and description
 productSchema.index({ name: "text", description: "text" });
-
-// Price range queries
 productSchema.index({ price: 1 });
-
-// Top-rated products
 productSchema.index({ averageRating: -1 });
-
-// Compound index for category + price filtering
 productSchema.index({ category: 1, price: 1, isDeleted: 1 });
-
-// Recent products
 productSchema.index({ createdAt: -1, isDeleted: 1 });
 
-// Location-based queries (if you add geo features later)
-productSchema.index({ "location.lat": 1, "location.lng": 1 });
-
 // ===== VIRTUALS =====
-
-// Virtual to check if product is in stock
 productSchema.virtual("inStock").get(function () {
+  if (this.productType === "service") return this.availability;
   return this.quantity > 0 && this.availability && !this.isDeleted;
 });
 
-// ===== METHODS =====
+productSchema.virtual("pricePerUnit").get(function () {
+  if (this.productType === "material" && this.unit) {
+    return `₹${this.price}/${this.unit}`;
+  }
+  return `₹${this.price}`;
+});
 
-// Soft delete method
+// ===== METHODS =====
 productSchema.methods.softDelete = function () {
   this.isDeleted = true;
   this.deletedAt = new Date();
-  this.availability = false; // Also mark as unavailable
+  this.availability = false;
   return this.save();
 };
 
-// Restore soft-deleted product
 productSchema.methods.restore = function () {
   this.isDeleted = false;
   this.deletedAt = null;
   return this.save();
 };
 
-// Update stock after order
 productSchema.methods.decreaseStock = function (quantity) {
+  if (this.productType === "service") {
+    throw new Error("Services don't have stock");
+  }
+
   if (this.quantity >= quantity) {
     this.quantity -= quantity;
     if (this.quantity === 0) {
@@ -141,8 +189,11 @@ productSchema.methods.decreaseStock = function (quantity) {
   throw new Error("Insufficient stock");
 };
 
-// Increase stock (for cancellations/returns)
 productSchema.methods.increaseStock = function (quantity) {
+  if (this.productType === "service") {
+    throw new Error("Services don't have stock");
+  }
+
   this.quantity += quantity;
   if (this.quantity > 0) {
     this.availability = true;
@@ -150,7 +201,6 @@ productSchema.methods.increaseStock = function (quantity) {
   return this.save();
 };
 
-// Update rating (called when new review is added)
 productSchema.methods.updateRating = function (newAverage, newCount) {
   this.averageRating = newAverage;
   this.numReviews = newCount;
@@ -158,31 +208,56 @@ productSchema.methods.updateRating = function (newAverage, newCount) {
 };
 
 // ===== MIDDLEWARE =====
-
-// Pre-save: Auto-update availability based on quantity
 productSchema.pre("save", function (next) {
-  if (this.isModified("quantity")) {
+  // Set isQuoteOnly based on productType
+  if (this.productType === "service") {
+    this.isQuoteOnly = true;
+    this.quantity = 0; // Services don't have quantity
+  }
+
+  // Auto-update availability based on quantity for materials/products
+  if (this.isModified("quantity") && this.productType !== "service") {
     if (this.quantity === 0) {
       this.availability = false;
     }
   }
+
   next();
 });
 
 // ===== QUERY HELPERS =====
-
-// Helper to exclude deleted products by default
 productSchema.query.notDeleted = function () {
   return this.where({ isDeleted: false });
 };
 
-// Helper to get available products
 productSchema.query.available = function () {
   return this.where({
     isDeleted: false,
     availability: true,
-    quantity: { $gt: 0 },
   });
+};
+
+productSchema.query.materials = function () {
+  return this.where({ productType: "material", isDeleted: false });
+};
+
+productSchema.query.services = function () {
+  return this.where({ productType: "service", isDeleted: false });
+};
+// In server/models/Product.js, add these methods before module.exports
+
+productSchema.methods.decreaseStock = function (quantity) {
+  if (this.quantity >= quantity) {
+    this.quantity -= quantity;
+    return this.save();
+  } else {
+    throw new Error(`Insufficient stock. Available: ${this.quantity}`);
+  }
+};
+
+productSchema.methods.increaseStock = function (quantity) {
+  this.quantity += quantity;
+  return this.save();
 };
 
 module.exports = mongoose.model("Product", productSchema);

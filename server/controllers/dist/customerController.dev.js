@@ -1,7 +1,7 @@
 "use strict";
 
 // server/controllers/customerController.js
-var Order = require("../models/OrderModel");
+var Order = require("../models/Order");
 
 var Product = require("../models/Product");
 

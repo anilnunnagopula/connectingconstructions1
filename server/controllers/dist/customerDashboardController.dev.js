@@ -9,7 +9,7 @@ function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) ||
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 // server/controllers/customerDashboardController.js
-var Order = require("../models/OrderModel");
+var Order = require("../models/Order");
 
 var Wishlist = require("../models/Wishlist");
 

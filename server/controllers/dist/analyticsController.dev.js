@@ -3,7 +3,7 @@
 // server/controllers/analyticsController.js
 var Product = require("../models/Product");
 
-var Order = require("../models/OrderModel"); // @desc    Get all analytics data for the authenticated supplier
+var Order = require("../models/Order"); // @desc    Get all analytics data for the authenticated supplier
 // @route   GET /api/supplier/analytics
 // @access  Private (Supplier only)
 

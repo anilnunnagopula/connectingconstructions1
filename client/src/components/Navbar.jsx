@@ -224,7 +224,7 @@ const Navbar = () => {
                   />
                 </Link>
                 <Link
-                  to="/customer/my-orders"
+                  to="/customer/orders"
                   className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white text-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm"
                   title="My Orders"
                   aria-label="My Orders"
@@ -321,7 +321,7 @@ const Navbar = () => {
                 />
               </Link>
               <Link
-                to="/customer/my-orders"
+                to="/customer/orders"
                 className="p-1"
                 onClick={() => setIsOpen(false)}
               >

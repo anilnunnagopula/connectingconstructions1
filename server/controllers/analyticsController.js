@@ -1,6 +1,6 @@
 // server/controllers/analyticsController.js
 const Product = require("../models/Product"); 
-const Order = require("../models/OrderModel"); 
+const Order = require("../models/Order"); 
 // @desc    Get all analytics data for the authenticated supplier
 // @route   GET /api/supplier/analytics
 // @access  Private (Supplier only)

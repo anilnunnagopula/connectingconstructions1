@@ -31,7 +31,7 @@ const RecentOrders = ({ orders }) => {
             </div>
           ))}
           <button
-            onClick={() => (window.location.href = "/my-orders")}
+            onClick={() => (window.location.href = "/orders")}
             className="text-blue-600 hover:underline mt-2 text-sm"
           >
             ➕ View all orders

@@ -1,6 +1,6 @@
 // server/controllers/supplierDashboardController.js
 const Product = require("../models/Product");
-const Order = require("../models/OrderModel");
+const Order = require("../models/Order");
 const User = require("../models/User");
 
 /**

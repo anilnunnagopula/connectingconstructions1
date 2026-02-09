@@ -11,9 +11,8 @@ var generateAccessToken = function generateAccessToken(userId, role) {
     id: userId,
     role: role
   }, process.env.JWT_SECRET, {
-    expiresIn: "15m"
-  } // Changed from 1h to 15m
-  );
+    expiresIn: "7d"
+  });
 }; // Generate Refresh Token (long-lived: 7 days)
 
 
@@ -22,7 +21,7 @@ var generateRefreshToken = function generateRefreshToken(userId) {
     id: userId,
     type: "refresh"
   }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: "7d"
+    expiresIn: "15d"
   }); // Generate a unique token ID for tracking
 
   var tokenId = crypto.randomBytes(16).toString("hex");
