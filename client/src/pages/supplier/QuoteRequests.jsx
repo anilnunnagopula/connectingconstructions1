@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react";
+import SupplierLayout from "../../layout/SupplierLayout";
 
 const baseURL = process.env.REACT_APP_API_URL;
 
@@ -54,7 +55,8 @@ const QuoteRequests = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8">
+    <SupplierLayout>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -188,7 +190,8 @@ const QuoteRequests = () => {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </SupplierLayout>
   );
 };
 

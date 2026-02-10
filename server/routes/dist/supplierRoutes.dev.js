@@ -143,5 +143,65 @@ router.get("/offers", protect, authorizeRoles("supplier"), getOffers);
 router.post("/offers", protect, authorizeRoles("supplier"), createOffer);
 router.get("/offers/:id", protect, authorizeRoles("supplier"), getOfferById);
 router.put("/offers/:id", protect, authorizeRoles("supplier"), updateOffer);
-router["delete"]("/offers/:id", protect, authorizeRoles("supplier"), deleteOffer);
+router["delete"]("/offers/:id", protect, authorizeRoles("supplier"), deleteOffer); // Business Status Toggle
+
+router.put("/business-status", protect, authorizeRoles("supplier"), function _callee(req, res) {
+  var isOpen, User, supplier;
+  return regeneratorRuntime.async(function _callee$(_context) {
+    while (1) {
+      switch (_context.prev = _context.next) {
+        case 0:
+          _context.prev = 0;
+          isOpen = req.body.isOpen;
+          User = require("../models/User");
+          _context.next = 5;
+          return regeneratorRuntime.awrap(User.findById(req.user._id));
+
+        case 5:
+          supplier = _context.sent;
+
+          if (supplier) {
+            _context.next = 8;
+            break;
+          }
+
+          return _context.abrupt("return", res.status(404).json({
+            success: false,
+            error: "Supplier not found"
+          }));
+
+        case 8:
+          supplier.businessStatus = {
+            isOpen: isOpen
+          };
+          _context.next = 11;
+          return regeneratorRuntime.awrap(supplier.save());
+
+        case 11:
+          res.status(200).json({
+            success: true,
+            data: {
+              isOpen: isOpen
+            },
+            message: "Store is now ".concat(isOpen ? 'open' : 'closed')
+          });
+          _context.next = 18;
+          break;
+
+        case 14:
+          _context.prev = 14;
+          _context.t0 = _context["catch"](0);
+          console.error("Business status error:", _context.t0);
+          res.status(500).json({
+            success: false,
+            error: "Failed to update status"
+          });
+
+        case 18:
+        case "end":
+          return _context.stop();
+      }
+    }
+  }, null, null, [[0, 14]]);
+});
 module.exports = router;

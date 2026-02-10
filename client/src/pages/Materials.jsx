@@ -41,12 +41,18 @@ const Materials = () => {
       {/* 📦 Material Cards */}
       {filteredCategories.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {filteredCategories.map((item, idx) => (
-            <Link
-              key={idx}
-              to={`/category/${encodeURIComponent(item)}`}
-              className="bg-white dark:bg-gray-800 shadow-lg hover:shadow-2xl transition-all duration-300 px-6 pt-6 pb-1 rounded-xl cursor-pointer flex flex-col group"
-            >
+          {filteredCategories.map((item, idx) => {
+            const linkPath =
+              user?.role === "customer"
+                ? `/customer/category/${encodeURIComponent(item)}`
+                : `/category/${encodeURIComponent(item)}`;
+
+            return (
+              <Link
+                key={idx}
+                to={linkPath}
+                className="bg-white dark:bg-gray-800 shadow-lg hover:shadow-2xl transition-all duration-300 px-6 pt-6 pb-1 rounded-xl cursor-pointer flex flex-col group"
+              >
               <div
                 className={`h-40 overflow-hidden rounded-md border border-black dark:border-white transition-transform duration-300 group-hover:scale-[1.02] ${
                   user ? "mb-2" : "mb-2"
@@ -77,7 +83,8 @@ const Materials = () => {
                 </p>
               )}
             </Link>
-          ))}
+          );
+        })}
         </div>
       ) : (
         <div className="text-center text-red-500 text-3xl mt-10 font-semibold">

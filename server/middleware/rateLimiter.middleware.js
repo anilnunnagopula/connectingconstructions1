@@ -13,10 +13,10 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Strict rate limiter for auth endpoints (5 attempts per 15 minutes)
+// Strict rate limiter for auth endpoints (100 attempts per 15 minutes for dev)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 100,
   skipSuccessfulRequests: true, // Don't count successful logins
   message: {
     success: false,
@@ -24,10 +24,10 @@ const authLimiter = rateLimit({
   },
 });
 
-// Password reset rate limiter (3 attempts per hour)
+// Password reset rate limiter (10 attempts per hour)
 const passwordResetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3,
+  max: 10, // Increased for development
   message: {
     success: false,
     message: "Too many password reset attempts, please try again after 1 hour.",

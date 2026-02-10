@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios"; // Using axios for easier file uploads
+import SupplierLayout from "../../layout/SupplierLayout";
 
 const MAX_FILE_SIZE_MB = 10; // Max 10MB for the CSV/Excel file
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -125,7 +126,8 @@ const SyncInventoryPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans p-6">
+    <SupplierLayout>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans p-6">
       <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-10">
         <h2 className="text-3xl font-bold mb-8 text-center text-gray-900 dark:text-white">
           🔄 Sync Inventory
@@ -192,7 +194,8 @@ const SyncInventoryPage = () => {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </SupplierLayout>
   );
 };
 

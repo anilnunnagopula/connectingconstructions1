@@ -231,9 +231,13 @@ const CategoryPage = () => {
   };
 
   const handleGoBack = () => {
-    console.log("⬅️  Going back to home");
+    console.log("⬅️  Going back to home/materials");
     setShowPopup(false);
-    navigate("/");
+    if (user?.role === "customer") {
+      navigate("/customer/materials");
+    } else {
+      navigate("/materials"); // Or "/"? Original was "/" but Materials page is at /materials. Let's keep / for public or /materials. Logic implies "Back" from category -> Materials list.
+    }
   };
 
   const handleLoginNow = () => {
@@ -262,7 +266,7 @@ const CategoryPage = () => {
     if (product.productType === "service" || product.isQuoteOnly) {
       console.log("  ℹ️  Product is a service - redirecting to quotes");
       toast.info("This is a service. Please request a quote instead.");
-      navigate(`/customer/quotes/new?product=${product._id}`);
+      navigate(`/customer/quotes/request?product=${product._id}`);
       return;
     }
 
@@ -294,7 +298,11 @@ const CategoryPage = () => {
 
   const handleViewDetails = (productId) => {
     console.log("👁️  View details for product:", productId);
-    navigate(`/product/${productId}`);
+    if (user?.role === "customer") {
+      navigate(`/customer/product/${productId}`);
+    } else {
+      navigate(`/product/${productId}`);
+    }
   };
   const handleToggleWishlist = async (productId, e) => {
     e.stopPropagation(); // Prevent card click
@@ -366,7 +374,13 @@ const CategoryPage = () => {
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
           <button
-            onClick={() => navigate("/materials")}
+            onClick={() => {
+              if (user?.role === "customer") {
+                navigate("/customer/materials");
+              } else {
+                navigate("/materials");
+              }
+            }}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition"
           >
             Browse Other Categories
@@ -448,7 +462,13 @@ const CategoryPage = () => {
               No products found in "{decodedCategory}"
             </p>
             <button
-              onClick={() => navigate("/materials")}
+              onClick={() => {
+                if (user?.role === "customer") {
+                  navigate("/customer/materials");
+                } else {
+                  navigate("/materials");
+                }
+              }}
               className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
             >
               Browse Other Categories

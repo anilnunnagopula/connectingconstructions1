@@ -133,6 +133,13 @@ const VoiceAssistantPopup = ({
             </p>
           )}
         </div>
+        
+        {/* Feedback Message (New) */}
+         {!error && transcript && (
+             <p className="text-blue-600 dark:text-blue-400 font-medium text-lg mt-2">
+                 Processing...
+             </p>
+         )}
 
         {/* Error/Feedback Message */}
         {error && (

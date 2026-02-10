@@ -288,5 +288,33 @@ router.delete(
     authorizeRoles("supplier"),
     deleteOffer
 );
+// Business Status Toggle
+router.put(
+  "/business-status",
+  protect,
+  authorizeRoles("supplier"),
+  async (req, res) => {
+    try {
+      const { isOpen } = req.body;
+      const User = require("../models/User");
+      
+      const supplier = await User.findById(req.user._id);
+      if (!supplier) {
+        return res.status(404).json({ success: false, error: "Supplier not found" });
+      }
 
+      supplier.businessStatus = { isOpen };
+      await supplier.save();
+
+      res.status(200).json({
+        success: true,
+        data: { isOpen },
+        message: `Store is now ${isOpen ? 'open' : 'closed'}`,
+      });
+    } catch (error) {
+      console.error("Business status error:", error);
+      res.status(500).json({ success: false, error: "Failed to update status" });
+    }
+  }
+);
 module.exports = router;

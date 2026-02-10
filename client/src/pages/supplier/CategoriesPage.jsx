@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import globalCategoriesData from "../../utils/Categories"; // <--- IMPORT THIS LINE
+import SupplierLayout from "../../layout/SupplierLayout";
 
 const CategoriesPage = () => {
   const navigate = useNavigate();
@@ -273,11 +274,12 @@ const CategoriesPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans p-6">
-      <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-10">
-        <h2 className="text-3xl font-bold mb-8 text-center text-gray-900 dark:text-white">
-          🗂️ Manage Categories
-        </h2>
+    <SupplierLayout>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans p-6">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-10">
+          <h2 className="text-3xl font-bold mb-8 text-center text-gray-900 dark:text-white">
+            🗂️ Manage Categories
+          </h2>
 
         {message && (
           <div
@@ -447,7 +449,8 @@ const CategoriesPage = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </SupplierLayout>
   );
 };
 

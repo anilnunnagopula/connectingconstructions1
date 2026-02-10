@@ -1,6 +1,7 @@
 // pages/supplier/ProductDetail.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom'; // Import useNavigate
+import SupplierLayout from "../../layout/SupplierLayout";
 
 const ProductDetail = () => {
   const { id } = useParams(); // Get the product ID from the URL
@@ -133,11 +134,12 @@ const ProductDetail = () => {
 
   // --- Start of UI for Product Details (Enhanced) ---
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 py-5 px-4 sm:px-6 lg:px-5 font-inter">
-      <div className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-12 md:p-12 transition-all duration-300">
-        <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-center text-gray-900 dark:text-white">
-          Product Details: {product.name}
-        </h2>
+    <SupplierLayout>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 py-5 px-4 sm:px-6 lg:px-5 font-inter">
+        <div className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-12 md:p-12 transition-all duration-300">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-center text-gray-900 dark:text-white">
+            Product Details: {product.name}
+          </h2>
 
         {message && (
           <div className={`mb-6 p-4 rounded-lg text-center font-medium shadow-md ${
@@ -271,8 +273,9 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </SupplierLayout>
   );
 };
 

@@ -37,7 +37,7 @@ const Sidebar = ({
     {
       icon: Layers,
       label: "Browse Materials",
-      path: "/materials",
+      path: "/customer/materials",
       badge: null,
     },
     {

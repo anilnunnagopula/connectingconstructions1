@@ -365,6 +365,9 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
+    // Capture old status before update
+    const oldStatus = order.orderStatus;
+    
     // Update order
     order.orderStatus = status;
 

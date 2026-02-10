@@ -40,12 +40,14 @@ import Profile from "./pages/Profile";
 import Navbar from "./components/Navbar";
 import About from "./pages/About";
 import Footer from "./components/Footer";
+import CustomerLayout from "./layout/CustomerLayout";
 import Materials from "./pages/Materials";
 
 import MyProducts from "./pages/supplier/MyProducts";
 import AddProduct from "./pages/supplier/AddProduct";
 import EditProduct from "./pages/supplier/EditProduct";
 import ProductDetail from "./pages/supplier/ProductDetail.jsx";
+import ProductDetails from "./pages/ProductDetails.jsx";
 import LocationPage from "./pages/supplier/LocationPage.jsx";
 import SettingsPage from "./pages/supplier/SettingsPage.jsx";
 import CategoriesPage from "./pages/supplier/CategoriesPage.jsx";
@@ -133,14 +135,14 @@ import AffiliateRevenueProgram from "./pages/legal/AffiliateRevenueProgram";
 // Import context providers
 import { DarkModeProvider } from "./context/DarkModeContext";
 import { CartProvider } from "./context/CartContext";
+import { ConversationProvider } from "./context/ConversationContext";
 import { AuthProvider } from "./context/AuthContext";
 
-// 🆕 Import GoogleOAuthProvider
 import { GoogleOAuthProvider } from "@react-oauth/google";
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // Create a new query client instance
 const queryClient = new QueryClient();
+// ... existing imports
 
 import { LoadScript } from "@react-google-maps/api";
 
@@ -151,15 +153,16 @@ function App() {
         <Router>
           <AuthProvider>
             <CartProvider>
-              <DarkModeProvider>
-                <LoadScript
-                  googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
-                >
-                  <div className="flex flex-col min-h-screen">
-                    <Navbar />
-                    <ScrollToTop />
+              <ConversationProvider>
+                <DarkModeProvider>
+                  <LoadScript
+                    googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
+                  >
+                    <div className="flex flex-col min-h-screen">
+                      <Navbar />
+                      <ScrollToTop />
 
-                    <div className="flex-grow">
+                      <div className="flex-grow">
                       <Routes>
                         {/* Public Routes */}
                         <Route path="/" element={<Home />} />
@@ -179,17 +182,28 @@ function App() {
                         />
                         <Route path="/verify-otp" element={<VerifyOtp />} />
                         <Route path="/materials" element={<Materials />} />
+                        <Route path="/product/:id" element={<ProductDetails />} />
                         <Route path="/about" element={<About />} />
                         <Route path="/contact" element={<Contact />} />
                         <Route path="/support" element={<HelpAndSupport />} />
                         {/* Customer routes  */}
                         <Route
                           path="/customer/settings"
-                          element={<CustomerSettingsPage />}
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <CustomerSettingsPage />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
                         />
                         <Route
                           path="/customer/notifications"
-                          element={<CustomerNotifications />}
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerNotifications />
+                            </ProtectedRoute>
+                          }
                         />
                         <Route
                           path="/customer/order-success/:orderId"
@@ -208,7 +222,6 @@ function App() {
                             </ProtectedRoute>
                           }
                         />
-
                         {/* Write Review */}
                         <Route
                           path="/customer/orders/:orderId/review"
@@ -218,7 +231,6 @@ function App() {
                             </ProtectedRoute>
                           }
                         />
-
                         {/* Wishlist */}
                         <Route
                           path="/customer/wishlist"
@@ -236,10 +248,15 @@ function App() {
                             </ProtectedRoute>
                           }
                         />
-
                         <Route
                           path="/customer/materials"
-                          element={<Materials />}
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <Materials />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
                         />
                         {/* Customer Quote Routes */}
                         <Route
@@ -255,6 +272,14 @@ function App() {
                           element={
                             <ProtectedRoute allowedRole="customer">
                               <MyQuotes />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/supplier/quote-requests"
+                          element={
+                            <ProtectedRoute allowedRole="supplier">
+                              <QuoteRequests />
                             </ProtectedRoute>
                           }
                         />
@@ -494,13 +519,12 @@ function App() {
                             </ProtectedRoute>
                           }
                         />
+                        // ✅ CORRECT
                         <Route
                           path="/supplier/orders"
                           element={
                             <ProtectedRoute allowedRole="supplier">
-                              <SupplierBottomNav>
-                                <OrdersPage />
-                              </SupplierBottomNav>
+                              <OrdersPage />
                             </ProtectedRoute>
                           }
                         />
@@ -556,6 +580,26 @@ function App() {
                           path="/category/:category"
                           element={<CategoryPage />}
                         />
+                        <Route
+                          path="/customer/category/:category"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <CategoryPage />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/customer/product/:id"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <ProductDetails />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
+                        />
                         {/* Customer Routes (Protected) */}
                         <Route
                           path="/customer-dashboard"
@@ -589,14 +633,7 @@ function App() {
                             </ProtectedRoute>
                           }
                         />
-                        <Route
-                          path="/customer/notifications"
-                          element={
-                            <ProtectedRoute allowedRole="customer">
-                              <CustomerNotifications />
-                            </ProtectedRoute>
-                          }
-                        />
+
                         {/* General Protected Routes */}
                         <Route
                           path="/dashboard"
@@ -610,9 +647,7 @@ function App() {
                           path="/supplier-dashboard"
                           element={
                             <ProtectedRoute allowedRole="supplier">
-                              <SupplierBottomNav>
-                                <SupplierDashboard />
-                              </SupplierBottomNav>
+                              <SupplierDashboard />
                             </ProtectedRoute>
                           }
                         />
@@ -629,11 +664,11 @@ function App() {
                       </Routes>
                     </div>
 
-                    <Chatbot />
-                    <Footer />
-                  </div>
-                </LoadScript>
-              </DarkModeProvider>
+                      <Footer />
+                    </div>
+                  </LoadScript>
+                </DarkModeProvider>
+              </ConversationProvider>
             </CartProvider>
           </AuthProvider>
         </Router>

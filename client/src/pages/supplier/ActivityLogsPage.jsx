@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import ActivityTimeline from "./components/ActivityTimeline";
 import { ArrowLeft } from "lucide-react";
+import SupplierLayout from "../../layout/SupplierLayout";
 
 const baseURL = process.env.REACT_APP_API_URL;
 
@@ -142,17 +143,13 @@ const ActivityLogsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 py-10 px-4">
-      <div className="max-w-6xl mx-auto">
-        <button
-          onClick={() => navigate(-1)} // Go back to the previous page (dashboard)
-          className="flex items-center text-blue-600 hover:underline mb-6"
-        >
-          <ArrowLeft size={20} className="mr-2" /> Back to Dashboard
-        </button>
-        <h1 className="text-3xl md:text-4xl font-bold mb-6 dark:text-white">
-          📜 All Recent Activity
-        </h1>
+    <SupplierLayout>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 py-10 px-4">
+        <div className="max-w-6xl mx-auto">
+          
+          <h1 className="text-3xl md:text-4xl font-bold mb-6 dark:text-white">
+            📜 All Recent Activity
+          </h1>
         <ActivityTimeline events={activityEvents} /> {/* Pass the full list */}
         {/* Pagination Controls */}
         {totalPages > 1 && (
@@ -177,7 +174,8 @@ const ActivityLogsPage = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </SupplierLayout>
   );
 };
 

@@ -14,6 +14,7 @@ import {
   MapPin,
   User,
 } from "lucide-react";
+import SupplierLayout from "../../layout/SupplierLayout";
 
 const baseURL = process.env.REACT_APP_API_URL;
 
@@ -185,7 +186,8 @@ const RespondToQuote = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8">
+    <SupplierLayout>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -582,7 +584,8 @@ const RespondToQuote = () => {
           </form>
         </div>
       </div>
-    </div>
+      </div>
+    </SupplierLayout>
   );
 };
 

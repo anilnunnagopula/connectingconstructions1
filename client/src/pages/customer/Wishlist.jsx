@@ -137,7 +137,10 @@ const Wishlist = () => {
               className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition overflow-hidden border border-gray-100 dark:border-gray-700"
             >
               {/* Product Image */}
-              <div className="relative h-48 bg-gray-200 dark:bg-gray-700">
+              <div 
+                className="relative h-48 bg-gray-200 dark:bg-gray-700 cursor-pointer"
+                onClick={() => navigate(`/customer/product/${product._id}`)}
+              >
                 {product.imageUrls?.[0] ? (
                   <img
                     src={product.imageUrls[0]}
@@ -152,7 +155,10 @@ const Wishlist = () => {
 
                 {/* Remove Button */}
                 <button
-                  onClick={() => handleRemoveFromWishlist(product._id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveFromWishlist(product._id);
+                  }}
                   className="absolute top-2 right-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition group"
                 >
                   <Heart
@@ -177,7 +183,10 @@ const Wishlist = () => {
 
               {/* Product Details */}
               <div className="p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
+                <h3 
+                  className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2 cursor-pointer hover:text-blue-600"
+                  onClick={() => navigate(`/customer/product/${product._id}`)}
+                >
                   {product.name}
                 </h3>
 

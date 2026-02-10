@@ -100,48 +100,35 @@ export const fetchDashboardStats = async () => {
  * Fetch enhanced dashboard data with additional metrics
  * @returns {Promise<Object>} Enhanced dashboard data
  */
-export const fetchEnhancedDashboardData = async () => {
+/**
+ * Fetch enhanced dashboard data with additional metrics
+ * @returns {Promise<Object>} Enhanced dashboard data
+ */
+/**
+ * Fetch enhanced dashboard data with period support
+ * @param {number} period - Days to fetch (7, 30, or 90)
+ * @returns {Promise<Object>} Enhanced dashboard data
+ */
+export const fetchEnhancedDashboardData = async (period = 7) => {
   try {
-    const response = await apiClient.get("/api/supplier/dashboard/enhanced");
+    const response = await apiClient.get(`/api/supplier/dashboard?period=${period}`);
     return {
       success: true,
-      data: {
-        stats: response.data.stats || {},
-        recentOrders: response.data.recentOrders || [],
-        lowStockProducts: response.data.lowStockProducts || [],
-        pendingOrders: response.data.pendingOrders || [],
-        alerts: response.data.alerts || [],
-        weeklyEarnings: response.data.weeklyEarnings || {
-          labels: [],
-          data: [],
-        },
-        topProducts: response.data.topProducts || [],
+      data: response.data.data || {
+        stats: {},
+        charts: { period: 7, salesChart: { labels: [], earnings: [], orders: [] } },
+        recentOrders: [],
+        lowStockProducts: [],
+        alerts: [],
+        topProducts: [],
+        quoteRequests: [],
+        orderStatusDistribution: {},
+        profileCompletion: { percentage: 0, missing: [] },
+        businessStatus: { isOpen: true, businessHours: "9:00 AM - 6:00 PM" },
       },
     };
   } catch (error) {
-    // Fallback to basic dashboard if enhanced endpoint doesn't exist
-    const basicData = await fetchDashboardStats();
-
-    if (basicData.success) {
-      // transform basic data to match enhanced structure
-      return {
-        success: true,
-        data: {
-          stats: basicData.data, // Map basic data to 'stats'
-          recentOrders: [],
-          lowStockProducts: [],
-          pendingOrders: basicData.data.totalOrders || 0, // Approximate
-          alerts: [],
-          weeklyEarnings: basicData.data.weeklyEarnings || {
-            labels: [],
-            data: [],
-          },
-          topProducts: [],
-        },
-      };
-    }
-
-    return basicData;
+    return handleError(error, "Failed to load dashboard data");
   }
 };
 

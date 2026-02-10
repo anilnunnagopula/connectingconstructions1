@@ -175,14 +175,24 @@ const Cart = () => {
 
 // ===== CART ITEM COMPONENT =====
 const CartItem = ({ item, onQuantityChange, onRemove, loading }) => {
+  const navigate = useNavigate();
   const product = item.product;
   const snapshot = item.productSnapshot;
+
+  const handleProductClick = () => {
+    if (product?._id) {
+      navigate(`/customer/product/${product._id}`);
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md hover:shadow-lg transition">
       <div className="flex gap-4">
         {/* Product Image */}
-        <div className="w-24 h-24 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
+        <div 
+          onClick={handleProductClick}
+          className="w-24 h-24 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer"
+        >
           {snapshot?.imageUrl || product?.imageUrls?.[0] ? (
             <img
               src={snapshot?.imageUrl || product?.imageUrls?.[0]}
@@ -198,7 +208,10 @@ const CartItem = ({ item, onQuantityChange, onRemove, loading }) => {
 
         {/* Product Details */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+          <h3 
+            onClick={handleProductClick}
+            className="font-semibold text-gray-900 dark:text-white truncate cursor-pointer hover:text-blue-600"
+          >
             {snapshot?.name || product?.name}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">

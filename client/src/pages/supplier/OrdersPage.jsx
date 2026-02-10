@@ -1,6 +1,6 @@
-// pages/supplier/OrdersPage.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import SupplierLayout from "../../layout/SupplierLayout"; // Import SupplierLayout
 
 const OrdersPage = () => {
   const navigate = useNavigate();
@@ -11,13 +11,14 @@ const OrdersPage = () => {
   const [messageType, setMessageType] = useState("");
 
   // Define possible order statuses (adjust to match your backend model)
+  // Define possible order statuses (must match backend validation)
   const orderStatuses = [
-    "Pending",
-    "Processing",
-    "Shipped",
-    "Delivered",
-    "Cancelled",
-    "Refunded",
+    "pending",
+    "confirmed",
+    "processing",
+    "shipped",
+    "delivered",
+    "cancelled",
   ];
 
   // Helper to get token
@@ -65,7 +66,12 @@ const OrdersPage = () => {
         );
       }
 
-      setOrders(data); // Assuming data is an array of order objects
+      // Handle different response structures from backend
+      const ordersArray = Array.isArray(data)
+        ? data
+        : data.orders || data.data?.orders || [];
+
+      setOrders(ordersArray);
       setMessage("Orders loaded successfully.");
       setMessageType("success");
     } catch (err) {
@@ -168,7 +174,8 @@ const OrdersPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans p-6">
+    <SupplierLayout>
+    <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans p-6 min-h-screen">
       <div className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-10">
         <h2 className="text-3xl font-bold mb-8 text-center text-gray-900 dark:text-white">
           🧾 Manage Orders
@@ -227,18 +234,20 @@ const OrdersPage = () => {
                     </p>
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        order.orderStatus === "Pending"
+                        order.orderStatus === "pending"
                           ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                          : order.orderStatus === "Processing"
+                          : order.orderStatus === "confirmed"
                           ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                          : order.orderStatus === "Shipped"
+                          : order.orderStatus === "processing"
                           ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300"
-                          : order.orderStatus === "Delivered"
+                          : order.orderStatus === "shipped"
+                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+                          : order.orderStatus === "delivered"
                           ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                           : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                       }`}
                     >
-                      {order.orderStatus}
+                      {order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1)}
                     </span>
                   </div>
                 </div>
@@ -281,7 +290,7 @@ const OrdersPage = () => {
                   >
                     {orderStatuses.map((status) => (
                       <option key={status} value={status}>
-                        {status}
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
                       </option>
                     ))}
                   </select>
@@ -295,6 +304,7 @@ const OrdersPage = () => {
         )}
       </div>
     </div>
+    </SupplierLayout>
   );
 };
 

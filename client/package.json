@@ -33,7 +33,8 @@
     "react-router-dom": "^6.22.3",
     "react-scripts": "5.0.1",
     "react-toastify": "^11.0.5",
-    "recharts": "^2.1.16"
+    "recharts": "^2.1.16",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import categories from "../../utils/Categories";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import SupplierLayout from "../../layout/SupplierLayout"; // Import SupplierLayout
 
 const containerStyle = { width: "100%", height: "300px", borderRadius: "8px" };
 const defaultCenter = { lat: 17.385044, lng: 78.486671 };
@@ -521,6 +522,7 @@ const EditProduct = () => {
   }
 
   return (
+    <SupplierLayout>
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-12 transform transition-all duration-300 ease-in-out hover:shadow-3xl hover:-translate-y-1">
         <h2 className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white">
@@ -826,7 +828,7 @@ const EditProduct = () => {
             />
           </div>
 
-          {/* Image Upload Section */}
+          {/* Product Image Section (for multiple images) - Copied from AddProduct */}
           <div className="md:col-span-2 mt-4">
             <h3 className="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
               Product Images
@@ -834,24 +836,34 @@ const EditProduct = () => {
           </div>
           <div className="md:col-span-2">
             <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Existing Images
+              Manage Images (Max {MAX_IMAGES} images total)
             </label>
-            {currentImageUrls.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
+            <input
+              type="file"
+              accept="image/*"
+              multiple // Allow multiple file selection
+              onChange={handleNewImageChange}
+              className="w-full text-gray-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+
+            {/* Display previews for all images (existing + new) */}
+            {(currentImageUrls.length > 0 || newImageFiles.length > 0) && (
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {/* Display existing uploaded images */}
                 {currentImageUrls.map((url, index) => (
                   <div
-                    key={url} // Use URL as key or a stable unique ID
-                    className="relative border border-gray-300 dark:border-gray-700 rounded-md p-1 flex justify-center items-center h-32 overflow-hidden"
+                    key={`existing-${index}`}
+                    className="relative border border-gray-300 dark:border-gray-700 rounded-md p-1 flex justify-center items-center h-32 overflow-hidden group"
                   >
                     <img
                       src={url}
-                      alt={`Existing Product Image ${index + 1}`}
+                      alt={`Product Image ${index + 1}`}
                       className="max-w-full h-auto max-h-full object-contain"
                     />
                     <button
                       type="button"
                       onClick={() => handleRemoveImage(index)}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                       title="Remove Image"
                     >
                       <svg
@@ -860,48 +872,32 @@ const EditProduct = () => {
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
-                        strokeWidth="2"
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
+                          strokeWidth={2}
                           d="M6 18L18 6M6 6l12 12"
                         />
                       </svg>
                     </button>
                   </div>
                 ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                No existing images.
-              </p>
-            )}
-
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Add New Images (Max {MAX_IMAGES - currentImageUrls.length} more,{" "}
-              {MAX_IMAGE_SIZE_MB}MB each)
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleNewImageChange}
-              className="w-full text-gray-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            {newImageFiles.length > 0 && (
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {/* Display newly selected local files */}
                 {newImageFiles.map((file, index) => (
                   <div
-                    key={file.name + index} // Use unique key
-                    className="border border-gray-300 dark:border-gray-700 rounded-md p-1 flex justify-center items-center h-32 overflow-hidden"
+                    key={`new-${index}`}
+                    className="relative border border-blue-300 dark:border-blue-700 rounded-md p-1 flex justify-center items-center h-32 overflow-hidden"
                   >
                     <img
                       src={URL.createObjectURL(file)}
-                      alt={`New Image Preview ${index + 1}`}
+                      alt={`New Image ${index + 1}`}
                       className="max-w-full h-auto max-h-full object-contain"
                       onLoad={() => URL.revokeObjectURL(file)}
                     />
+                    <span className="absolute top-1 left-1 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
+                      New
+                    </span>
                   </div>
                 ))}
               </div>
@@ -926,6 +922,7 @@ const EditProduct = () => {
         </form>
       </div>
     </div>
+    </SupplierLayout>
   );
 };
 

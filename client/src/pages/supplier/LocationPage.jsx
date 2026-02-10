@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { ArrowLeft, MapPin, PlusCircle, Edit3, Trash2 } from "lucide-react"; // Icons
+import SupplierLayout from "../../layout/SupplierLayout";
 
 const googleMapsLibraries = ["places", "maps"];
 
@@ -394,18 +395,13 @@ const LocationPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white py-10 px-4">
-      <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center text-blue-600 hover:underline mb-6"
-        >
-          <ArrowLeft size={20} className="mr-2" /> Back to Dashboard
-        </button>
-
-        <h1 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900 dark:text-white text-center">
-          📍 Manage Your Shop Locations
-        </h1>
+    <SupplierLayout>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white py-10 px-4">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+          
+          <h1 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900 dark:text-white text-center">
+            📍 Manage Your Shop Locations
+          </h1>
 
         {message && (
           <div
@@ -590,7 +586,8 @@ const LocationPage = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </SupplierLayout>
   );
 };
 

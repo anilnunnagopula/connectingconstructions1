@@ -307,7 +307,16 @@ const MyOrders = () => {
                   <div className="md:col-span-2 space-y-4">
                     {order.items?.map((item, idx) => (
                       <div key={idx} className="flex items-start gap-4">
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
+                        <div 
+                          className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600 cursor-pointer"
+                          onClick={() => {
+                            if (item.product?._id) {
+                              navigate(`/customer/product/${item.product._id}`);
+                            } else {
+                              // Optional: toast("Product no longer available");
+                            }
+                          }}
+                        >
                           {item.productSnapshot?.imageUrl ||
                           item.product?.imageUrls?.[0] ? (
                             <img
@@ -327,7 +336,14 @@ const MyOrders = () => {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 dark:text-white text-sm">
+                          <h4 
+                            className="font-medium text-gray-900 dark:text-white text-sm cursor-pointer hover:text-blue-600"
+                            onClick={() => {
+                              if (item.product?._id) {
+                                navigate(`/customer/product/${item.product._id}`);
+                              }
+                            }}
+                          >
                             {item.productSnapshot?.name ||
                               item.product?.name ||
                               "Product Name Unavailable"}

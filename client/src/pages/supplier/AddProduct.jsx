@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
 import categories from "../../utils/Categories"; 
+import SupplierLayout from "../../layout/SupplierLayout"; // Import SupplierLayout 
 
 const googleMapsLibraries = ["places", "maps"];
 
@@ -513,8 +514,6 @@ const AddProduct = () => {
         <div className="bg-red-100 text-red-700 p-4 rounded-md shadow-md">
           Error loading Google Maps: {loadError.message}
           <p>
-            Please ensure your `REACT_APP_Maps_API_KEY` is correct and has the
-            necessary APIs enabled (Maps JavaScript API, Geocoding API).
           </p>
         </div>
       </div>
@@ -522,15 +521,16 @@ const AddProduct = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 py-12 px-4 sm:px-6 lg:px-8 font-inter">
-      <div className="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-12 transform transition-all duration-300 ease-in-out hover:shadow-3xl hover:-translate-y-1">
-        <h2 className="text-2xl font-bold mb-6 text-center">
-          📦 Add New Product
-        </h2>
+    <SupplierLayout>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 py-12 px-4 sm:px-6 lg:px-8 font-inter">
+        <div className="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-12 transform transition-all duration-300 ease-in-out hover:shadow-3xl hover:-translate-y-1">
+          <h2 className="text-2xl font-bold mb-6 text-center">
+            📦 Add New Product
+          </h2>
 
-        {message && (
-          <div
-            className={`mb-4 p-3 rounded-md text-center ${
+          {message && (
+            <div
+              className={`mb-4 p-3 rounded-md text-center ${
               messageType === "success"
                 ? "bg-green-100 text-green-700"
                 : messageType === "info"
@@ -880,7 +880,8 @@ const AddProduct = () => {
           </div>
         </form>
       </div>
-    </div>  
+      </div>
+    </SupplierLayout>
   );
 };
 

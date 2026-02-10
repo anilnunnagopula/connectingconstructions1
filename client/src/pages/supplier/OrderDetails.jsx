@@ -16,6 +16,7 @@ import {
   Printer,
   Clock,
 } from "lucide-react";
+import SupplierLayout from "../../layout/SupplierLayout";
 
 import {
   fetchOrderDetails,
@@ -165,7 +166,8 @@ const OrderDetails = () => {
   }
 
   return (
-    <div className="bg-gray-100 dark:bg-gray-900 min-h-screen py-6 px-4">
+    <SupplierLayout>
+      <div className="bg-gray-100 dark:bg-gray-900 min-h-screen py-6 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -602,7 +604,8 @@ const OrderDetails = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </SupplierLayout>
   );
 };
 
