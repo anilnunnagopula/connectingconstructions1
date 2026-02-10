@@ -10,6 +10,8 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 var QuoteRequest = require("../models/QuoteRequest");
 
 var QuoteResponse = require("../models/QuoteResponse");
+
+var NotificationService = require("../services/notificationService");
 /**
  * @desc    Get quote requests for supplier
  * @route   GET /api/quotes/response/requests
@@ -218,20 +220,24 @@ exports.createQuoteResponse = function _callee2(req, res) {
         case 23:
           quoteResponse = _context2.sent;
           _context2.next = 26;
-          return regeneratorRuntime.awrap(quoteRequest.incrementResponses());
+          return regeneratorRuntime.awrap(NotificationService.notifyQuoteResponse(quoteRequest, quoteResponse));
 
         case 26:
+          _context2.next = 28;
+          return regeneratorRuntime.awrap(quoteRequest.incrementResponses());
+
+        case 28:
           console.log("\u2705 Quote response created: ".concat(quoteResponse.responseNumber));
           res.status(201).json({
             success: true,
             message: "Quote response submitted successfully",
             data: quoteResponse
           });
-          _context2.next = 34;
+          _context2.next = 36;
           break;
 
-        case 30:
-          _context2.prev = 30;
+        case 32:
+          _context2.prev = 32;
           _context2.t0 = _context2["catch"](0);
           console.error("❌ Create quote response error:", _context2.t0);
           res.status(500).json({
@@ -239,12 +245,12 @@ exports.createQuoteResponse = function _callee2(req, res) {
             message: _context2.t0.message || "Failed to create quote response"
           });
 
-        case 34:
+        case 36:
         case "end":
           return _context2.stop();
       }
     }
-  }, null, null, [[0, 30]]);
+  }, null, null, [[0, 32]]);
 };
 /**
  * @desc    Get supplier's quote responses

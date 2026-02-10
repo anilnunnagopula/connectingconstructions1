@@ -1,7 +1,7 @@
 // server/controllers/quoteResponseController.js
 const QuoteRequest = require("../models/QuoteRequest");
 const QuoteResponse = require("../models/QuoteResponse");
-
+const NotificationService = require("../services/notificationService");
 /**
  * @desc    Get quote requests for supplier
  * @route   GET /api/quotes/response/requests
@@ -150,6 +150,8 @@ exports.createQuoteResponse = async (req, res) => {
       terms,
       paymentTerms: paymentTerms || "cod",
     });
+     await NotificationService.notifyQuoteResponse(quoteRequest, quoteResponse);
+
 
     // Increment response count on quote request
     await quoteRequest.incrementResponses();

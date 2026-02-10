@@ -3,31 +3,64 @@
 // server/models/Wishlist.js
 var mongoose = require("mongoose");
 
-var wishlistSchema = new mongoose.Schema({
-  user: {
-    // The customer who owns this wishlist item
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true
-  },
+var wishlistItemSchema = new mongoose.Schema({
   product: {
-    // The product added to the wishlist
     type: mongoose.Schema.Types.ObjectId,
     ref: "Product",
     required: true
   },
   addedAt: {
-    // Timestamp for when the item was added
     type: Date,
     "default": Date.now
   }
-}); // Ensure a user can only add a specific product to their wishlist once
+});
+var wishlistSchema = new mongoose.Schema({
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    unique: true
+  },
+  items: [wishlistItemSchema]
+}, {
+  timestamps: true
+}); // ===== INDEXES =====
 
 wishlistSchema.index({
-  user: 1,
-  product: 1
-}, {
-  unique: true
+  customer: 1
 });
-var Wishlist = mongoose.model("Wishlist", wishlistSchema);
-module.exports = Wishlist;
+wishlistSchema.index({
+  "items.product": 1
+}); // ===== METHODS =====
+// Add item to wishlist
+
+wishlistSchema.methods.addItem = function (productId) {
+  var exists = this.items.some(function (item) {
+    return item.product.toString() === productId.toString();
+  });
+
+  if (exists) {
+    throw new Error("Product already in wishlist");
+  }
+
+  this.items.push({
+    product: productId
+  });
+  return this.save();
+}; // Remove item from wishlist
+
+
+wishlistSchema.methods.removeItem = function (productId) {
+  this.items = this.items.filter(function (item) {
+    return item.product.toString() !== productId.toString();
+  });
+  return this.save();
+}; // Clear wishlist
+
+
+wishlistSchema.methods.clearWishlist = function () {
+  this.items = [];
+  return this.save();
+};
+
+module.exports = mongoose.model("Wishlist", wishlistSchema);

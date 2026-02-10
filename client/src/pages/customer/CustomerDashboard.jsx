@@ -117,7 +117,7 @@ const OrderCard = ({ order }) => {
 
       <div className="flex items-center justify-between mt-3">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          {order.products?.length || 0} items
+          {order.items?.length || 0} items
         </p>
         <p className="font-bold text-gray-900 dark:text-white">
           ₹{order.totalAmount?.toLocaleString("en-IN")}
@@ -129,21 +129,22 @@ const OrderCard = ({ order }) => {
 
 // ===== QUOTE CARD COMPONENT =====
 const QuoteCard = ({ quote }) => (
-  <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+  <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:shadow-sm transition cursor-pointer">
     <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <p className="font-medium text-sm text-gray-900 dark:text-white">
-          {quote.service || "Service Request"}
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+          {quote.quoteNumber || quote.items?.[0]?.name || "Quote Request"}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          {quote.quotesCount || 0} suppliers responded
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+           {new Date(quote.createdAt).toLocaleDateString()}
         </p>
       </div>
-      {quote.bestPrice && (
-        <p className="text-sm font-bold text-green-600 dark:text-green-400">
-          ₹{quote.bestPrice.toLocaleString("en-IN")}
-        </p>
-      )}
+      <div className="text-right">
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
+            ${quote.responseCount > 0 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}>
+            {quote.responseCount || 0} responses
+        </span>
+      </div>
     </div>
   </div>
 );
@@ -241,11 +242,51 @@ const CustomerDashboard = () => {
           return;
         }
 
-        const response = await axios.get(`${baseURL}/api/customer/dashboard`, {
-          headers: { Authorization: `Bearer ${storedUser.token}` },
-        });
+        const headers = { Authorization: `Bearer ${storedUser.token}` };
 
-        setDashboardData(response.data.data || response.data);
+        // Parallel fetch: Dashboard, Orders, Quotes, Cart, Wishlist
+        const [dashboardRes, ordersRes, quotesRes, cartRes, wishlistRes] = await Promise.all([
+          axios.get(`${baseURL}/api/customer/dashboard`, { headers }).catch(err => ({ error: err })),
+          axios.get(`${baseURL}/api/orders?limit=10`, { headers }).catch(err => ({ error: err })),
+          axios.get(`${baseURL}/api/quotes/request?limit=10`, { headers }).catch(err => ({ error: err })),
+          axios.get(`${baseURL}/api/cart`, { headers }).catch(err => ({ error: err })),
+          axios.get(`${baseURL}/api/customer/wishlist`, { headers }).catch(err => ({ error: err }))
+        ]);
+        
+        // Handle dashboard response
+        let data = {};
+        if (!dashboardRes.error) {
+            data = dashboardRes.data.data || dashboardRes.data || {};
+        }
+
+        // Handle orders response
+        if (!ordersRes.error && ordersRes.data) {
+             const ordersData = ordersRes.data.data || {};
+             data.recentOrders = ordersData.orders || [];
+             data.totalOrders = ordersData.total || data.totalOrders || 0;
+        }
+
+        // Handle quotes response
+        if (!quotesRes.error && quotesRes.data) {
+            const quotesData = quotesRes.data.data || quotesRes.data || {};
+            data.quoteRequests = quotesData.quoteRequests || [];
+        }
+
+        // Handle cart response
+        if (!cartRes.error && cartRes.data) {
+           // CartContext: const { totalItems } = response.data.data;
+           const cartData = cartRes.data.data || {};
+           data.cartItemsCount = cartData.totalItems || 0;
+        }
+
+        // Handle wishlist response
+        if (!wishlistRes.error && wishlistRes.data) {
+            // Wishlist returns { data: [items] }
+            const wishlistData = wishlistRes.data.data || wishlistRes.data || [];
+            data.wishlistItemsCount = Array.isArray(wishlistData) ? wishlistData.length : 0;
+        }
+
+        setDashboardData(prev => ({ ...prev, ...data }));
       } catch (error) {
         console.error("Dashboard fetch error:", error);
         if (error.response?.status === 401) {
@@ -396,7 +437,7 @@ const CustomerDashboard = () => {
               title="Track Order"
               description="Monitor delivery status"
               color="purple"
-              onClick={() => navigate("/customer/track-order")}
+              onClick={() => navigate("/customer/order-tracking")}
             />
 
             {/* Cart & Wishlist */}

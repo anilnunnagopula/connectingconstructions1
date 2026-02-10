@@ -7,7 +7,7 @@ var orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Product",
-    required: true
+    required: false
   },
   quantity: {
     type: Number,
@@ -107,7 +107,16 @@ var orderSchema = new mongoose.Schema({
   // Timestamps for status changes
   confirmedAt: Date,
   shippedAt: Date,
-  deliveredAt: Date
+  deliveredAt: Date,
+  // ✅ ADD THIS - Quote reference
+  quoteReference: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "QuoteResponse"
+  },
+  isFromQuote: {
+    type: Boolean,
+    "default": false
+  }
 }, {
   timestamps: true,
   toJSON: {

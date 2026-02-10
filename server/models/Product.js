@@ -121,7 +121,6 @@ const productSchema = new mongoose.Schema(
     numReviews: {
       type: Number,
       default: 0,
-      min: 0,
     },
 
     isDeleted: {

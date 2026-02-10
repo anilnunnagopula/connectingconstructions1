@@ -2,7 +2,7 @@
 const Order = require("../models/Order");
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
-
+const NotificationService = require("../services/notificationService");
 /**
  * @desc    Create new order from cart
  * @route   POST /api/orders/create
@@ -96,6 +96,7 @@ exports.createOrder = async (req, res) => {
       paymentStatus: paymentMethod === "cod" ? "pending" : "pending",
       customerNotes,
     });
+    await NotificationService.notifyOrderCreated(order);
 
     // Decrease product stock
     for (const item of cart.items) {
@@ -337,7 +338,8 @@ exports.updateOrderStatus = async (req, res) => {
 
     // Verify supplier owns products in this order
     const hasSupplierProducts = order.items.some(
-      (item) => item.productSnapshot.supplier?.toString() === supplierId.toString()
+      (item) =>
+        item.productSnapshot.supplier?.toString() === supplierId.toString(),
     );
 
     if (!hasSupplierProducts) {
@@ -348,7 +350,14 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     // Validate status transitions
-    const validStatuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+    const validStatuses = [
+      "pending",
+      "confirmed",
+      "processing",
+      "shipped",
+      "delivered",
+      "cancelled",
+    ];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -358,7 +367,7 @@ exports.updateOrderStatus = async (req, res) => {
 
     // Update order
     order.orderStatus = status;
-    
+
     if (trackingInfo) {
       order.trackingInfo = {
         ...order.trackingInfo,
@@ -381,6 +390,11 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     await order.save();
+    
+    await NotificationService.notifyOrderStatusUpdate(order, oldStatus, status);
+    if (status === "delivered") {
+      await NotificationService.notifyReviewRequest(order);
+    }
 
     console.log(`✅ Order ${order.orderNumber} status updated to: ${status}`);
 

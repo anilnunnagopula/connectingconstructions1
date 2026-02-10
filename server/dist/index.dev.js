@@ -37,7 +37,13 @@ var cartRoutes = require("./routes/cart");
 
 var orderRoutes = require("./routes/orders");
 
-var quoteRoutes = require("./routes/quotes"); // Initialize app
+var quoteRoutes = require("./routes/quotes");
+
+var notificationRoutes = require("./routes/notifications");
+
+var wishlistRoutes = require("./routes/wishlist");
+
+var reviewRoutes = require("./routes/reviews"); // Initialize app
 
 
 var app = express(); // Connect to MongoDB
@@ -68,7 +74,10 @@ app.use("/api/customer", customerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/quotes", quoteRoutes);
-app.use("/api", generalRoutes); // ===== HEALTH CHECK =====
+app.use("/api", generalRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/reviews", reviewRoutes); // ===== HEALTH CHECK =====
 
 app.get("/health", function (req, res) {
   res.status(200).json({

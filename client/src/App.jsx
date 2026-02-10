@@ -78,9 +78,12 @@ import OrderSuccess from "./pages/customer/OrderSuccess";
 import RequestQuote from "./pages/customer/RequestQuote";
 import MyQuotes from "./pages/customer/MyQuotes";
 import QuoteDetails from "./pages/customer/QuoteDetails";
+import OrderDetails from "./pages/customer/OrderDetails";
+import WriteReview from "./pages/customer/WriteReview";
+import Wishlist from "./pages/customer/Wishlist";
+
 import QuoteRequests from "./pages/supplier/QuoteRequests";
 import RespondToQuote from "./pages/supplier/RespondToQuote";
-import Wishlist from "./pages/customer/Wishlist.jsx";
 //legal pages
 import CorePolicies from "./pages/legal/CorePolicies";
 import SmartPlatform from "./pages/legal/SmartPlatform";
@@ -196,6 +199,27 @@ function App() {
                             </ProtectedRoute>
                           }
                         />
+                        {/* Order Details */}
+                        <Route
+                          path="/customer/orders/:orderId"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <OrderDetails />
+                            </ProtectedRoute>
+                          }
+                        />
+
+                        {/* Write Review */}
+                        <Route
+                          path="/customer/orders/:orderId/review"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <WriteReview />
+                            </ProtectedRoute>
+                          }
+                        />
+
+                        {/* Wishlist */}
                         <Route
                           path="/customer/wishlist"
                           element={
@@ -204,6 +228,15 @@ function App() {
                             </ProtectedRoute>
                           }
                         />
+                        <Route
+                          path="/customer/order-tracking"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <OrderTracking />
+                            </ProtectedRoute>
+                          }
+                        />
+
                         <Route
                           path="/customer/materials"
                           element={<Materials />}
@@ -561,14 +594,6 @@ function App() {
                           element={
                             <ProtectedRoute allowedRole="customer">
                               <CustomerNotifications />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/customer/track-order"
-                          element={
-                            <ProtectedRoute allowedRole="customer">
-                              <OrderTracking />
                             </ProtectedRoute>
                           }
                         />

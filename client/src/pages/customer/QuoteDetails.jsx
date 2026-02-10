@@ -55,10 +55,12 @@ const QuoteDetails = () => {
     }
   };
 
+  // In QuoteDetails.jsx
+
   const handleAcceptQuote = async (responseId) => {
     if (
       !window.confirm(
-        "Are you sure you want to accept this quote? This action cannot be undone.",
+        "Accept this quote? An order will be created and sent to the supplier.",
       )
     ) {
       return;
@@ -68,7 +70,9 @@ const QuoteDetails = () => {
       setAccepting(responseId);
       const user = JSON.parse(localStorage.getItem("user"));
 
-      await axios.put(
+      console.log("📤 Accepting quote:", { quoteId: id, responseId });
+
+      const response = await axios.put(
         `${baseURL}/api/quotes/request/${id}/accept/${responseId}`,
         {},
         {
@@ -76,15 +80,43 @@ const QuoteDetails = () => {
         },
       );
 
-      toast.success("Quote accepted successfully!");
+      console.log("✅ Quote accepted response:", response.data);
 
-      // TODO: Navigate to order/checkout
-      setTimeout(() => {
+      // ✅ Check if order was created
+      if (!response.data.data?.order) {
+        console.error("❌ No order in response:", response.data);
+        toast.error("Quote accepted but order creation failed");
         navigate("/customer/quotes");
-      }, 1500);
+        return;
+      }
+
+      const orderId = response.data.data.order._id;
+      const orderData = response.data.data.order;
+
+      toast.success("Quote accepted! Order created successfully!");
+
+      // ✅ Redirect to order success page
+      navigate(`/customer/order-success/${orderId}`, {
+        state: {
+          orderData: {
+            _id: orderData._id,
+            orderNumber: orderData.orderNumber,
+            totalAmount: orderData.totalAmount,
+          },
+          fromQuote: true,
+        },
+      });
     } catch (error) {
       console.error("❌ Accept quote error:", error);
-      toast.error(error.response?.data?.message || "Failed to accept quote");
+
+      // Better error handling
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.message || "Cannot accept this quote");
+      } else if (error.response?.status === 404) {
+        toast.error("Quote not found");
+      } else {
+        toast.error("Failed to accept quote. Please try again.");
+      }
     } finally {
       setAccepting(null);
     }
@@ -480,6 +512,6 @@ const QuoteDetails = () => {
       </div>
     </CustomerLayout>
   );
-};
+};;
 
 export default QuoteDetails;

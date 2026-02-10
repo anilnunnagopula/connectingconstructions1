@@ -21,6 +21,10 @@ const generalRoutes = require("./routes/generalRoutes");
 const cartRoutes = require("./routes/cart");
 const orderRoutes = require("./routes/orders");
 const quoteRoutes = require("./routes/quotes");
+const notificationRoutes = require("./routes/notifications");
+const wishlistRoutes = require("./routes/wishlist");
+const reviewRoutes = require("./routes/reviews");
+
 // Initialize app
 const app = express();
 
@@ -47,7 +51,9 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/quotes", quoteRoutes);
 app.use("/api", generalRoutes);
-
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/reviews", reviewRoutes);
 // ===== HEALTH CHECK =====
 app.get("/health", (req, res) => {
   res.status(200).json({

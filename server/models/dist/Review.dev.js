@@ -4,120 +4,230 @@
 var mongoose = require("mongoose");
 
 var reviewSchema = new mongoose.Schema({
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
   product: {
-    // Link to the Product being reviewed
     type: mongoose.Schema.Types.ObjectId,
     ref: "Product",
     required: true
   },
-  user: {
-    // Link to the User (customer) who wrote the review
+  order: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: "Order",
     required: true
   },
   rating: {
     type: Number,
     required: true,
     min: 1,
-    // Rating from 1 to 5
     max: 5
+  },
+  title: {
+    type: String,
+    required: true,
+    maxlength: 100
   },
   comment: {
     type: String,
     required: true,
-    trim: true
-  }
+    maxlength: 1000
+  },
+  images: [{
+    type: String
+  }],
+  // Quality ratings
+  qualityRating: {
+    type: Number,
+    min: 1,
+    max: 5
+  },
+  valueRating: {
+    type: Number,
+    min: 1,
+    max: 5
+  },
+  deliveryRating: {
+    type: Number,
+    min: 1,
+    max: 5
+  },
+  // Verified purchase
+  verified: {
+    type: Boolean,
+    "default": true
+  },
+  // Helpful votes
+  helpful: {
+    type: Number,
+    "default": 0
+  },
+  helpfulVotes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  }],
+  // Supplier response
+  supplierResponse: {
+    text: String,
+    respondedAt: Date
+  },
+  // Moderation
+  status: {
+    type: String,
+    "enum": ["pending", "approved", "rejected"],
+    "default": "approved"
+  },
+  moderationNotes: String
 }, {
-  timestamps: true // Adds `createdAt` (review date) and `updatedAt`
-
-}); // Prevent a user from reviewing the same product multiple times
+  timestamps: true
+}); // ===== INDEXES =====
 
 reviewSchema.index({
   product: 1,
-  user: 1
+  createdAt: -1
+});
+reviewSchema.index({
+  customer: 1
+});
+reviewSchema.index({
+  order: 1
+});
+reviewSchema.index({
+  rating: 1
+});
+reviewSchema.index({
+  customer: 1,
+  product: 1
 }, {
   unique: true
-}); // Post-save hook to update product's average rating whenever a new review is added
+}); // ===== METHODS =====
+// Mark review as helpful
 
-reviewSchema.post("save", function _callee(doc) {
-  var Product, reviews, totalRating, numReviews, averageRating;
+reviewSchema.methods.markHelpful = function (userId) {
+  if (!this.helpfulVotes.includes(userId)) {
+    this.helpfulVotes.push(userId);
+    this.helpful += 1;
+    return this.save();
+  }
+
+  return Promise.resolve(this);
+}; // Remove helpful vote
+
+
+reviewSchema.methods.unmarkHelpful = function (userId) {
+  var index = this.helpfulVotes.indexOf(userId);
+
+  if (index > -1) {
+    this.helpfulVotes.splice(index, 1);
+    this.helpful = Math.max(0, this.helpful - 1);
+    return this.save();
+  }
+
+  return Promise.resolve(this);
+}; // Add supplier response
+
+
+reviewSchema.methods.addSupplierResponse = function (responseText) {
+  this.supplierResponse = {
+    text: responseText,
+    respondedAt: new Date()
+  };
+  return this.save();
+}; // ===== MIDDLEWARE =====
+// Update product rating after save
+
+
+reviewSchema.post("save", function _callee() {
   return regeneratorRuntime.async(function _callee$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
-          // 'doc' refers to the review that was just saved
-          Product = mongoose.model("Product"); // Get the Product model
-          // Find all reviews for this product
+          _context.next = 2;
+          return regeneratorRuntime.awrap(this.constructor.updateProductRating(this.product));
 
-          _context.next = 3;
-          return regeneratorRuntime.awrap(doc.constructor.find({
-            product: doc.product
-          }));
-
-        case 3:
-          reviews = _context.sent;
-          // Calculate the total rating and number of reviews
-          totalRating = reviews.reduce(function (acc, item) {
-            return item.rating + acc;
-          }, 0);
-          numReviews = reviews.length; // Calculate average rating
-
-          averageRating = numReviews > 0 ? totalRating / numReviews : 0; // Update the Product document
-
-          _context.next = 9;
-          return regeneratorRuntime.awrap(Product.findByIdAndUpdate(doc.product, {
-            averageRating: parseFloat(averageRating.toFixed(1)),
-            // Ensure one decimal place
-            numReviews: numReviews
-          }, {
-            "new": true,
-            runValidators: true
-          } // Return updated doc, run schema validators
-          ));
-
-        case 9:
+        case 2:
         case "end":
           return _context.stop();
       }
     }
-  });
-}); // Optional: If you want to recalculate rating when a review is deleted
+  }, null, this);
+}); // Update product rating after delete
 
-reviewSchema.post("deleteOne", function _callee2(doc) {
-  var Product, reviews, totalRating, numReviews, averageRating;
+reviewSchema.post("remove", function _callee2() {
   return regeneratorRuntime.async(function _callee2$(_context2) {
     while (1) {
       switch (_context2.prev = _context2.next) {
         case 0:
-          Product = mongoose.model("Product");
-          _context2.next = 3;
-          return regeneratorRuntime.awrap(doc.constructor.find({
-            product: doc.product
-          }));
+          _context2.next = 2;
+          return regeneratorRuntime.awrap(this.constructor.updateProductRating(this.product));
 
-        case 3:
-          reviews = _context2.sent;
-          totalRating = reviews.reduce(function (acc, item) {
-            return item.rating + acc;
-          }, 0);
-          numReviews = reviews.length;
-          averageRating = numReviews > 0 ? totalRating / numReviews : 0;
-          _context2.next = 9;
-          return regeneratorRuntime.awrap(Product.findByIdAndUpdate(doc.product, {
-            averageRating: parseFloat(averageRating.toFixed(1)),
-            numReviews: numReviews
-          }, {
-            "new": true,
-            runValidators: true
-          }));
-
-        case 9:
+        case 2:
         case "end":
           return _context2.stop();
       }
     }
-  });
-});
-var Review = mongoose.model("Review", reviewSchema);
-module.exports = Review;
+  }, null, this);
+}); // ===== STATICS =====
+// Calculate and update product average rating
+
+reviewSchema.statics.updateProductRating = function _callee3(productId) {
+  var Product, stats;
+  return regeneratorRuntime.async(function _callee3$(_context3) {
+    while (1) {
+      switch (_context3.prev = _context3.next) {
+        case 0:
+          Product = require("./Product");
+          _context3.next = 3;
+          return regeneratorRuntime.awrap(this.aggregate([{
+            $match: {
+              product: productId,
+              status: "approved"
+            }
+          }, {
+            $group: {
+              _id: "$product",
+              averageRating: {
+                $avg: "$rating"
+              },
+              numReviews: {
+                $sum: 1
+              }
+            }
+          }]));
+
+        case 3:
+          stats = _context3.sent;
+
+          if (!(stats.length > 0)) {
+            _context3.next = 9;
+            break;
+          }
+
+          _context3.next = 7;
+          return regeneratorRuntime.awrap(Product.findByIdAndUpdate(productId, {
+            averageRating: Math.round(stats[0].averageRating * 10) / 10,
+            numReviews: stats[0].numReviews
+          }));
+
+        case 7:
+          _context3.next = 11;
+          break;
+
+        case 9:
+          _context3.next = 11;
+          return regeneratorRuntime.awrap(Product.findByIdAndUpdate(productId, {
+            averageRating: 0,
+            numReviews: 0
+          }));
+
+        case 11:
+        case "end":
+          return _context3.stop();
+      }
+    }
+  }, null, this);
+};
+
+module.exports = mongoose.model("Review", reviewSchema);

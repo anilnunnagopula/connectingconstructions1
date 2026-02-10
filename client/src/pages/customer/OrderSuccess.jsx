@@ -11,6 +11,7 @@ const OrderSuccess = () => {
   const { orderId } = useParams();
 
   const orderData = location.state?.orderData;
+  const fromQuote = location.state?.fromQuote;
 
   useEffect(() => {
     // Celebrate! 🎉
@@ -36,11 +37,12 @@ const OrderSuccess = () => {
 
             {/* Success Message */}
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Order Placed Successfully!
+              {fromQuote ? "Quote Accepted!" : "Order Placed Successfully!"}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Thank you for your order. We'll send you a confirmation email
-              shortly.
+              {fromQuote
+                ? "Your order has been created from the accepted quote. The supplier will process it soon."
+                : "Thank you for your order. We'll send you a confirmation email shortly."}
             </p>
 
             {/* Order Details */}
@@ -68,7 +70,14 @@ const OrderSuccess = () => {
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
               >
                 <Package size={20} />
-                Track Order
+                View Order Details
+              </button>
+              <button
+                onClick={() => navigate("/customer/orders")}
+                className="w-full border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
+              >
+                <Package size={20} />
+                My Orders
               </button>
               <button
                 onClick={() => navigate("/customer-dashboard")}
@@ -84,5 +93,4 @@ const OrderSuccess = () => {
     </CustomerLayout>
   );
 };
-
 export default OrderSuccess;

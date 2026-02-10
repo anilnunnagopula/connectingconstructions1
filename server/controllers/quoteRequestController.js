@@ -1,8 +1,9 @@
 // server/controllers/quoteRequestController.js
 const QuoteRequest = require("../models/QuoteRequest");
 const QuoteResponse = require("../models/QuoteResponse");
+const Order = require("../models/Order");
+const NotificationService = require("../services/notificationService");
 const User = require("../models/User");
-
 /**
  * @desc    Create new quote request
  * @route   POST /api/quotes/request
@@ -63,6 +64,21 @@ exports.createQuoteRequest = async (req, res) => {
       targetSuppliers: broadcastToAll ? [] : targetSuppliers,
       broadcastToAll,
     });
+    
+    if (broadcastToAll) {
+      // Get all suppliers
+      const suppliers = await User.find({ role: "supplier" }).select("_id");
+      for (const supplier of suppliers) {
+        await NotificationService.notifyQuoteRequest(
+          quoteRequest,
+          supplier._id,
+        );
+      }
+    } else if (targetSuppliers && targetSuppliers.length > 0) {
+      for (const supplierId of targetSuppliers) {
+        await NotificationService.notifyQuoteRequest(quoteRequest, supplierId);
+      }
+    }
 
     console.log(`✅ Quote request created: ${quoteRequest.quoteNumber}`);
 
@@ -216,10 +232,13 @@ exports.cancelQuoteRequest = async (req, res) => {
  * @route   PUT /api/quotes/request/:id/accept/:responseId
  * @access  Private (Customer)
  */
+
 exports.acceptQuoteResponse = async (req, res) => {
   try {
     const { id, responseId } = req.params;
     const customerId = req.user._id;
+
+    console.log("🎯 Accept quote:", { id, responseId, customerId });
 
     // Get quote request
     const quoteRequest = await QuoteRequest.findOne({
@@ -228,6 +247,7 @@ exports.acceptQuoteResponse = async (req, res) => {
     });
 
     if (!quoteRequest) {
+      console.log("❌ Quote request not found");
       return res.status(404).json({
         success: false,
         message: "Quote request not found",
@@ -235,6 +255,7 @@ exports.acceptQuoteResponse = async (req, res) => {
     }
 
     if (quoteRequest.status === "accepted") {
+      console.log("❌ Quote already accepted");
       return res.status(400).json({
         success: false,
         message: "Quote already accepted",
@@ -248,6 +269,7 @@ exports.acceptQuoteResponse = async (req, res) => {
     });
 
     if (!quoteResponse) {
+      console.log("❌ Quote response not found");
       return res.status(404).json({
         success: false,
         message: "Quote response not found",
@@ -255,11 +277,51 @@ exports.acceptQuoteResponse = async (req, res) => {
     }
 
     if (quoteResponse.isExpired) {
+      console.log("❌ Quote expired");
       return res.status(400).json({
         success: false,
         message: "Quote has expired",
       });
     }
+
+    console.log("✅ Creating order from quote...");
+
+    // ✅ CREATE ORDER FROM QUOTE
+    const orderItems = quoteResponse.items.map((item) => ({
+      // Don't include product field if there's no productRef
+      ...(item.productRef && { product: item.productRef }),
+      quantity: item.quantity,
+      productSnapshot: {
+        name: item.name,
+        price: item.unitPrice,
+        unit: item.unit,
+        supplier: quoteResponse.supplier,
+      },
+      priceAtOrder: item.unitPrice,
+      totalPrice: item.totalPrice,
+    }));
+
+    const order = await Order.create({
+      customer: customerId,
+      items: orderItems,
+      subtotal: quoteResponse.totalAmount - (quoteResponse.deliveryCharges || 0),
+      deliveryFee: quoteResponse.deliveryCharges || 0,
+      tax: 0, // No tax on quote-based orders (already included)
+      totalAmount: quoteResponse.totalAmount,
+      deliveryAddress: quoteRequest.deliveryLocation,
+      deliverySlot: {
+        date: quoteRequest.requiredBy,
+        timeSlot: "As per quote agreement",
+      },
+      paymentMethod: quoteResponse.paymentTerms === "cod" ? "cod" : "advance_50",
+      paymentStatus: "pending",
+      quoteReference: responseId,
+      isFromQuote: true,
+      customerNotes: quoteRequest.additionalNotes,
+      supplierNotes: quoteResponse.terms,
+    });
+
+    console.log("✅ Order created:", order._id);
 
     // Accept the quote
     await quoteResponse.accept();
@@ -276,24 +338,31 @@ exports.acceptQuoteResponse = async (req, res) => {
         status: "rejected",
         rejectedAt: new Date(),
         rejectionReason: "Customer accepted another quote",
-      },
+      }
     );
 
-    console.log(`✅ Quote accepted: ${quoteResponse.responseNumber}`);
+    console.log(`✅ Quote accepted: ${quoteResponse.responseNumber}, Order: ${order.orderNumber}`);
 
+    // ✅ RETURN PROPER FORMAT
     res.status(200).json({
       success: true,
-      message: "Quote accepted successfully",
+      message: "Quote accepted and order created successfully",
       data: {
         quoteRequest,
         acceptedQuote: quoteResponse,
+        order: {
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          totalAmount: order.totalAmount,
+          orderStatus: order.orderStatus,
+        },
       },
     });
   } catch (error) {
     console.error("❌ Accept quote error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to accept quote",
+      message: error.message || "Failed to accept quote",
     });
   }
 };

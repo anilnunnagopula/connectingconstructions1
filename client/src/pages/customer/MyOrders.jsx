@@ -16,6 +16,7 @@ import {
   XCircle,
   AlertCircle,
   ShoppingBag,
+  Star,
 } from "lucide-react";
 
 const MyOrders = () => {
@@ -172,7 +173,7 @@ const MyOrders = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <button
-              onClick={() => navigate("/customer/dashboard")}
+              onClick={() => navigate("/customer-dashboard")}
               className="flex items-center text-gray-500 hover:text-gray-700 mb-2 transition"
             >
               <ArrowLeft size={16} className="mr-1" /> Back to Dashboard
@@ -187,7 +188,10 @@ const MyOrders = () => {
           </div>
 
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search by Order ID or Product..."
@@ -200,7 +204,14 @@ const MyOrders = () => {
 
         {/* Tabs */}
         <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar">
-          {["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map((tab) => (
+          {[
+            "All",
+            "Pending",
+            "Processing",
+            "Shipped",
+            "Delivered",
+            "Cancelled",
+          ].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab.toLowerCase())}
@@ -224,8 +235,8 @@ const MyOrders = () => {
                 No orders found
               </h3>
               <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mt-2">
-                {searchTerm 
-                  ? "We couldn't find any orders matching your search." 
+                {searchTerm
+                  ? "We couldn't find any orders matching your search."
                   : "You haven't placed any orders yet. Start shopping to see your orders here."}
               </p>
               {!searchTerm && (
@@ -252,11 +263,12 @@ const MyOrders = () => {
                       </span>
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(
-                          order.orderStatus
+                          order.orderStatus,
                         )}`}
                       >
                         {getStatusIcon(order.orderStatus)}
-                        {order.orderStatus?.charAt(0).toUpperCase() + order.orderStatus?.slice(1)}
+                        {order.orderStatus?.charAt(0).toUpperCase() +
+                          order.orderStatus?.slice(1)}
                       </span>
                     </div>
                     <div className="flex items-center text-xs text-gray-500 gap-4">
@@ -272,7 +284,7 @@ const MyOrders = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-xs text-gray-500">Total Amount</p>
@@ -280,7 +292,8 @@ const MyOrders = () => {
                         ₹{order.totalAmount?.toLocaleString("en-IN")}
                       </p>
                     </div>
-                    <button 
+                    <button
+                      onClick={() => navigate(`/customer/orders/${order._id}`)}
                       className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
                       title="View Details"
                     >
@@ -293,32 +306,43 @@ const MyOrders = () => {
                 <div className="p-4 md:p-6 grid gap-6 md:grid-cols-3">
                   <div className="md:col-span-2 space-y-4">
                     {order.items?.map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-4">
-                            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
-                                {item.productSnapshot?.imageUrl || item.product?.imageUrls?.[0] ? (
-                                    <img 
-                                        src={item.productSnapshot?.imageUrl || item.product?.imageUrls?.[0]} 
-                                        alt={item.productSnapshot?.name || item.product?.name}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                        <Package size={20} />
-                                    </div>
-                                )}
+                      <div key={idx} className="flex items-start gap-4">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
+                          {item.productSnapshot?.imageUrl ||
+                          item.product?.imageUrls?.[0] ? (
+                            <img
+                              src={
+                                item.productSnapshot?.imageUrl ||
+                                item.product?.imageUrls?.[0]
+                              }
+                              alt={
+                                item.productSnapshot?.name || item.product?.name
+                              }
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              <Package size={20} />
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-                                    {item.productSnapshot?.name || item.product?.name || "Product Name Unavailable"}
-                                </h4>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Qty: {item.quantity} {item.productSnapshot?.unit || item.product?.unit}
-                                </p>
-                                <p className="text-sm font-semibold text-blue-600 mt-1">
-                                    ₹{item.priceAtOrder?.toLocaleString("en-IN") || item.totalPrice?.toLocaleString("en-IN")}
-                                </p>
-                            </div>
+                          )}
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-900 dark:text-white text-sm">
+                            {item.productSnapshot?.name ||
+                              item.product?.name ||
+                              "Product Name Unavailable"}
+                          </h4>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Qty: {item.quantity}{" "}
+                            {item.productSnapshot?.unit || item.product?.unit}
+                          </p>
+                          <p className="text-sm font-semibold text-blue-600 mt-1">
+                            ₹
+                            {item.priceAtOrder?.toLocaleString("en-IN") ||
+                              item.totalPrice?.toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                      </div>
                     ))}
                   </div>
 
@@ -333,25 +357,38 @@ const MyOrders = () => {
                         {formatAddress(order.deliveryAddress)}
                       </p>
                     </div>
-                    
+
                     {order.trackingInfo?.trackingId && (
                       <div>
-                         <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                            <Truck size={14} className="text-gray-400" />
-                            Tracking
-                         </h4>
-                         <p className="text-gray-600 dark:text-gray-400 text-xs">
-                           ID: {order.trackingInfo.trackingId} <br/>
-                           Carrier: {order.trackingInfo.carrier}
-                         </p>
+                        <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                          <Truck size={14} className="text-gray-400" />
+                          Tracking
+                        </h4>
+                        <p className="text-gray-600 dark:text-gray-400 text-xs">
+                          ID: {order.trackingInfo.trackingId} <br />
+                          Carrier: {order.trackingInfo.carrier}
+                        </p>
                       </div>
                     )}
 
                     <div className="pt-2">
-                        <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-xs">
-                            Payment: {order.paymentMethod?.toUpperCase()} ({order.paymentStatus})
-                        </span>
+                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-xs">
+                        Payment: {order.paymentMethod?.toUpperCase()} (
+                        {order.paymentStatus})
+                      </span>
                     </div>
+                    {/* ✅ ADD THIS ENTIRE BLOCK */}
+                    {order.orderStatus === "delivered" && (
+                      <button
+                        onClick={() =>
+                          navigate(`/customer/orders/${order._id}/review`)
+                        }
+                        className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+                      >
+                        <Star size={14} />
+                        Write Review
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
