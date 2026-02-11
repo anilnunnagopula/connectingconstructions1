@@ -7,6 +7,7 @@ import {
   Bell,
   User,
   Plus,
+  MessageSquare,
 } from "lucide-react";
 
 /**
@@ -75,12 +76,11 @@ const SupplierBottomNav = ({ children, pendingOrders = 0, notifications = 0 }) =
       badgeColor: "bg-red-500",
     },
     {
-      id: "notifications",
-      label: "Alerts",
-      icon: Bell,
-      path: "/supplier/notifications",
-      badge: notifications > 0 ? notifications : null,
-      badgeColor: "bg-blue-500",
+      id: "messages",
+      label: "Messages",
+      icon: MessageSquare,
+      path: "/supplier/messages",
+      badge: null,
     },
     {
       id: "profile",

@@ -1,41 +1,36 @@
-import React from "react";
-import { useEffect } from "react";
-import { FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa"; 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  const name = e.target[0].value;
-  const email = e.target[1].value;
-  const message = e.target[2].value;
-
-  try {
-    const res = await fetch("http://localhost:5000/api/contact", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, email, message }),
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      alert("✅ Message sent successfully!");
-      e.target.reset(); // Clear the form
-    } else {
-      alert("❌ Failed to send message: " + data.message);
-    }
-  } catch (err) {
-    console.error("Error sending message:", err);
-    alert("❌ Something went wrong. Please try again later.");
-  }
-};
+import React, { useEffect, useState } from "react";
+import { FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 
 const Contact = () => {
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
-      // Scrolls to the top of the page when the component mounts
-      window.scrollTo(0, 0);
-    }, []);
+    window.scrollTo(0, 0);
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const name = e.target[0].value;
+    const email = e.target[1].value;
+    const message = e.target[2].value;
+
+    try {
+      const baseURL = process.env.REACT_APP_API_URL;
+      await axios.post(`${baseURL}/api/contact`, { name, email, message });
+      
+      toast.success("Message sent successfully!");
+      e.target.reset(); 
+    } catch (err) {
+      console.error("Error sending message:", err);
+      toast.error(err.response?.data?.message || "Failed to send message");
+    } finally {
+        setLoading(false);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800 px-4 py-6 text-gray-800 dark:text-white">
@@ -108,30 +103,31 @@ const Contact = () => {
             <h2 className="text-2xl font-semibold mb-6 text-blue-700 dark:text-blue-300">
               📩 Send us a message
             </h2>
-            <form className="space-y-2" onSubmit={handleSubmit}>
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <input
                 type="text"
                 placeholder="Full Name"
                 required
-                className="w-full px-4 py-2 rounded bg-gray-100 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
               />
               <input
                 type="email"
                 placeholder="Email Address"
                 required
-                className="w-full px-4 py-2 rounded bg-gray-100 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
               />
               <textarea
-                rows="3"
+                rows="4"
                 placeholder="Your message..."
                 required
-                className="w-full px-4 py-2 rounded bg-gray-100 dark:bg-gray-700 dark:text-white resize-none"
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 outline-none transition"
               ></textarea>
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Send Message 🚀
+                {loading ? "Sending..." : "Send Message 🚀"}
               </button>
             </form>
           </div>

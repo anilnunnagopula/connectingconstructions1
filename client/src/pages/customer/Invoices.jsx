@@ -33,7 +33,7 @@ const Invoices = () => {
     setLoading(true);
     try {
       const response = await getOrders({
-        status: "Delivered", // Only completed/delivered orders have invoices
+        status: "delivered", // Only completed/delivered orders have invoices (lowercase to match Order model)
         limit: 50,
       });
 

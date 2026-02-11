@@ -1,10 +1,10 @@
 // server/middleware/rateLimiter.middleware.js
 const rateLimit = require("express-rate-limit");
 
-// General API rate limiter (100 requests per 15 minutes)
+// General API rate limiter (500 requests per 15 minutes for development, 100 for production)
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: process.env.NODE_ENV === "production" ? 100 : 500, // Higher limit for development
   message: {
     success: false,
     message: "Too many requests, please try again later.",

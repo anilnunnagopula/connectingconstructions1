@@ -8,8 +8,21 @@ const {
   getAllProductsPublic,
   getProductByIdPublic,
 } = require("../controllers/productController");
+const { getNearbySuppliers } = require("../controllers/shopLocationController");
+
+// --- Import Models ---
+// const Contact = require("../models/Contact"); // Removed, using controller
+
+const { submitContactMessage } = require("../controllers/contactController");
+const { getActiveAnnouncements } = require("../controllers/announcementController");
 
 // --- Public Routes ---
+
+// NEW: Contact Form Submission
+router.post("/contact", submitContactMessage);
+
+// NEW: Get Active Announcements
+router.get("/announcements", getActiveAnnouncements);
 
 // Proxy endpoint for Nominatim reverse geocoding
 router.get("/geocode-proxy", async (req, res) => {
@@ -45,5 +58,8 @@ router.get("/geocode-proxy", async (req, res) => {
 // NEW: Public route for fetching products
 router.get("/products", getAllProductsPublic);
 router.get("/products/:id", getProductByIdPublic);
+
+// NEW: Public route for fetching nearby suppliers
+router.get("/suppliers/nearby", getNearbySuppliers);
 
 module.exports = router;

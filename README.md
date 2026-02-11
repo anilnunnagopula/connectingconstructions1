@@ -1,4 +1,4 @@
-# 🏗️ ConnectConstructions
+# 🏗️ ConnectingConstructions
 
 > ⚠️ **Private & Proprietary Project**  
 > All rights reserved © 2025 Anil Nunnagopula. Unauthorized use, copying, or redistribution is strictly prohibited.
@@ -7,7 +7,7 @@
 
 ## 🧠 Project Vision
 
-**ConnectConstructions** is a large-scale digital platform built to bridge civil engineers, builders, and construction suppliers — offering a unified space for product listings, labor bookings, and all civil-related requirements.
+**ConnectingConstructions** is a large-scale digital platform built to bridge civil engineers, builders, and construction suppliers — offering a unified space for product listings, labor bookings, and all civil-related requirements.
 
 Inspired by the idea of **“Amazon for Builders”**, this platform streamlines the construction material discovery and procurement process.
 

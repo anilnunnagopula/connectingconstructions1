@@ -87,11 +87,17 @@ import AddressManagement from "./pages/customer/AddressManagement";
 import QuickReorder from "./pages/customer/QuickReorder";
 import Invoices from "./pages/customer/Invoices";
 import PaymentMethods from "./pages/customer/PaymentMethods";
+import Offers from "./pages/customer/Offers";
+import NearbySuppliers from "./pages/customer/NearbySuppliers";
+import ChatSystem from "./pages/customer/ChatSystem";
+import ProductAlerts from "./pages/customer/ProductAlerts";
+import SpendingAnalytics from "./pages/customer/SpendingAnalytics";
 
 import ErrorBoundary from "./components/ErrorBoundary";
 
 import QuoteRequests from "./pages/supplier/QuoteRequests";
 import RespondToQuote from "./pages/supplier/RespondToQuote";
+import SupplierMessages from "./pages/supplier/SupplierMessages";
 //legal pages
 import CorePolicies from "./pages/legal/CorePolicies";
 import SmartPlatform from "./pages/legal/SmartPlatform";
@@ -138,6 +144,17 @@ import SubscriptionPlans from "./pages/legal/SubscriptionPolicy.jsx";
 import CommissionModelOverview from "./pages/legal/CommissionModelOverview";
 import AdPlacementFeaturedListings from "./pages/legal/AdPlacementFeaturedListings";
 // import LegalInquiries from "./pages/legal/LegalInquiries";
+
+// Admin Imports
+import AdminLayout from "./layout/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import ProductModeration from "./pages/admin/ProductModeration";
+import ComplaintManagement from "./pages/admin/ComplaintManagement";
+import ContactMessages from "./pages/admin/ContactMessages";
+import Announcements from "./pages/admin/Announcements";
+import SystemHealth from "./pages/admin/SystemHealth";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 // AI Components
 import VoiceCommand from "./ai/VoiceCommand";
@@ -199,6 +216,91 @@ function App() {
                         <Route path="/about" element={<About />} />
                         <Route path="/contact" element={<Contact />} />
                         <Route path="/support" element={<HelpAndSupport />} />
+                        <Route path="/support" element={<HelpAndSupport />} />
+
+                        {/* Admin Routes */}
+                        <Route
+                          path="/admin"
+                          element={
+                            <ProtectedRoute allowedRole="admin">
+                              <AdminLayout>
+                                <AdminDashboard />
+                              </AdminLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/users"
+                          element={
+                            <ProtectedRoute allowedRole="admin">
+                              <AdminLayout>
+                                <UserManagement />
+                              </AdminLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/products"
+                          element={
+                            <ProtectedRoute allowedRole="admin">
+                              <AdminLayout>
+                                <ProductModeration />
+                              </AdminLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                         <Route
+                          path="/admin/complaints"
+                          element={
+                            <ProtectedRoute allowedRole="admin">
+                              <AdminLayout>
+                                <ComplaintManagement />
+                              </AdminLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                         <Route
+                          path="/admin/contacts"
+                          element={
+                            <ProtectedRoute allowedRole="admin">
+                              <AdminLayout>
+                                <ContactMessages />
+                              </AdminLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/announcements"
+                          element={
+                            <ProtectedRoute allowedRole="admin">
+                              <AdminLayout>
+                                <Announcements />
+                              </AdminLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/system-health"
+                          element={
+                            <ProtectedRoute allowedRole="admin">
+                              <AdminLayout>
+                                <SystemHealth />
+                              </AdminLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+
+                        <Route
+                          path="/admin/settings"
+                          element={
+                            <ProtectedRoute allowedRole="admin">
+                              <AdminLayout>
+                                <AdminSettings />
+                              </AdminLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+
                         {/* Customer routes  */}
                         <Route
                           path="/customer/settings"
@@ -290,6 +392,56 @@ function App() {
                           }
                         />
                         <Route
+                          path="/customer/offers"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <Offers />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/customer/suppliers"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <NearbySuppliers />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/customer/messages"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <ChatSystem />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/customer/alerts"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <ProductAlerts />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/customer/analytics"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <SpendingAnalytics />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
                           path="/customer/order-tracking"
                           element={
                             <ProtectedRoute allowedRole="customer">
@@ -303,6 +455,16 @@ function App() {
                             <ProtectedRoute allowedRole="customer">
                               <CustomerLayout>
                                 <Materials />
+                              </CustomerLayout>
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/customer/support"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <CustomerLayout>
+                                <HelpAndSupport />
                               </CustomerLayout>
                             </ProtectedRoute>
                           }
@@ -539,6 +701,14 @@ function App() {
                         <Route
                           path="/supplier/notifications"
                           element={<NotificationsPage />}
+                        />
+                        <Route
+                          path="/supplier/messages"
+                          element={
+                            <ProtectedRoute allowedRole="supplier">
+                              <SupplierMessages />
+                            </ProtectedRoute>
+                          }
                         />
                         <Route
                           path="/supplier/license-and-certificates"

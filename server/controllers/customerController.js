@@ -38,13 +38,13 @@ const getCustomerDashboardData = async (req, res) => {
       totalOrders,
       totalSpentResult,
       recentOrders,
-      wishlistItemsCount,
+      wishlistItemsResult,
       user,
     ] = await Promise.all([
       // 1. Total Orders
       Order.countDocuments({
         customer: customerId,
-        isDeleted: false,
+        // isDeleted: false, 
       }),
 
       // 2. Total Spent (only delivered orders)
@@ -53,22 +53,22 @@ const getCustomerDashboardData = async (req, res) => {
           $match: {
             customer: customerId,
             orderStatus: { $in: ["Delivered"] },
-            isDeleted: false,
+            // isDeleted: false,
           },
         },
-        { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+        { $group: { _id: null, total: { $sum: "$totalAmount" } } }, // Fixed: totalAmount used in analytics, ensure consistency (Order.js has totalAmount)
       ]),
 
       // 3. Recent Orders (top 5, use lean())
-      Order.find({ customer: customerId, isDeleted: false })
+      Order.find({ customer: customerId })
         .sort({ createdAt: -1 })
         .limit(5)
         .populate("products.productId", "name price imageUrls")
         .select("-__v")
         .lean(),
 
-      // 4. Wishlist Count
-      Wishlist.countDocuments({ user: customerId }),
+      // 4. Wishlist Items Count
+      Wishlist.findOne({ customer: customerId }).select("items"),
 
       // 5. User data (cart, notifications, profile pic)
       User.findById(customerId)
@@ -81,6 +81,7 @@ const getCustomerDashboardData = async (req, res) => {
     const cartItemsCount = user?.cart?.length || 0;
     const unreadNotificationsCount =
       user?.notifications?.filter((n) => !n.read).length || 0;
+    const wishlistItemsCount = wishlistItemsResult?.items?.length || 0;
 
     console.log(`📊 Dashboard data fetched for customer: ${customerId}`);
 
@@ -186,7 +187,7 @@ const createOrder = async (req, res) => {
     // Create order
     const order = new Order({
       customer: req.user._id,
-      products: processedItems,
+      items: processedItems, // Fixed: products -> items
       shippingAddress,
       paymentMethod,
       totalAmount,
@@ -236,7 +237,7 @@ const getMyOrders = async (req, res) => {
 
     // ✨ Query with pagination and lean()
     const query = Order.find(filters)
-      .populate("products.productId", "name price imageUrls")
+      .populate("items.product", "name price imageUrls") // Fixed: products.productId -> items.product
       .sort({ createdAt: -1 })
       .select("-__v");
 
@@ -348,31 +349,38 @@ const addToWishlist = async (req, res) => {
       });
     }
 
-    const existingWishlistItem = await Wishlist.findOne({
-      user: req.user._id,
-      product: productId,
-    });
+    // Find or create wishlist for customer
+    let wishlist = await Wishlist.findOne({ customer: req.user._id });
 
-    if (existingWishlistItem) {
+    if (!wishlist) {
+      wishlist = new Wishlist({
+        customer: req.user._id,
+        items: [],
+      });
+    }
+
+    // Check if product already exists in items array
+    const exists = wishlist.items.some(
+      (item) => item.product.toString() === productId.toString()
+    );
+
+    if (exists) {
       return res.status(400).json({
         success: false,
         message: "Product already in wishlist.",
       });
     }
 
-    const wishlistItem = new Wishlist({
-      user: req.user._id,
-      product: productId,
-    });
-
-    await wishlistItem.save();
+    // Add to items array
+    wishlist.items.push({ product: productId });
+    await wishlist.save();
 
     console.log(`❤️  Added to wishlist: ${productId}`);
 
     res.status(201).json({
       success: true,
       message: "Product added to wishlist.",
-      wishlistItem,
+      wishlist, // Returning full wishlist object
     });
   } catch (error) {
     console.error("❌ Error adding to wishlist:", error);
@@ -397,17 +405,23 @@ const getMyWishlist = async (req, res) => {
       });
     }
 
-    // ✨ Use lean() for read-only
-    const wishlist = await Wishlist.find({ user: req.user._id })
+    const wishlist = await Wishlist.findOne({ customer: req.user._id })
       .populate(
-        "product",
-        "name price imageUrls category supplier availability",
+        "items.product",
+        "name price imageUrls category supplier availability"
       )
       .lean();
 
-    // ✨ Filter out deleted products
-    const activeWishlist = wishlist.filter(
-      (item) => item.product && !item.product.isDeleted,
+    if (!wishlist) {
+      return res.json({
+        success: true,
+        data: [],
+      });
+    }
+
+    // Filter out items with deleted products or null products
+    const activeWishlist = wishlist.items.filter(
+      (item) => item.product && !item.product.isDeleted
     );
 
     res.json({
@@ -438,21 +452,40 @@ const removeFromWishlist = async (req, res) => {
       });
     }
 
-    const wishlistItemId = req.params.id;
+    const productId = req.params.id; // Corrected: Using productId from params
 
-    const result = await Wishlist.findOneAndDelete({
-      _id: wishlistItemId,
-      user: req.user._id,
-    });
+    const wishlist = await Wishlist.findOne({ customer: req.user._id });
 
-    if (!result) {
+    if (!wishlist) {
       return res.status(404).json({
         success: false,
-        message: "Wishlist item not found or you do not own it.",
+        message: "Wishlist not found.",
       });
     }
 
-    console.log(`💔 Removed from wishlist: ${wishlistItemId}`);
+    // Filter out the item
+    const initialLength = wishlist.items.length;
+    wishlist.items = wishlist.items.filter(
+      (item) => item.product && item.product.toString() !== productId.toString()
+    );
+    
+    // Also handle case where productId might be the subdocument _id (less likely given usage, but possible)
+    if (wishlist.items.length === initialLength) {
+         wishlist.items = wishlist.items.filter(
+            (item) => item._id && item._id.toString() !== productId.toString()
+        );
+    }
+
+    if (wishlist.items.length === initialLength) {
+        return res.status(404).json({
+            success: false,
+            message: "Item not found in wishlist.",
+        });
+    }
+
+    await wishlist.save();
+
+    console.log(`💔 Removed from wishlist: ${productId}`);
 
     res.json({
       success: true,
@@ -463,7 +496,7 @@ const removeFromWishlist = async (req, res) => {
     if (error.name === "CastError") {
       return res.status(400).json({
         success: false,
-        message: "Invalid wishlist item ID format.",
+        message: "Invalid ID format.",
       });
     }
     res.status(500).json({
@@ -630,6 +663,108 @@ const getMySupportRequests = async (req, res) => {
   }
 };
 
+// ===== MESSAGING =====
+
+/**
+ * @desc    Get suppliers from customer's past orders (for messaging)
+ * @route   GET /api/customer/suppliers-from-orders
+ * @access  Private (Customer only)
+ */
+const getSuppliersFromOrders = async (req, res) => {
+  try {
+    if (req.user.role !== "customer") {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized as a customer.",
+      });
+    }
+
+    // Find all orders by this customer and populate product with supplier
+    const orders = await Order.find({
+      customer: req.user._id,
+      // isDeleted: false, // Removed as Order schema doesn't have isDeleted
+    })
+      .populate({
+        path: "items.product",
+        select: "supplier name",
+        populate: {
+          path: "supplier",
+          select: "name email phoneNumber profilePictureUrl",
+        },
+      })
+      // Note: productSnapshot.supplier is an ID in the schema, but we can try to populate it if it references User
+      .populate("items.productSnapshot.supplier", "name email phoneNumber profilePictureUrl")
+      .lean();
+
+    console.log(`🔎 Found ${orders.length} orders for supplier lookup.`);
+    if (orders.length > 0) {
+        console.log("Sample Order Items:", JSON.stringify(orders[0].items, null, 2));
+    }
+
+    // Extract unique suppliers from all orders
+    const suppliersMap = new Map();
+
+    orders.forEach((order) => {
+      if (order.items && order.items.length > 0) {
+        order.items.forEach((item) => {
+          let supplier = null;
+
+          // Priority 1: Product Snapshot (Active at time of order)
+          // Check if populated object exists
+          if (item.productSnapshot && item.productSnapshot.supplier && item.productSnapshot.supplier._id) {
+             supplier = item.productSnapshot.supplier;
+          }
+          // Priority 2: Current Product Reference (Fallback)
+          else if (item.product && item.product.supplier && item.product.supplier._id) {
+             supplier = item.product.supplier;
+          }
+
+          if (supplier && supplier._id) {
+            const supplierId = supplier._id.toString();
+            if (!suppliersMap.has(supplierId)) {
+              suppliersMap.set(supplierId, {
+                _id: supplier._id,
+                name: supplier.name || "Unknown Supplier",
+                email: supplier.email || null,
+                phoneNumber: supplier.phoneNumber || null,
+                profilePictureUrl: supplier.profilePictureUrl || null,
+                orderCount: 1,
+                lastOrderDate: order.createdAt,
+              });
+            } else {
+              // Update order count if supplier already exists
+              const existing = suppliersMap.get(supplierId);
+              existing.orderCount += 1;
+              if (new Date(order.createdAt) > new Date(existing.lastOrderDate)) {
+                existing.lastOrderDate = order.createdAt;
+              }
+            }
+          }
+        });
+      }
+    });
+
+    // Convert map to array and sort by last order date
+    const suppliers = Array.from(suppliersMap.values()).sort(
+      (a, b) => new Date(b.lastOrderDate) - new Date(a.lastOrderDate)
+    );
+
+    console.log(`📋 Found ${suppliers.length} suppliers from orders for customer: ${req.user._id}`);
+
+    res.json({
+      success: true,
+      data: suppliers,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching suppliers from orders:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch suppliers.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCustomerDashboardData,
   createOrder,
@@ -642,4 +777,5 @@ module.exports = {
   getMyViewHistory,
   createSupportRequest,
   getMySupportRequests,
+  getSuppliersFromOrders,
 };

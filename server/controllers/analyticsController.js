@@ -1,4 +1,5 @@
 // server/controllers/analyticsController.js
+const mongoose = require("mongoose");
 const Product = require("../models/Product"); 
 const Order = require("../models/Order"); 
 // @desc    Get all analytics data for the authenticated supplier
@@ -179,4 +180,114 @@ exports.getSupplierAnalytics = async (req, res) => {
         error: error.message,
       });
   }
+
 };
+
+// @desc    Get analytics data for the authenticated customer
+// @route   GET /api/customer/analytics
+// @access  Private (Customer only)
+// @desc    Get analytics data for the authenticated customer
+// @route   GET /api/customer/analytics
+// @access  Private (Customer only)
+exports.getCustomerAnalytics = async (req, res) => {
+  try {
+    const customerId = req.user._id;
+
+    // --- 1. Total Spent & Total Orders ---
+    const totalStats = await Order.aggregate([
+      {
+        $match: {
+          customer: new mongoose.Types.ObjectId(customerId),
+          orderStatus: { $ne: "cancelled" }, // Corrected status (lowercase or match enum)
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalSpent: { $sum: "$totalAmount" }, // Fixed: totalPrice -> totalAmount
+          totalOrders: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const totalSpent = totalStats.length > 0 ? totalStats[0].totalSpent : 0;
+    const totalOrders = totalStats.length > 0 ? totalStats[0].totalOrders : 0;
+
+    // --- 2. Spending by Category ---
+    const categoryStats = await Order.aggregate([
+      {
+        $match: {
+          customer: new mongoose.Types.ObjectId(customerId),
+          orderStatus: { $ne: "cancelled" },
+        },
+      },
+      { $unwind: "$items" }, // Fixed: products -> items
+      {
+        $lookup: {
+            from: "products",
+            localField: "items.product",
+            foreignField: "_id",
+            as: "productDetails"
+        }
+      },
+      { $unwind: "$productDetails" },
+      {
+        $group: {
+          _id: "$productDetails.category",
+          amount: { $sum: "$items.totalPrice" }, // Fixed: Use items.totalPrice
+        },
+      },
+      { $project: { name: "$_id", value: "$amount", _id: 0 } },
+    ]);
+
+    // --- 3. Monthly Spending (Last 6 months) ---
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const monthlyStats = await Order.aggregate([
+      {
+        $match: {
+          customer: new mongoose.Types.ObjectId(customerId),
+          orderStatus: { $ne: "cancelled" },
+          createdAt: { $gte: sixMonthsAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          },
+          total: { $sum: "$totalAmount" }, // Fixed: totalPrice -> totalAmount
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]);
+
+    // Format monthly stats for chart
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const formattedMonthlyStats = monthlyStats.map(item => ({
+        name: `${monthNames[item._id.month - 1]} ${item._id.year}`,
+        amount: item.total
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: { // Wrap in data object to match frontend expectation
+        totalSpent,
+        totalOrders,
+        categoryStats,
+        monthlyStats: formattedMonthlyStats,
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching customer analytics:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch analytics data",
+      error: error.message,
+    });
+  }
+};
+

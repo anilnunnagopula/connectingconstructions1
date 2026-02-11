@@ -1,17 +1,16 @@
+// client/src/components/HelpAndSupport.jsx
 import React, { useState, useEffect } from "react";
 import {
   collection,
   query,
   onSnapshot,
-  addDoc,
-  serverTimestamp,
   increment,
   updateDoc,
   doc,
 } from "firebase/firestore";
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
-
-import { db, auth } from "../firebase/firebaseConfig"; // ✅ Use your working Firebase config
+import axios from "axios"; // Added axios
+import { db, auth } from "../firebase/firebaseConfig";
 
 const HELP_CATEGORIES = [
   "Getting Started",
@@ -32,12 +31,14 @@ const HelpAndSupport = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [userId, setUserId] = useState(null);
-  const [newArticle, setNewArticle] = useState({
-    title: "",
-    content: "",
-    category: "",
-    keywords: "",
+  
+  // Contact Form State
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    message: "",
   });
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
 
   useEffect(() => {
@@ -81,26 +82,23 @@ const HelpAndSupport = () => {
     return matchCat && matchText;
   });
 
-  const handleAddArticle = async () => {
-    if (!newArticle.title || !newArticle.content || !newArticle.category) {
-      setMessage("All fields are required.");
-      return;
-    }
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setMessage(null);
+
     try {
-      await addDoc(collection(db, "help_articles"), {
-        ...newArticle,
-        keywords: newArticle.keywords.toLowerCase(),
-        createdAt: serverTimestamp(),
-        createdBy: userId,
-        views: 0,
-        helpfulYes: 0,
-        helpfulNo: 0,
+      await axios.post("/api/contact", {
+        ...contactForm,
+        userId,
       });
-      setMessage("Article added.");
-      setNewArticle({ title: "", content: "", category: "", keywords: "" });
+      setMessage("✅ Message sent successfully! We will get back to you soon.");
+      setContactForm({ name: "", email: "", message: "" });
     } catch (err) {
       console.error(err);
-      setMessage("Failed to add article.");
+      setMessage("❌ Failed to send message. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -147,7 +145,15 @@ const HelpAndSupport = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filtered.length === 0 && !loading ? (
-          <p className="text-center col-span-2">No articles found.</p>
+          <div className="col-span-1 md:col-span-2 text-center py-10">
+            <p className="text-lg font-medium text-gray-600 dark:text-gray-300">
+              No FAQs found.
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Try adjusting your search or category filter, or contact support
+              below.
+            </p>
+          </div>
         ) : (
           filtered.map((a) => (
             <div key={a.id} className="p-4 border rounded shadow">
@@ -175,53 +181,77 @@ const HelpAndSupport = () => {
         )}
       </div>
 
-      <div className="mt-10 border-t pt-6">
-        <h3 className="text-xl font-semibold mb-2">Add New Article</h3>
-        {message && <p className="mb-2 text-sm text-blue-600">{message}</p>}
-        <input
-          className="block w-full mb-2 p-2 border rounded"
-          placeholder="Title"
-          value={newArticle.title}
-          onChange={(e) =>
-            setNewArticle({ ...newArticle, title: e.target.value })
-          }
-        />
-        <select
-          className="block w-full mb-2 p-2 border rounded"
-          value={newArticle.category}
-          onChange={(e) =>
-            setNewArticle({ ...newArticle, category: e.target.value })
-          }
-        >
-          <option value="">Select category</option>
-          {HELP_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
-        <textarea
-          className="block w-full mb-2 p-2 border rounded"
-          placeholder="Content"
-          value={newArticle.content}
-          onChange={(e) =>
-            setNewArticle({ ...newArticle, content: e.target.value })
-          }
-        />
-        <input
-          className="block w-full mb-2 p-2 border rounded"
-          placeholder="Keywords"
-          value={newArticle.keywords}
-          onChange={(e) =>
-            setNewArticle({ ...newArticle, keywords: e.target.value })
-          }
-        />
-        <button
-          onClick={handleAddArticle}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Add Article
-        </button>
+      <div className="mt-10 border-t pt-8">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold mb-2">Still need help?</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Can't find the answer you're looking for? Reach out to our support
+            team.
+          </p>
+        </div>
+
+        <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+          <h3 className="text-xl font-semibold mb-4 text-blue-600 dark:text-blue-400">
+            📩 Contact Support
+          </h3>
+          {message && (
+            <div
+              className={`p-3 rounded mb-4 ${
+                message.includes("success")
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              {message}
+            </div>
+          )}
+          <form onSubmit={handleContactSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Name</label>
+              <input
+                type="text"
+                required
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                value={contactForm.name}
+                onChange={(e) =>
+                  setContactForm({ ...contactForm, name: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <input
+                type="email"
+                required
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                value={contactForm.email}
+                onChange={(e) =>
+                  setContactForm({ ...contactForm, email: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Message</label>
+              <textarea
+                required
+                rows="4"
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                placeholder="Describe your issue..."
+                value={contactForm.message}
+                onChange={(e) =>
+                  setContactForm({ ...contactForm, message: e.target.value })
+                }
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              {submitting ? "Sending..." : "Send Message"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ const {
   paginate,
   getPaginationMeta,
 } = require("../utils/queryHelpers");
+const { checkAndTriggerAlerts } = require("./productAlertController");
 
 // ===== HELPER FUNCTIONS =====
 
@@ -230,6 +231,11 @@ const updateProduct = async (req, res) => {
     if (description !== undefined) product.description = description;
 
     await product.save();
+
+
+    
+    // Check and trigger alerts (Async - don't wait)
+    checkAndTriggerAlerts(product);
 
     console.log("✅ Product updated:", product._id);
 

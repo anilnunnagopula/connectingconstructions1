@@ -13,7 +13,7 @@ const PaymentMethodSchema = new mongoose.Schema(
     // The type of payment method (e.g., 'CARD', 'UPI')
     type: {
       type: String,
-      enum: ["CARD", "UPI"], // You can add more types as needed
+      enum: ["CARD", "UPI", "NETBANKING"], // Added NETBANKING
       required: true,
     },
     // A nested object to hold specific details based on the type
@@ -43,14 +43,28 @@ const PaymentMethodSchema = new mongoose.Schema(
         required: function () {
           return this.type === "CARD";
         },
-        select: false, // Prevents CVV from being returned in queries by default
+        select: false,
       },
 
-      // For UPI type (if you want to add it)
+      // For UPI type
       upiId: {
         type: String,
         required: function () {
           return this.type === "UPI";
+        },
+      },
+
+      // For NETBANKING type
+      bankName: {
+        type: String,
+        required: function () {
+          return this.type === "NETBANKING";
+        },
+      },
+      accountNumber: {
+        type: String,
+        required: function () {
+          return this.type === "NETBANKING";
         },
       },
     },

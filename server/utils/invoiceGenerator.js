@@ -13,12 +13,12 @@ const generateInvoicePDF = (order, options = {}) => {
 
   // Company/Platform Information
   const companyInfo = options.companyInfo || {
-    name: "ConnectConstructions",
+    name: "ConnectingConstructions",
     address: "Construction Materials Marketplace",
     city: "India",
     phone: "+91 1234567890",
-    email: "support@connectconstructions.com",
-    website: "www.connectconstructions.com",
+    email: "support@connectingconstructions.com",
+    website: "www.connectingconstructions.com",
     gstin: "29ABCDE1234F1Z5", // Replace with actual GSTIN
   };
 

@@ -25,6 +25,7 @@ exports.createReview = async (req, res) => {
 
     // Validate required fields
     if (!productId || !orderId || !rating || !title || !comment) {
+      console.log("❌ Missing fields:", { productId, orderId, rating, title, comment });
       return res.status(400).json({
         success: false,
         message: "All required fields must be provided",
@@ -53,6 +54,7 @@ exports.createReview = async (req, res) => {
     );
 
     if (!productInOrder) {
+      console.log("❌ Product not in order:", { productId, orderItems: order.items.map(i => i.product) });
       return res.status(400).json({
         success: false,
         message: "Product not found in this order",
@@ -66,6 +68,7 @@ exports.createReview = async (req, res) => {
     });
 
     if (existingReview) {
+      console.log("❌ Existing review found:", existingReview._id);
       return res.status(400).json({
         success: false,
         message: "You have already reviewed this product",

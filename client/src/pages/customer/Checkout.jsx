@@ -9,6 +9,8 @@ import {
   CreditCard,
   CheckCircle,
   ArrowLeft,
+  MapPin,
+  Edit2,
 } from "lucide-react";
 import CustomerLayout from "../../layout/CustomerLayout";
 import AddressSelector from "../../components/AddressSelector";

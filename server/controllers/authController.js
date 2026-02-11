@@ -124,14 +124,14 @@ const loginUser = async (req, res) => {
 
     validateInput(req.body, ["email", "password", "role"]);
 
-    // Find user
-    const user = await User.findOne({ email, role });
+    // Find user (email is unique, so we don't strictly need role for lookup)
+    const user = await User.findOne({ email });
 
     if (!user) {
       console.log("❌ User not found:", email);
       return res.status(401).json({
         success: false,
-        error: "Invalid credentials (email/role mismatch).",
+        error: "Invalid credentials.",
       });
     }
 

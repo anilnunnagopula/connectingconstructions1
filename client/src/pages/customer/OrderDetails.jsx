@@ -18,8 +18,10 @@ import {
   AlertCircle,
   Download,
   MessageSquare,
+  FileText,
 } from "lucide-react";
 import CustomerLayout from "../../layout/CustomerLayout";
+import ReportIssueModal from "../../components/ReportIssueModal";
 
 const baseURL = process.env.REACT_APP_API_URL;
 
@@ -30,6 +32,8 @@ const OrderDetails = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     loadOrderDetails();
@@ -51,6 +55,48 @@ const OrderDetails = () => {
       toast.error("Failed to load order details");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      setDownloadingInvoice(true);
+      const user = JSON.parse(localStorage.getItem("user"));
+      
+      // Use direct axios for blob response since we need it here
+      const response = await axios.get(
+        `${baseURL}/api/customer/invoices/${orderId}/download`,
+        {
+          headers: { Authorization: `Bearer ${user.token}` },
+          responseType: "blob",
+        }
+      );
+
+      // Create a blob URL and trigger download
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Invoice-${order.orderNumber || orderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Invoice downloaded successfully");
+    } catch (error) {
+      console.error("Download invoice error:", error);
+
+      // Better error message based on status code
+      if (error.response?.status === 400) {
+        toast.error("Invoice is only available for delivered orders. This order hasn't been delivered yet.");
+      } else if (error.response?.status === 404) {
+        toast.error("Order not found");
+      } else {
+        toast.error("Failed to download invoice. Please try again later.");
+      }
+    } finally {
+      setDownloadingInvoice(false);
     }
   };
 
@@ -485,17 +531,52 @@ const OrderDetails = () => {
                 </button>
               )}
 
+              {order.orderStatus === "delivered" && (
+                <button
+                  onClick={handleDownloadInvoice}
+                  disabled={downloadingInvoice}
+                  className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {downloadingInvoice ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-transparent"></div>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <FileText size={20} />
+                      Download Invoice
+                    </>
+                  )}
+                </button>
+              )}
+
               <button
-                onClick={() => window.print()}
-                className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2"
-              >
-                <Download size={20} />
-                Download Invoice
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="w-full border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20 px-6 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                >
+                  <AlertTriangle size={20} />
+                  Report Issue
+              </button>
+
+              <button
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="w-full border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20 px-6 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                >
+                  <AlertTriangle size={20} />
+                  Report Issue
               </button>
             </div>
           </div>
         </div>
       </div>
+      <ReportIssueModal 
+        isOpen={isReportModalOpen} 
+        onClose={() => setIsReportModalOpen(false)}
+        entityType="Order"
+        entityId={orderId}
+        entityName={`Order #${order.orderNumber}`}
+      />
     </CustomerLayout>
   );
 };

@@ -692,6 +692,28 @@ const CustomerSettingsPage = () => {
           </button>
         </div>
 
+        {/* Quick Link to Manage All Addresses */}
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MapPin size={24} className="text-blue-600 dark:text-blue-400" />
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Manage All Addresses</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Add, edit, or delete multiple delivery addresses
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/customer/addresses")}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2"
+            >
+              View All Addresses
+              <ArrowLeft size={16} className="rotate-180" />
+            </button>
+          </div>
+        </div>
+
         {/* Content for active tab */}
         {activeTab === "personal" && (
           <div className="space-y-6">

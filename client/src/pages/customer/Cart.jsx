@@ -179,9 +179,12 @@ const CartItem = ({ item, onQuantityChange, onRemove, loading }) => {
   const product = item.product;
   const snapshot = item.productSnapshot;
 
+  // Use productId as fallback if product object is missing
+  const productId = product?._id || item.productId;
+
   const handleProductClick = () => {
-    if (product?._id) {
-      navigate(`/customer/product/${product._id}`);
+    if (productId) {
+      navigate(`/customer/product/${productId}`);
     }
   };
 
@@ -227,7 +230,7 @@ const CartItem = ({ item, onQuantityChange, onRemove, loading }) => {
 
         {/* Remove Button (Desktop) */}
         <button
-          onClick={() => onRemove(product._id)}
+          onClick={() => onRemove(productId)}
           disabled={loading}
           className="hidden md:block p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50"
         >
@@ -243,7 +246,7 @@ const CartItem = ({ item, onQuantityChange, onRemove, loading }) => {
           </span>
           <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
             <button
-              onClick={() => onQuantityChange(product._id, item.quantity, -1)}
+              onClick={() => onQuantityChange(productId, item.quantity, -1)}
               disabled={loading || item.quantity <= 1}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
@@ -253,7 +256,7 @@ const CartItem = ({ item, onQuantityChange, onRemove, loading }) => {
               {item.quantity}
             </span>
             <button
-              onClick={() => onQuantityChange(product._id, item.quantity, 1)}
+              onClick={() => onQuantityChange(productId, item.quantity, 1)}
               disabled={loading}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
@@ -275,7 +278,7 @@ const CartItem = ({ item, onQuantityChange, onRemove, loading }) => {
 
         {/* Remove Button (Mobile) */}
         <button
-          onClick={() => onRemove(product._id)}
+          onClick={() => onRemove(productId)}
           disabled={loading}
           className="md:hidden p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50"
         >

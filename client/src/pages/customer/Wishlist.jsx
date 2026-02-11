@@ -42,7 +42,7 @@ const Wishlist = () => {
       });
 
       console.log("✅ Wishlist loaded:", response.data);
-      setItems(response.data.data.items || []);
+      setItems(response.data.data || []);
     } catch (error) {
       console.error("❌ Wishlist error:", error);
       toast.error("Failed to load wishlist");

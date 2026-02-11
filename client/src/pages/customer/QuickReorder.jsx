@@ -28,7 +28,7 @@ const QuickReorder = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("Delivered");
+  const [filterStatus, setFilterStatus] = useState("delivered");
   const [reorderingOrderId, setReorderingOrderId] = useState(null);
 
   // Fetch past orders
@@ -40,8 +40,8 @@ const QuickReorder = () => {
     setLoading(true);
     try {
       const response = await getOrders({
-        status: filterStatus === "All" ? "" : filterStatus,
-        limit: 50,
+        status: filterStatus === "all" ? "" : filterStatus,
+        limit: 100, // Increased for better UX with many orders
       });
 
       if (response.success) {
@@ -138,12 +138,16 @@ const QuickReorder = () => {
   // Get status badge color
   const getStatusColor = (status) => {
     const colors = {
-      Delivered:
+      delivered:
         "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-      Cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+      cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+      pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      confirmed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+      processing: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+      shipped: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
     };
     return (
-      colors[status] ||
+      colors[status?.toLowerCase()] ||
       "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
     );
   };
@@ -187,9 +191,9 @@ const QuickReorder = () => {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="Delivered">Delivered Orders</option>
-                <option value="Cancelled">Cancelled Orders</option>
-                <option value="All">All Orders</option>
+                <option value="delivered">Delivered Orders</option>
+                <option value="cancelled">Cancelled Orders</option>
+                <option value="all">All Orders</option>
               </select>
             </div>
           </div>
@@ -307,7 +311,13 @@ const QuickReorder = () => {
                             <span>Qty: {item.quantity}</span>
                             <span>•</span>
                             <span className="font-semibold">
-                              ₹{item.price?.toLocaleString("en-IN")}
+                              ₹
+                              {(
+                                item.product?.price ||
+                                item.priceAtOrder ||
+                                item.price ||
+                                0
+                              ).toLocaleString("en-IN")}
                             </span>
                           </div>
                         </div>

@@ -40,7 +40,11 @@ const Login = () => {
       }
 
       login(data);
-      navigate(`/${data.role}-dashboard`);
+      if (data.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate(`/${data.role}-dashboard`);
+      }
     } catch (err) {
       console.error("Google login error:", err);
       setError(err.message || "Google sign-in failed. Please try again.");
@@ -85,7 +89,12 @@ const Login = () => {
       }
 
       login(data);
-      navigate(`/${data.role}-dashboard`);
+      // Redirect based on role
+      if (data.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate(`/${data.role}-dashboard`);
+      }
     } catch (err) {
       console.error("Login submission error:", err);
       setError(err.message || "Login failed. Please try again.");

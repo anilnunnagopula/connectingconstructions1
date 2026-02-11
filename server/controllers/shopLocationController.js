@@ -163,10 +163,71 @@ const deleteShopLocation = async (req, res) => {
   }
 };
 
+// @desc    Get nearby suppliers (Customer)
+// @route   GET /api/nearby-suppliers
+// @access  Public
+const getNearbySuppliers = async (req, res) => {
+  try {
+    const { lat, lng, radius = 50 } = req.query; // radius in km
+
+    if (!lat || !lng) {
+      return res.status(400).json({ message: "Latitude and Longitude are required." });
+    }
+
+    const startLat = parseFloat(lat);
+    const startLng = parseFloat(lng);
+    const maxDist = parseFloat(radius);
+
+    // Fetch all shop locations (optimization: use bounding box or 2d index ideally)
+    const locations = await ShopLocation.find().populate("supplier", "name email phoneNumber profilePictureUrl");
+
+    const nearby = locations.filter(loc => {
+        if (!loc.lat || !loc.lng) return false;
+        const dist = getDistanceFromLatLonInKm(startLat, startLng, loc.lat, loc.lng);
+        return dist <= maxDist;
+    }).map(loc => {
+        const dist = getDistanceFromLatLonInKm(startLat, startLng, loc.lat, loc.lng);
+        return { ...loc.toObject(), distance: dist.toFixed(2) };
+    }).sort((a, b) => a.distance - b.distance);
+
+    res.json({
+        success: true,
+        count: nearby.length,
+        data: nearby
+    });
+
+  } catch (error) {
+    console.error("Error fetching nearby suppliers:", error);
+    res.status(500).json({
+      message: "Failed to fetch nearby suppliers.",
+      error: error.message,
+    });
+  }
+};
+
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2-lat1);  
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180)
+}
+
 // CRITICAL: This module.exports block MUST be at the very end
 module.exports = {
   getShopLocations,
   addShopLocation,
   updateShopLocation,
   deleteShopLocation,
+  getNearbySuppliers,
 };

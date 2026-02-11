@@ -207,3 +207,117 @@ exports.deleteOffer = async (req, res) => {
       .json({ message: "Failed to delete offer", error: error.message });
   }
 };
+// @desc    Get all active offers (Customer)
+// @route   GET /api/offers/active
+// @access  Public
+exports.getActiveOffers = async (req, res) => {
+  try {
+    const today = new Date();
+    
+    // Find offers that are active, started before today, and end after today
+    // And status is Active
+    const offers = await Offer.find({
+      status: "Active",
+      startDate: { $lte: today },
+      endDate: { $gte: today },
+    })
+    .select("-supplier") // Hide supplier details if not needed
+    .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: offers,
+    });
+  } catch (error) {
+    console.error("Get active offers error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+// @desc    Validate an offer code (Customer)
+// @route   POST /api/offers/validate
+// @access  Private (Customer usually)
+exports.validateOffer = async (req, res) => {
+  try {
+    const { code, cartAmount, cartItems } = req.body; // cartItems for product-specific checks
+
+    if (!code) {
+        return res.status(400).json({ success: false, error: "Code is required" });
+    }
+
+    const offer = await Offer.findOne({ 
+      code: code.toUpperCase(),
+      status: "Active",
+    });
+
+    if (!offer) {
+      return res.status(404).json({
+        success: false,
+        error: "Invalid or inactive offer code",
+      });
+    }
+
+    const today = new Date();
+    if (today < new Date(offer.startDate) || today > new Date(offer.offerEndDate)) {
+         // Note: OfferModel has endDate, checking strictly
+         if (today > new Date(offer.endDate)) {
+            return res.status(400).json({
+                success: false,
+                error: "Offer expired",
+            });
+         }
+    }
+
+    // Usage limit check
+    if (offer.usageLimit !== null && offer.usedCount >= offer.usageLimit) {
+        return res.status(400).json({
+            success: false,
+            error: "Offer usage limit exceeded",
+        });
+    }
+
+    // Validate based on applyTo
+    // Simplified validation for now
+    let isValid = true;
+    let applicableAmount = cartAmount; // Default to full amount
+
+    // Logic for specific products/categories can be added here
+    // For now, assuming granular checks are done or it applies to total
+
+    if (isValid) {
+        let discount = 0;
+        if (offer.type === "PERCENTAGE") {
+            discount = (applicableAmount * offer.value) / 100;
+            // Max discount check if implemented
+        } else {
+            discount = offer.value;
+        }
+        
+        // Ensure discount doesn't exceed total
+        discount = Math.min(discount, cartAmount);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                offer,
+                discountAmount: discount
+            }
+        });
+    } else {
+         res.status(400).json({
+            success: false,
+            error: "Offer not applicable to these items",
+        });
+    }
+
+  } catch (error) {
+    console.error("Validate offer error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};

@@ -35,7 +35,7 @@ const Sidebar = () => {
 
   return (
     <div className="h-screen w-64 bg-gray-900 text-white p-6 fixed top-0 left-0 hidden md:block">
-      <h2 className="text-xl font-bold mb-8">ConnectConstructions</h2>
+      <h2 className="text-xl font-bold mb-8">ConnectingConstructions</h2>
       <nav className="flex flex-col space-y-4">
         {links.map((link, idx) => (
           <NavLink

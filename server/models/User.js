@@ -157,6 +157,33 @@ const userSchema = new mongoose.Schema(
     deletedAt: {
       type: Date,
     },
+
+    // ✨ NEW: Admin & Supplier Verification
+    isActive: {
+      type: Boolean,
+      default: true, // Used for suspending accounts
+    },
+    isVerified: {
+      type: Boolean,
+      default: false, // Only for suppliers
+    },
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "verified", "rejected", "none"],
+      default: "none",
+    },
+    supplierTier: {
+        type: String,
+        enum: ["standard", "silver", "gold", "platinum"],
+        default: "standard"
+    },
+    verifiedAt: {
+      type: Date,
+    },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Admin who verified
+    },
   },
   {
     timestamps: true,
@@ -181,6 +208,8 @@ userSchema.index({ isDeleted: 1 });
 
 // Index for finding suppliers
 userSchema.index({ role: 1, isDeleted: 1 });
+userSchema.index({ isVerified: 1 });
+userSchema.index({ verificationStatus: 1 });
 
 // ===== MONGOOSE MIDDLEWARE =====
 

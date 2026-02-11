@@ -56,7 +56,7 @@ const CorePolicies = () => {
 
         <p className="text-center mb-8 max-w-2xl mx-auto text-gray-600 dark:text-gray-400">
           Transparency is our foundation. Explore the key policies that govern
-          your experience on ConnectConstructions.
+          your experience on ConnectingConstructions.
         </p>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">

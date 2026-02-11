@@ -73,6 +73,132 @@ const productSchema = new mongoose.Schema(
       min: 0,
     },
 
+    // ===== CONSTRUCTION MATERIALS SPECIFIC FIELDS =====
+    // Brand (e.g., UltraTech, ACC, Tata Steel, JSW, Birla)
+    brand: {
+      type: String,
+      trim: true,
+    },
+
+    // Grade/Quality (e.g., Fe415, Fe500, OPC 43, OPC 53, M-Sand, P-Sand)
+    grade: {
+      type: String,
+      trim: true,
+    },
+
+    // Packaging (e.g., 25kg bag, 50kg bag, loose, bundled)
+    packaging: {
+      type: String,
+      trim: true,
+    },
+
+    // Technical Specifications (flexible object for any material specs)
+    specifications: {
+      type: Map,
+      of: String,
+      default: {},
+      // Examples:
+      // { "Compressive Strength": "43 MPa", "Tensile Strength": "415 MPa" }
+      // { "Fineness": "300 m²/kg", "Setting Time": "30 mins" }
+      // { "Thickness": "8mm", "Width": "4 feet", "Length": "8 feet" }
+    },
+
+    // Bulk Pricing Tiers (array of price breaks)
+    bulkPricing: [
+      {
+        minQuantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        maxQuantity: {
+          type: Number, // null/undefined means unlimited
+        },
+        pricePerUnit: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+      },
+    ],
+
+    // Variants (for products with multiple options like size, color, finish)
+    variants: [
+      {
+        name: {
+          type: String,
+          required: true,
+          // e.g., "Size", "Color", "Finish", "Thickness"
+        },
+        options: [
+          {
+            value: {
+              type: String,
+              required: true,
+              // e.g., "25kg", "50kg", "Red", "Glossy"
+            },
+            priceAdjustment: {
+              type: Number,
+              default: 0,
+              // e.g., +50 for 50kg bag, +100 for glossy finish
+            },
+            stockQuantity: {
+              type: Number,
+              default: 0,
+            },
+            sku: {
+              type: String,
+              // Stock Keeping Unit for this variant
+            },
+          },
+        ],
+      },
+    ],
+
+    // Certifications (e.g., ISI Marked, BIS Certified, ISO 9001)
+    certifications: {
+      type: [String],
+      default: [],
+    },
+
+    // Manufacturing Date / Batch Number
+    manufacturingDate: {
+      type: Date,
+    },
+
+    batchNumber: {
+      type: String,
+      trim: true,
+    },
+
+    // Warranty / Guarantee
+    warranty: {
+      type: String,
+      trim: true,
+      // e.g., "1 year", "6 months", "No warranty"
+    },
+
+    // Country of Origin
+    countryOfOrigin: {
+      type: String,
+      default: "India",
+      trim: true,
+    },
+
+    // HSN Code (for GST)
+    hsnCode: {
+      type: String,
+      trim: true,
+    },
+
+    // GST Rate
+    gstRate: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 18, // Default 18% for most construction materials
+    },
+
     // ===== EXISTING FIELDS =====
     price: {
       type: Number,

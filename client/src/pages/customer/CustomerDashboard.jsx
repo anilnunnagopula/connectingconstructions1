@@ -1,6 +1,7 @@
 // client/src/pages/customer/CustomerDashboard.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { toast } from "react-hot-toast";
 import {
   Package,
@@ -225,6 +226,8 @@ const CustomerDashboard = () => {
   });
 
   const [user, setUser] = useState(null);
+  const [announcements, setAnnouncements] = useState([]);
+  const baseURL = process.env.REACT_APP_API_URL;
 
   // Fetch user from localStorage
   useEffect(() => {
@@ -233,10 +236,20 @@ const CustomerDashboard = () => {
       if (storedUser && storedUser !== "undefined") {
         setUser(JSON.parse(storedUser));
       }
+      fetchAnnouncements();
     } catch (error) {
       console.error("Error parsing user:", error);
     }
   }, []);
+
+  const fetchAnnouncements = async () => {
+      try {
+          const res = await axios.get(`${baseURL}/api/announcements?role=customer`);
+          setAnnouncements(res.data.data);
+      } catch (error) {
+          console.error("Failed to fetch announcements", error);
+      }
+  };
 
   // Fetch dashboard data
   useEffect(() => {
@@ -337,6 +350,30 @@ const CustomerDashboard = () => {
             )}
           </div>
 
+
+
+          {/* Announcements */}
+          {announcements.length > 0 && (
+              <div className="mt-6 space-y-3">
+                  {announcements.map((ann) => (
+                      <div 
+                        key={ann._id} 
+                        className={`p-4 rounded-xl border-l-4 shadow-sm flex items-start gap-4 ${
+                            ann.type === 'warning' ? 'bg-yellow-50 border-yellow-500 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200' :
+                            ann.type === 'maintenance' ? 'bg-red-50 border-red-500 text-red-800 dark:bg-red-900/20 dark:text-red-200' :
+                            ann.type === 'success' ? 'bg-green-50 border-green-500 text-green-800 dark:bg-green-900/20 dark:text-green-200' :
+                            'bg-blue-50 border-blue-500 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200'
+                        }`}
+                      >
+                          <div className="flex-1">
+                              <h4 className="font-bold text-lg mb-1">{ann.title}</h4>
+                              <p className="text-sm whitespace-pre-wrap opacity-90">{ann.content}</p>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          )}
+
           {/* Quick Stats in Welcome Card */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
@@ -416,7 +453,7 @@ const CustomerDashboard = () => {
               title="Browse Materials"
               description="Search construction materials"
               color="blue"
-              onClick={() => navigate("/materials")}
+              onClick={() => navigate("/customer/materials")}
             />
 
             {/* Orders & Tracking */}
@@ -456,21 +493,13 @@ const CustomerDashboard = () => {
               onClick={() => navigate("/customer/wishlist")}
             />
 
-            <FeatureCard
-              icon={<Star size={24} />}
-              title="Saved Items"
-              description="Interested materials"
-              color="yellow"
-              onClick={() => navigate("/customer/wishlist")}
-            />
-
             {/* Communication */}
             <FeatureCard
               icon={<MessageSquare size={24} />}
               title="Talk to Supplier"
               description="Direct communication"
               color="green"
-              onClick={() => navigate("/customer/chat")}
+              onClick={() => navigate("/customer/messages")}
             />
 
             <FeatureCard
@@ -487,7 +516,7 @@ const CustomerDashboard = () => {
               title="Product Alerts"
               description="Watched item updates"
               color="blue"
-              onClick={() => navigate("/customer/product-alerts")}
+              onClick={() => navigate("/customer/alerts")}
             />
 
             {/* Location & Suppliers */}
@@ -531,6 +560,15 @@ const CustomerDashboard = () => {
               description="Billing history"
               color="gray"
               onClick={() => navigate("/customer/invoices")}
+            />
+
+            {/* Analytics */}
+            <FeatureCard
+              icon={<TrendingUp size={24} />}
+              title="Spending Analytics"
+              description="Track expenses"
+              color="green"
+              onClick={() => navigate("/customer/analytics")}
             />
 
             {/* Quick Actions */}

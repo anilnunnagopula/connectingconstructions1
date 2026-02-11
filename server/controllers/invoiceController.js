@@ -15,7 +15,7 @@ exports.getInvoices = async (req, res) => {
     // Find all delivered orders for this customer
     const orders = await Order.find({
       customer: customerId,
-      orderStatus: "Delivered",
+      orderStatus: "delivered", // Fixed: lowercase to match Order model
     })
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
@@ -26,7 +26,7 @@ exports.getInvoices = async (req, res) => {
 
     const totalOrders = await Order.countDocuments({
       customer: customerId,
-      orderStatus: "Delivered",
+      orderStatus: "delivered", // Fixed: lowercase to match Order model
     });
 
     res.status(200).json({
@@ -74,7 +74,7 @@ exports.downloadInvoice = async (req, res) => {
     }
 
     // Check if order is completed (has invoice)
-    if (order.orderStatus !== "Delivered") {
+    if (order.orderStatus !== "delivered") {
       return res.status(400).json({
         success: false,
         error: "Invoice is only available for delivered orders",
@@ -84,12 +84,12 @@ exports.downloadInvoice = async (req, res) => {
     // Generate PDF
     const invoiceStream = generateInvoicePDF(order, {
       companyInfo: {
-        name: "ConnectConstructions",
+        name: "ConnectingConstructions",
         address: "Construction Materials Marketplace",
         city: "India",
-        phone: "+91 1234567890",
-        email: "support@connectconstructions.com",
-        website: "www.connectconstructions.com",
+        phone: "+91 9398828248",
+        email: "support@connectingconstructions.com",
+        website: "www.connectingconstructions.com",
         gstin: "29ABCDE1234F1Z5", // Replace with actual GSTIN
       },
     });

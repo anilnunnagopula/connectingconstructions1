@@ -14,6 +14,12 @@ import {
   ChevronRight,
   Layers,
   MapPin,
+  TrendingUp,
+  Ticket,
+  Map,
+  MessageCircle,
+  AlertTriangle,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -47,6 +53,24 @@ const Sidebar = ({
       badge: cartCount,
     },
     {
+      icon: TrendingUp,
+      label: "Analytics",
+      path: "/customer/analytics",
+      badge: null,
+    },
+    {
+      icon: Ticket,
+      label: "Offers",
+      path: "/customer/offers",
+      badge: null,
+    },
+    {
+      icon: Map,
+      label: "Suppliers",
+      path: "/customer/suppliers",
+      badge: null,
+    },
+    {
       icon: Package,
       label: "My Orders",
       path: "/customer/orders",
@@ -56,6 +80,12 @@ const Sidebar = ({
       icon: MessageSquare,
       label: "Quote Requests",
       path: "/customer/quotes",
+      badge: null,
+    },
+    {
+      icon: MessageCircle,
+      label: "Messages",
+      path: "/customer/messages",
       badge: null,
     },
     {
@@ -71,6 +101,12 @@ const Sidebar = ({
       badge: notificationCount,
     },
     {
+      icon: AlertTriangle,
+      label: "Alerts",
+      path: "/customer/alerts",
+      badge: null,
+    },
+    {
       icon: MapPin,
       label: "Addresses",
       path: "/customer/addresses",
@@ -80,6 +116,12 @@ const Sidebar = ({
       icon: Settings,
       label: "Settings",
       path: "/customer/settings",
+      badge: null,
+    },
+    {
+      icon: HelpCircle,
+      label: "Help & Support",
+      path: "/customer/support",
       badge: null,
     },
   ];

@@ -78,7 +78,8 @@ const PaymentMethods = () => {
         !formData.cardNumber ||
         !formData.cardHolderName ||
         !formData.expiryMonth ||
-        !formData.expiryYear
+        !formData.expiryYear ||
+        !formData.cvv
       ) {
         toast.error("Please fill all card details");
         return;
@@ -90,8 +91,29 @@ const PaymentMethods = () => {
       }
     }
 
+    const payload = {
+      type: formData.type.toUpperCase(), // Convert to uppercase for enum match
+      details: {},
+    };
+
+    if (formData.type === "upi") {
+      payload.details = { upiId: formData.upiId };
+    } else if (formData.type === "card") {
+      payload.details = {
+        cardNumber: formData.cardNumber,
+        cardHolderName: formData.cardHolderName,
+        expiryDate: `${formData.expiryMonth}/${formData.expiryYear.slice(-2)}`, // Format MM/YY
+        cvv: formData.cvv,
+      };
+    } else if (formData.type === "netbanking") {
+      payload.details = {
+        bankName: formData.bankName,
+        accountNumber: formData.accountNumber,
+      };
+    }
+
     try {
-      const response = await addPaymentMethod(formData);
+      const response = await addPaymentMethod(payload);
       if (response.success) {
         toast.success("Payment method added successfully");
         fetchPaymentMethods();
@@ -161,7 +183,7 @@ const PaymentMethods = () => {
 
   // Get icon for payment type
   const getPaymentIcon = (type) => {
-    switch (type) {
+    switch (type?.toLowerCase()) {
       case "upi":
         return <Smartphone size={24} className="text-blue-600 dark:text-blue-400" />;
       case "card":
@@ -254,33 +276,33 @@ const PaymentMethods = () => {
                 {/* Payment Details */}
                 <div className="mb-4">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 capitalize">
-                    {method.type}
+                    {method.type.toLowerCase()}
                   </p>
-                  {method.type === "upi" && (
+                  {method.type === "UPI" && (
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      {method.upiId}
+                      {method.details?.upiId}
                     </p>
                   )}
-                  {method.type === "card" && (
+                  {method.type === "CARD" && (
                     <>
                       <p className="font-semibold text-gray-900 dark:text-white">
-                        {maskCardNumber(method.cardNumber)}
+                        {maskCardNumber(method.details?.cardNumber)}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {method.cardHolderName}
+                        {method.details?.cardHolderName}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        Expires: {method.expiryMonth}/{method.expiryYear}
+                        Expires: {method.details?.expiryDate}
                       </p>
                     </>
                   )}
-                  {method.type === "netbanking" && (
+                  {method.type === "NETBANKING" && (
                     <>
                       <p className="font-semibold text-gray-900 dark:text-white">
-                        {method.bankName}
+                        {method.details?.bankName}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {maskAccountNumber(method.accountNumber)}
+                        {maskAccountNumber(method.details?.accountNumber)}
                       </p>
                     </>
                   )}
@@ -448,6 +470,21 @@ const PaymentMethods = () => {
                           value={formData.expiryYear}
                           onChange={(e) =>
                             setFormData({ ...formData, expiryYear: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          CVV
+                        </label>
+                        <input
+                          type="password"
+                          placeholder="123"
+                          maxLength="3"
+                          value={formData.cvv || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, cvv: e.target.value })
                           }
                           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         />

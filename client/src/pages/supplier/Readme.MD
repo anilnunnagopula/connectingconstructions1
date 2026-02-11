@@ -1,4 +1,4 @@
-# ConnectConstructions - Supplier Dashboard Phase 1
+# ConnectingConstructions - Supplier Dashboard Phase 1
 ## Production-Ready Implementation Guide
 
 ---
@@ -432,7 +432,7 @@ Before deploying to production:
 
 ## 📄 License
 
-This code is part of the ConnectConstructions project.
+This code is part of the ConnectingConstructions project.
 
 ---
 

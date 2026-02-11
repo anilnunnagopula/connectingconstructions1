@@ -3,6 +3,7 @@ const Order = require("../models/Order");
 const Wishlist = require("../models/Wishlist");
 const ViewHistory = require("../models/ViewHistory");
 const SupportRequest = require("../models/SupportRequest");
+const Notification = require("../models/Notification");
 
 /**
  * @desc    Get aggregated data for customer dashboard
@@ -19,6 +20,7 @@ const getCustomerDashboardData = async (req, res) => {
       wishlistItems,
       historyViewed,
       supportRequests,
+      unreadNotifications,
       recentOrders,
     ] = await Promise.all([
       // 1. Total orders
@@ -36,7 +38,10 @@ const getCustomerDashboardData = async (req, res) => {
       // 4. Support requests count
       SupportRequest.countDocuments({ user: customerId }),
 
-      // 5. Recent orders (top 5)
+      // 5. Unread notifications count
+      Notification.countDocuments({ recipient: customerId, read: false }),
+
+      // 6. Recent orders (top 5)
       Order.find({ customer: customerId, isDeleted: false })
         .sort({ createdAt: -1 })
         .limit(5)
@@ -54,6 +59,7 @@ const getCustomerDashboardData = async (req, res) => {
         wishlistItems,
         historyViewed,
         supportRequests,
+        unreadNotificationsCount: unreadNotifications,
         recentOrders,
       },
     });

@@ -52,7 +52,7 @@ const ResponsiveSidebar = () => {
           open ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:block`}
       >
-        <h2 className="text-xl font-bold mb-8">ConnectConstructions</h2>
+        <h2 className="text-xl font-bold mb-8">ConnectingConstructions</h2>
         <nav className="flex flex-col space-y-4">
           {links.map((link, idx) => (
             <NavLink

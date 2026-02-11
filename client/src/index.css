@@ -33,3 +33,17 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-400 dark:bg-gray-500;
 }
+
+@media print {
+  /* Hide potentially interfering elements during print */
+  nav, footer, aside, .sidebar {
+    display: none !important;
+  }
+  
+  /* Ensure body and main content take full width */
+  body, #root, main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}

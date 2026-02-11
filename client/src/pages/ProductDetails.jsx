@@ -9,6 +9,7 @@ import {
   Package,
   MapPin,
   Store,
+  AlertTriangle,
   Star,
   Share2,
   Heart,
@@ -26,6 +27,7 @@ const ProductDetails = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     fetchProductDetails();
@@ -97,6 +99,31 @@ const ProductDetails = () => {
       return;
     }
     navigate(`/customer/quotes/request?product=${product._id}`);
+  };
+
+  const handleMessageSupplier = () => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) {
+      toast.error("Please login to message the supplier");
+      navigate("/login");
+      return;
+    }
+
+    if (!product.supplier || !product.supplier._id) {
+      toast.error("Supplier information not available");
+      return;
+    }
+
+    // Navigate to messages page - the supplier will be auto-selected
+    navigate("/customer/messages", {
+      state: {
+        selectedSupplier: {
+          _id: product.supplier._id,
+          name: product.supplier.companyName || product.supplier.name,
+          profilePictureUrl: product.supplier.profilePictureUrl
+        }
+      }
+    });
   };
 
   const handleQuantityChange = (change) => {
@@ -205,9 +232,17 @@ const ProductDetails = () => {
             {product.supplier && (
               <div className="flex items-center gap-2 mt-2 text-gray-600 dark:text-gray-400">
                 <Store size={16} />
-                <span className="text-sm">
-                  Sold by {product.supplier.companyName || product.supplier.name || "Verified Supplier"}
+                <span className="text-sm font-medium">
+                  Sold by {product.supplier.companyName || product.supplier.name}
                 </span>
+                {product.supplier.isVerified && (
+                  <span
+                    className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold"
+                    title="Verified by ConnectConstructions"
+                  >
+                    ✓ Verified
+                  </span>
+                )}
               </div>
             )}
 
@@ -294,16 +329,37 @@ const ProductDetails = () => {
                     <ShoppingCart size={20} />
                     Add to Cart
                   </button>
+                  <button 
+                     onClick={() => setIsReportModalOpen(true)}
+                     className="px-4 py-3 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
+                     title="Report this product"
+                  >
+                      <AlertTriangle size={20} />
+                  </button>
+                  <button
+                    onClick={handleMessageSupplier}
+                    className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-6 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    title="Message Supplier"
+                  >
+                    <MessageSquare size={20} />
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="flex gap-3">
+              <div className="space-y-3">
                 <button
                   onClick={handleRequestQuote}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-bold transition flex items-center justify-center gap-2 shadow-lg hover:shadow-purple-500/25"
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-bold transition flex items-center justify-center gap-2 shadow-lg hover:shadow-purple-500/25"
                 >
                   <MessageSquare size={20} />
                   Request Quote
+                </button>
+                <button
+                  onClick={handleMessageSupplier}
+                  className="w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-6 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                >
+                  <MessageSquare size={20} />
+                  Ask Seller
                 </button>
               </div>
             )}
@@ -317,6 +373,13 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
+      <ReportIssueModal 
+        isOpen={isReportModalOpen} 
+        onClose={() => setIsReportModalOpen(false)}
+        entityType="Product"
+        entityId={id}
+        entityName={product?.name}
+      />
     </div>
   );
 };

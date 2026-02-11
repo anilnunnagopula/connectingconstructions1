@@ -5,7 +5,7 @@ const About = () => {
     <div className="bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-gray-950 min-h-screen py-4 px-6 sm:px-8 lg:px-12 font-inter">
       <div className="max-w-5xl mx-auto text-center">
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-blue-800 dark:text-blue-400 drop-shadow-sm tracking-tight">
-          🚀 About ConnectConstructions
+          🚀 About ConnectingConstructions
         </h1>
 
         <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 leading-relaxed mb-10 w-full px-4 sm:px-6 md:px-8">

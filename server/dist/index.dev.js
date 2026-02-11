@@ -43,7 +43,9 @@ var notificationRoutes = require("./routes/notifications");
 
 var wishlistRoutes = require("./routes/wishlist");
 
-var reviewRoutes = require("./routes/reviews"); // Initialize app
+var reviewRoutes = require("./routes/reviews");
+
+var razorpayRoutes = require("./routes/razorpayRoutes"); // Initialize app
 
 
 var app = express(); // Connect to MongoDB
@@ -77,7 +79,11 @@ app.use("/api/quotes", quoteRoutes);
 app.use("/api", generalRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/wishlist", wishlistRoutes);
-app.use("/api/reviews", reviewRoutes); // ===== HEALTH CHECK =====
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/offers", require("./routes/offers"));
+app.use("/api/chat", require("./routes/chatRoutes"));
+app.use("/api/alerts", require("./routes/productAlertRoutes"));
+app.use("/api/payment/razorpay", razorpayRoutes); // ===== HEALTH CHECK =====
 
 app.get("/health", function (req, res) {
   res.status(200).json({
@@ -90,7 +96,7 @@ app.get("/health", function (req, res) {
 app.get("/", function (req, res) {
   res.status(200).json({
     success: true,
-    message: "ConnectConstructions API v2.0",
+    message: "ConnectingConstructions API v2.0",
     environment: process.env.NODE_ENV || "development"
   });
 }); // ===== ERROR HANDLING =====

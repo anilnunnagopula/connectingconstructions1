@@ -82,7 +82,7 @@ const orderSchema = new mongoose.Schema(
     // Payment
     paymentMethod: {
       type: String,
-      enum: ["cod", "upi", "card", "netbanking"],
+      enum: ["cod", "upi", "card", "netbanking", "razorpay"],
       default: "cod",
     },
 
@@ -91,6 +91,22 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "paid", "failed", "refunded"],
       default: "pending",
     },
+
+    // Razorpay payment fields
+    razorpayOrderId: String,
+    razorpayPaymentId: String,
+    razorpaySignature: String,
+    paidAt: Date,
+    paymentError: String,
+
+    // Refund fields
+    refundStatus: {
+      type: String,
+      enum: ["not_applicable", "initiated", "processing", "completed", "failed"],
+      default: "not_applicable",
+    },
+    refundId: String,
+    refundAmount: Number,
 
     // Order status
     orderStatus: {

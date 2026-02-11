@@ -806,6 +806,226 @@ export const submitReview = async (reviewData) => {
   }
 };
 
+// ==================== OFFERS APIs (NEW) ====================
+
+/**
+ * Get active offers
+ * @returns {Promise<Object>} List of active offers
+ */
+export const getOffers = async () => {
+  try {
+    // Note: getActiveOffers is public, so token optional but handled by interceptor if present
+    const response = await apiClient.get("/api/offers/active");
+    return {
+      success: true,
+      data: response.data.data || response.data || [],
+    };
+  } catch (error) {
+    return handleError(error, "Failed to fetch offers");
+  }
+};
+
+/**
+ * Validate an offer code
+ * @param {string} code - Offer code
+ * @param {number} cartAmount - Total cart amount
+  * @param {Array} cartItems - items in cart
+ * @returns {Promise<Object>} Validation result
+ */
+export const validateOfferCode = async (code, cartAmount, cartItems = []) => {
+  try {
+    const response = await apiClient.post("/api/offers/validate", {
+      code,
+      cartAmount,
+      cartItems
+    });
+    return {
+      success: true,
+      data: response.data.data || response.data || {},
+    };
+  } catch (error) {
+    return handleError(error, "Invalid offer code");
+  }
+};
+
+/**
+ * Get nearby suppliers
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radius - Radius in km (default 50)
+ * @returns {Promise<Object>} List of suppliers
+ */
+export const getNearbySuppliers = async (lat, lng, radius = 50) => {
+  try {
+    const response = await apiClient.get("/api/suppliers/nearby", {
+      params: { lat, lng, radius },
+    });
+    return {
+       success: true,
+       data: response.data.data || response.data || [],
+    };
+  } catch (error) {
+    return handleError(error, "Failed to fetch nearby suppliers");
+  }
+};
+
+
+
+// ==================== CHAT APIs (NEW) ====================
+
+/**
+ * Send a message
+ * @param {Object} messageData - { receiverId, content, relatedOrder, relatedProduct }
+ * @returns {Promise<Object>} Created message
+ */
+export const sendMessage = async (messageData) => {
+  try {
+    const response = await apiClient.post("/api/chat/send", messageData);
+    return {
+      success: true,
+      data: response.data.data || response.data || {},
+    };
+  } catch (error) {
+    return handleError(error, "Failed to send message");
+  }
+};
+
+/**
+ * Get messages with a user
+ * @param {string} userId - ID of the user to chat with
+ * @returns {Promise<Object>} List of messages
+ */
+export const getMessages = async (userId) => {
+  try {
+    const response = await apiClient.get(`/api/chat/${userId}`);
+    return {
+      success: true,
+      data: response.data.data || response.data || [],
+    };
+  } catch (error) {
+    return handleError(error, "Failed to fetch messages");
+  }
+};
+
+/**
+ * Get all conversations
+ * @returns {Promise<Object>} List of conversations
+ */
+export const getConversations = async () => {
+  try {
+    const response = await apiClient.get("/api/chat/conversations");
+    return {
+      success: true,
+      data: response.data.data || response.data || [],
+    };
+  } catch (error) {
+    return handleError(error, "Failed to fetch conversations");
+  }
+};
+
+/**
+ * Mark messages as read
+ * @param {string} senderId - ID of the sender
+ * @returns {Promise<Object>} Success status
+ */
+export const markMessagesAsRead = async (senderId) => {
+  try {
+    const response = await apiClient.put(`/api/chat/read/${senderId}`);
+    return {
+      success: true,
+      data: response.data,
+    };
+  } catch (error) {
+    return handleError(error, "Failed to mark messages as read");
+  }
+};
+
+/**
+ * Get suppliers from customer's past orders (for starting conversations)
+ * @returns {Promise<Object>} List of suppliers
+ */
+export const getSuppliersFromOrders = async () => {
+  try {
+    const response = await apiClient.get("/api/customer/suppliers-from-orders");
+    return {
+      success: true,
+      data: response.data.data || response.data || [],
+    };
+  } catch (error) {
+    return handleError(error, "Failed to fetch suppliers");
+  }
+};
+
+// ==================== ALERT APIs (NEW) ====================
+
+/**
+ * Create a product alert
+ * @param {Object} alertData - { productId, alertType, targetPrice }
+ * @returns {Promise<Object>} Created alert
+ */
+export const createAlert = async (alertData) => {
+  try {
+    const response = await apiClient.post("/api/alerts", alertData);
+    return {
+      success: true,
+      data: response.data.data || response.data || {},
+    };
+  } catch (error) {
+    return handleError(error, "Failed to create alert");
+  }
+};
+
+/**
+ * Get user's alerts
+ * @returns {Promise<Object>} List of alerts
+ */
+export const getAlerts = async () => {
+  try {
+    const response = await apiClient.get("/api/alerts");
+    return {
+      success: true,
+      data: response.data.data || response.data || [],
+    };
+  } catch (error) {
+    return handleError(error, "Failed to fetch alerts");
+  }
+};
+
+/**
+ * Delete an alert
+ * @param {string} alertId - ID of the alert
+ * @returns {Promise<Object>} Success status
+ */
+export const deleteAlert = async (alertId) => {
+  try {
+    const response = await apiClient.delete(`/api/alerts/${alertId}`);
+    return {
+      success: true,
+      data: response.data,
+    };
+  } catch (error) {
+    return handleError(error, "Failed to delete alert");
+  }
+};
+
+// ==================== ANALYTICS APIs (NEW) ====================
+
+/**
+ * Get customer spending analytics
+ * @returns {Promise<Object>} Analytics data
+ */
+export const getCustomerAnalytics = async () => {
+  try {
+    const response = await apiClient.get("/api/customer/analytics");
+    return {
+      success: true,
+      data: response.data.data || response.data || {},
+    };
+  } catch (error) {
+    return handleError(error, "Failed to fetch analytics");
+  }
+};
+
 /**
  * Get reviews for a product
  * @param {string} productId - Product ID
@@ -820,6 +1040,75 @@ export const getProductReviews = async (productId) => {
     };
   } catch (error) {
     return handleError(error, "Failed to fetch reviews");
+  }
+};
+
+// ==================== RAZORPAY APIs (NEW) ====================
+
+/**
+ * Create Razorpay order for payment
+ * @param {string} orderId - Order ID
+ * @param {number} amount - Amount to pay
+ * @param {string} currency - Currency (default INR)
+ * @returns {Promise<Object>} Razorpay order details
+ */
+export const createRazorpayOrder = async (orderId, amount, currency = "INR") => {
+  try {
+    const response = await apiClient.post("/api/payment/razorpay/create-order", {
+      orderId,
+      amount,
+      currency,
+    });
+    return {
+      success: true,
+      data: response.data.data || response.data || {},
+    };
+  } catch (error) {
+    return handleError(error, "Failed to create payment order");
+  }
+};
+
+/**
+ * Verify Razorpay payment signature
+ * @param {Object} paymentData - { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId }
+ * @returns {Promise<Object>} Verification result
+ */
+export const verifyRazorpayPayment = async (paymentData) => {
+  try {
+    const response = await apiClient.post(
+      "/api/payment/razorpay/verify-payment",
+      paymentData,
+    );
+    return {
+      success: true,
+      data: response.data.data || response.data || {},
+    };
+  } catch (error) {
+    return handleError(error, "Payment verification failed");
+  }
+};
+
+/**
+ * Handle Razorpay payment failure
+ * @param {string} orderId - Order ID
+ * @param {Object} error - Error details
+ * @returns {Promise<Object>} Result
+ */
+export const handleRazorpayFailure = async (orderId, error) => {
+  try {
+    const response = await apiClient.post(
+      "/api/payment/razorpay/payment-failed",
+      {
+        orderId,
+        error,
+      },
+    );
+    return {
+      success: true,
+      data: response.data.data || response.data || {},
+    };
+  } catch (error) {
+    return handleError(error, "Failed to record payment failure");
   }
 };
 
@@ -871,7 +1160,28 @@ export default {
   // Invoices
   getInvoices,
   downloadInvoice,
+  // Offers
+  getOffers,
+  validateOfferCode,
+  // Suppliers
+  getNearbySuppliers,
+  // Chat
+  sendMessage,
+  getMessages,
+  getConversations,
+  markMessagesAsRead,
+  getSuppliersFromOrders,
+  // Alerts
+  createAlert,
+  getAlerts,
+  deleteAlert,
+  // Analytics
+  getCustomerAnalytics,
   // Reviews
   submitReview,
   getProductReviews,
+  // Razorpay
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+  handleRazorpayFailure,
 };

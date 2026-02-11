@@ -15,12 +15,14 @@ const {
   getMyViewHistory,
   createSupportRequest,
   getMySupportRequests,
+  getSuppliersFromOrders,
 } = require("../controllers/customerController");
 
 // Import customer dashboard and profile controller functions
 const {
   getCustomerDashboardData,
 } = require("../controllers/customerDashboardController");
+const { getCustomerAnalytics } = require("../controllers/analyticsController");
 const {
   getCustomerProfile,
   updateCustomerProfile,
@@ -55,6 +57,14 @@ router.get(
   authorizeRoles("customer"),
   getCustomerDashboardData
 ); // GET /api/customer/dashboard
+
+// Customer Analytics
+router.get(
+  "/analytics",
+  protect,
+  authorizeRoles("customer"),
+  getCustomerAnalytics
+);
 
 // Customer Profile Management
 router
@@ -140,5 +150,13 @@ router
   .route("/support-requests")
   .post(protect, authorizeRoles("customer"), createSupportRequest)
   .get(protect, authorizeRoles("customer"), getMySupportRequests);
+
+// Messaging - Get suppliers from past orders
+router.get(
+  "/suppliers-from-orders",
+  protect,
+  authorizeRoles("customer"),
+  getSuppliersFromOrders
+); // GET /api/customer/suppliers-from-orders
 
 module.exports = router;

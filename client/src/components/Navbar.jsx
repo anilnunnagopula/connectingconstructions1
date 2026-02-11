@@ -42,7 +42,7 @@ const Navbar = () => {
     } 
     if (userRole === "customer") return navigate("/customer-dashboard");
     if (userRole === "supplier") return navigate("/supplier-dashboard");
-    if (userRole === "admin") return navigate("/admin-dashboard");  
+    if (userRole === "admin") return navigate("/admin");  
     navigate("/");  
   }, [isLoggedIn, userRole, navigate]); // userRole is now a direct dependency
 

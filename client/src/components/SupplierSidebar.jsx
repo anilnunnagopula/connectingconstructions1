@@ -14,7 +14,8 @@ import {
   DollarSign,
   PlusCircle,
   FileText,
-  Tag
+  Tag,
+  MessageSquare
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -78,6 +79,12 @@ const SupplierSidebar = ({
       path: "/supplier/notifications",
       badge: notificationCount,
       badgeColor: "bg-blue-500",
+    },
+    {
+      icon: MessageSquare,
+      label: "Messages",
+      path: "/supplier/messages",
+      badge: null,
     },
     {
       icon: Settings,

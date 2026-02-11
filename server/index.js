@@ -24,6 +24,7 @@ const quoteRoutes = require("./routes/quotes");
 const notificationRoutes = require("./routes/notifications");
 const wishlistRoutes = require("./routes/wishlist");
 const reviewRoutes = require("./routes/reviews");
+const razorpayRoutes = require("./routes/razorpayRoutes");
 
 // Initialize app
 const app = express();
@@ -54,6 +55,16 @@ app.use("/api", generalRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/offers", require("./routes/offers"));
+app.use("/api/chat", require("./routes/chatRoutes"));
+app.use("/api/alerts", require("./routes/productAlertRoutes"));
+app.use("/api/offers", require("./routes/offers"));
+app.use("/api/chat", require("./routes/chatRoutes"));
+app.use("/api/alerts", require("./routes/productAlertRoutes"));
+app.use("/api/payment/razorpay", razorpayRoutes);
+app.use("/api/admin", require("./routes/adminRoutes")); 
+app.use("/api/complaints", require("./routes/complaintRoutes")); // ✨ NEW Complaint Routes
+
 // ===== HEALTH CHECK =====
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -67,7 +78,7 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "ConnectConstructions API v2.0",
+    message: "ConnectingConstructions API v2.0",
     environment: process.env.NODE_ENV || "development",
   });
 });

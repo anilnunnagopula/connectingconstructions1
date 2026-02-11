@@ -11,6 +11,7 @@ import {
   Plus,
   Minus,
   ArrowLeft,
+  Star,
 } from "lucide-react";
 import LoginPopup from "../components/LoginPopup";
 import { useCart } from "../context/CartContext";
@@ -31,7 +32,11 @@ const CategoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [wishlistItems, setWishlistItems] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
 
+  const PRODUCTS_PER_PAGE = 100; // Increased for civil engineering materials
   const decodedCategory = decodeURIComponent(category);
 
   console.log("🔍 CategoryPage Debug:");
@@ -73,12 +78,25 @@ const CategoryPage = () => {
           headers: { Authorization: `Bearer ${user.token}` },
         });
 
-        const productIds = response.data.data.items.map(
-          (item) => item.product._id,
+        // Handle different response formats
+        let wishlist = [];
+        if (response.data.data?.wishlist) {
+          wishlist = response.data.data.wishlist;
+        } else if (response.data.data?.items) {
+          wishlist = response.data.data.items;
+        } else if (Array.isArray(response.data.data)) {
+          wishlist = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          wishlist = response.data;
+        }
+
+        const productIds = wishlist.map(
+          (item) => item.product?._id || item.product || item._id,
         );
         setWishlistItems(productIds);
       } catch (error) {
         console.error("Load wishlist error:", error);
+        // Don't show error to user - wishlist is non-critical
       }
     };
 
@@ -104,7 +122,7 @@ const CategoryPage = () => {
 
     try {
       const response = await axios.get(
-        `${baseURL}/api/products?category=${encodeURIComponent(decodedCategory)}`,
+        `${baseURL}/api/products?category=${encodeURIComponent(decodedCategory)}&limit=${PRODUCTS_PER_PAGE}&page=${page}`,
       );
 
       console.log("✅ API Response received:");
@@ -112,6 +130,12 @@ const CategoryPage = () => {
       console.log("  Data Type:", typeof response.data);
       console.log("  Is Array:", Array.isArray(response.data));
       console.log("  Raw Data:", response.data);
+
+      // Extract pagination data if available
+      if (response.data.pagination) {
+        setTotalPages(response.data.pagination.totalPages || 1);
+        setTotalProducts(response.data.pagination.total || 0);
+      }
 
       // Handle different response formats
       let productsArray = [];
@@ -166,15 +190,15 @@ const CategoryPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [category, decodedCategory, user]);
+  }, [category, decodedCategory, user, page, PRODUCTS_PER_PAGE]);
 
   // Fetch products when user is available
   useEffect(() => {
-    console.log("🎯 Fetch trigger - User exists:", !!user);
+    console.log("🎯 Fetch trigger - User exists:", !!user, "Page:", page);
     if (user) {
       fetchProductsByCategory();
     }
-  }, [fetchProductsByCategory, user]);
+  }, [fetchProductsByCategory, user, page]);
 
   // Check if product is in cart
   const isProductInCart = useCallback(
@@ -319,7 +343,7 @@ const CategoryPage = () => {
       } else {
         // Add to wishlist
         await axios.post(
-          `${baseURL}/api/wishlist`,
+          `${baseURL}/api/wishlist/add`,
           { productId },
           {
             headers: { Authorization: `Bearer ${user.token}` },
@@ -443,7 +467,61 @@ const CategoryPage = () => {
               />
             ))}
           </div>
-        ) : (
+        ) : null}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition"
+            >
+              Previous
+            </button>
+
+            {[...Array(Math.min(5, totalPages))].map((_, idx) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = idx + 1;
+              } else if (page <= 3) {
+                pageNum = idx + 1;
+              } else if (page >= totalPages - 2) {
+                pageNum = totalPages - 4 + idx;
+              } else {
+                pageNum = page - 2 + idx;
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setPage(pageNum)}
+                  className={`px-4 py-2 rounded-lg transition ${
+                    page === pageNum
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition"
+            >
+              Next
+            </button>
+
+            <span className="ml-4 text-sm text-gray-600 dark:text-gray-400">
+              Page {page} of {totalPages} ({totalProducts} products)
+            </span>
+          </div>
+        )}
+
+        {filtered.length === 0 && !loading && (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🏗️</div>
             <p className="text-gray-500 dark:text-gray-400 text-xl">
@@ -584,6 +662,19 @@ const ProductCard = ({
             )}
           </p>
         </div>
+
+        {/* Rating Display */}
+        {product.averageRating > 0 && (
+          <div className="flex items-center gap-1 mb-2">
+            <Star size={16} className="fill-yellow-400 text-yellow-400" />
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              {product.averageRating.toFixed(1)}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              ({product.numReviews || 0} reviews)
+            </span>
+          </div>
+        )}
 
         {/* Description */}
         <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
