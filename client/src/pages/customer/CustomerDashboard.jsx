@@ -1,7 +1,7 @@
 // client/src/pages/customer/CustomerDashboard.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { toast } from "react-hot-toast";
 import {
   Package,
   ShoppingCart,
@@ -23,8 +23,14 @@ import {
 } from "lucide-react";
 import CustomerLayout from "../../layout/CustomerLayout";
 import StatCard from "../../components/StatCard";
-
-const baseURL = process.env.REACT_APP_API_URL;
+import DashboardSkeleton from "../../components/skeletons/DashboardSkeleton";
+import {
+  getDashboardData,
+  getOrders,
+  getQuotes,
+  getCart,
+  getWishlist,
+} from "../../services/customerApiService";
 
 // ===== FEATURE CARD COMPONENT =====
 const FeatureCard = ({ icon, title, description, color, badge, onClick }) => {
@@ -242,57 +248,55 @@ const CustomerDashboard = () => {
           return;
         }
 
-        const headers = { Authorization: `Bearer ${storedUser.token}` };
+        // Parallel fetch using API service
+        const [dashboardRes, ordersRes, quotesRes, cartRes, wishlistRes] =
+          await Promise.all([
+            getDashboardData(),
+            getOrders({ limit: 10 }),
+            getQuotes({ limit: 10 }),
+            getCart(),
+            getWishlist(),
+          ]);
 
-        // Parallel fetch: Dashboard, Orders, Quotes, Cart, Wishlist
-        const [dashboardRes, ordersRes, quotesRes, cartRes, wishlistRes] = await Promise.all([
-          axios.get(`${baseURL}/api/customer/dashboard`, { headers }).catch(err => ({ error: err })),
-          axios.get(`${baseURL}/api/orders?limit=10`, { headers }).catch(err => ({ error: err })),
-          axios.get(`${baseURL}/api/quotes/request?limit=10`, { headers }).catch(err => ({ error: err })),
-          axios.get(`${baseURL}/api/cart`, { headers }).catch(err => ({ error: err })),
-          axios.get(`${baseURL}/api/customer/wishlist`, { headers }).catch(err => ({ error: err }))
-        ]);
-        
-        // Handle dashboard response
+        // Initialize data object
         let data = {};
-        if (!dashboardRes.error) {
-            data = dashboardRes.data.data || dashboardRes.data || {};
+
+        // Handle dashboard response
+        if (dashboardRes.success) {
+          data = dashboardRes.data || {};
         }
 
         // Handle orders response
-        if (!ordersRes.error && ordersRes.data) {
-             const ordersData = ordersRes.data.data || {};
-             data.recentOrders = ordersData.orders || [];
-             data.totalOrders = ordersData.total || data.totalOrders || 0;
+        if (ordersRes.success) {
+          const ordersData = ordersRes.data || {};
+          data.recentOrders = ordersData.orders || [];
+          data.totalOrders = ordersData.total || data.totalOrders || 0;
         }
 
         // Handle quotes response
-        if (!quotesRes.error && quotesRes.data) {
-            const quotesData = quotesRes.data.data || quotesRes.data || {};
-            data.quoteRequests = quotesData.quoteRequests || [];
+        if (quotesRes.success) {
+          const quotesData = quotesRes.data || {};
+          data.quoteRequests = quotesData.quoteRequests || [];
         }
 
         // Handle cart response
-        if (!cartRes.error && cartRes.data) {
-           // CartContext: const { totalItems } = response.data.data;
-           const cartData = cartRes.data.data || {};
-           data.cartItemsCount = cartData.totalItems || 0;
+        if (cartRes.success) {
+          const cartData = cartRes.data || {};
+          data.cartItemsCount = cartData.totalItems || 0;
         }
 
         // Handle wishlist response
-        if (!wishlistRes.error && wishlistRes.data) {
-            // Wishlist returns { data: [items] }
-            const wishlistData = wishlistRes.data.data || wishlistRes.data || [];
-            data.wishlistItemsCount = Array.isArray(wishlistData) ? wishlistData.length : 0;
+        if (wishlistRes.success) {
+          const wishlistData = Array.isArray(wishlistRes.data)
+            ? wishlistRes.data
+            : [];
+          data.wishlistItemsCount = wishlistData.length;
         }
 
-        setDashboardData(prev => ({ ...prev, ...data }));
+        setDashboardData((prev) => ({ ...prev, ...data }));
       } catch (error) {
         console.error("Dashboard fetch error:", error);
-        if (error.response?.status === 401) {
-          localStorage.removeItem("user");
-          navigate("/login");
-        }
+        toast.error("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
@@ -305,14 +309,7 @@ const CustomerDashboard = () => {
   if (loading) {
     return (
       <CustomerLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">
-              Loading dashboard...
-            </p>
-          </div>
-        </div>
+        <DashboardSkeleton />
       </CustomerLayout>
     );
   }

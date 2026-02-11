@@ -158,11 +158,6 @@ const VoiceAssistantPopup = ({
             <li>"Suppliers for Labours"</li>
           </ul>
         </div>
-
-        <div className="text-left text-lg text-red-600 dark:text-red-400 pt-2 border-t border-gray-300 dark:border-gray-700">
-            <h3 >Note: This feature is still under Construction</h3>
-        </div>
-
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import CustomerLayout from "../../layout/CustomerLayout";
+import OrderTimeline from "../../components/OrderTimeline";
 
 const baseURL = process.env.REACT_APP_API_URL;
 
@@ -304,66 +305,9 @@ const OrderTracking = () => {
                     </div>
                   </div>
 
-                  {/* Progress Tracker */}
-                  <div className="relative mb-6">
-                    {/* Progress Line */}
-                    <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700">
-                      <div
-                        className="h-full bg-blue-600 transition-all duration-500"
-                        style={{
-                          width: `${
-                            (currentIndex / (stages.length - 1)) * 100
-                          }%`,
-                        }}
-                      />
-                    </div>
-
-                    {/* Stage Indicators */}
-                    <div className="relative flex justify-between">
-                      {stages.map((stage, index) => {
-                        const isComplete = index <= currentIndex;
-                        const isCurrent = index === currentIndex;
-
-                        return (
-                          <div
-                            key={stage.key}
-                            className="flex flex-col items-center"
-                          >
-                            <div
-                              className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all ${
-                                isComplete
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-gray-200 dark:bg-gray-700 text-gray-400"
-                              } ${
-                                isCurrent
-                                  ? "ring-4 ring-blue-200 dark:ring-blue-900"
-                                  : ""
-                              }`}
-                            >
-                              {isComplete ? (
-                                <CheckCircle size={20} />
-                              ) : (
-                                <Clock size={20} />
-                              )}
-                            </div>
-                            <p
-                              className={`text-xs font-medium text-center ${
-                                isComplete
-                                  ? "text-gray-900 dark:text-white"
-                                  : "text-gray-400"
-                              }`}
-                            >
-                              {stage.label}
-                            </p>
-                            {stage.date && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {new Date(stage.date).toLocaleDateString()}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                  {/* Enhanced Timeline */}
+                  <div className="mb-6">
+                    <OrderTimeline order={order} variant="horizontal" />
                   </div>
 
                   {/* Tracking Info */}

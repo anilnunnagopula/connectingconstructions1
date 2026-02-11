@@ -130,7 +130,13 @@ export const parseVoiceCommand = (transcript, currentPath, context = {}) => {
     "my products": "/supplier/myproducts",
     "add product": "/supplier/add-product",
     "dashboard": "/supplier-dashboard",
-    "my dashboard": "/supplier-dashboard"
+    "my dashboard": "/supplier-dashboard",
+    "analytics": "/supplier/analytics",
+    "my analytics": "/supplier/analytics",
+    "payments": "/supplier/payments",
+    "my payments": "/supplier/payments",
+    // "orders" is ambiguous (customer vs supplier), handled in VoiceCommand.jsx via redirection
+    "supplier orders": "/supplier/orders"
   };
 
   // Check for navigation phrases: "go to X", "open X", "show me X", "navigate to X"

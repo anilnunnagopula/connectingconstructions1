@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import LoginPopup from "../components/LoginPopup";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 const baseURL = process.env.REACT_APP_API_URL;
 
@@ -21,13 +22,14 @@ const CategoryPage = () => {
   const { category } = useParams();
   const navigate = useNavigate();
   const { addToCart, cartItems } = useCart();
+  const { user, isAuthenticated, isAuthLoading } = useAuth();
+  
   const [sortBy, setSortBy] = useState("none");
   const [showPopup, setShowPopup] = useState(false);
   const [products, setProducts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
   const [wishlistItems, setWishlistItems] = useState([]);
 
   const decodedCategory = decodeURIComponent(category);
@@ -35,50 +37,36 @@ const CategoryPage = () => {
   console.log("🔍 CategoryPage Debug:");
   console.log("  Category:", decodedCategory);
   console.log("  User:", user);
-  console.log("  Show Popup:", showPopup);
-  console.log("  Products Count:", products.length);
-  console.log("  Loading:", loading);
-
-  // Load user from localStorage
+  
+  // Redirect customers to the customer layout route
   useEffect(() => {
-    console.log("📦 Loading user from localStorage...");
-    try {
-      const storedUser = localStorage.getItem("user");
-      console.log("  Stored User (raw):", storedUser);
-
-      if (storedUser && storedUser !== "undefined") {
-        const parsed = JSON.parse(storedUser);
-        console.log("  Parsed User:", parsed);
-        setUser(parsed);
-      } else {
-        console.log("  ❌ No valid user found");
-        setUser(null);
-      }
-    } catch (error) {
-      console.error("❌ Error parsing user:", error);
-      setUser(null);
+    if (user?.role === "customer" && !window.location.pathname.startsWith("/customer")) {
+      console.log("🔄 Redirecting customer to protected route");
+      navigate(`/customer/category/${encodeURIComponent(decodedCategory)}`);
     }
-  }, []);
+  }, [user, navigate, decodedCategory]);
 
-  // Show popup immediately if not logged in
+  // Show popup only if not logged in and not loading auth
   useEffect(() => {
     console.log("🔐 Checking login status...");
-    if (!user) {
-      console.log("  ❌ No user - showing login popup");
-      setShowPopup(true);
-      setLoading(false);
-      setProducts([]);
-      setFiltered([]);
-    } else {
-      console.log("  ✅ User logged in:", user.role);
-      setShowPopup(false);
+    if (!isAuthLoading) {
+      if (!user) {
+        console.log("  ❌ No user - showing login popup");
+        setShowPopup(true);
+        setLoading(false);
+        setProducts([]);
+        setFiltered([]);
+      } else {
+        console.log("  ✅ User logged in:", user.role);
+        setShowPopup(false);
+      }
     }
-  }, [user]);
+  }, [user, isAuthLoading]);
+
   // Load wishlist
   useEffect(() => {
     const loadWishlist = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
         if (!user?.token || user.role !== "customer") return;
 
         const response = await axios.get(`${baseURL}/api/wishlist`, {
@@ -108,7 +96,7 @@ const CategoryPage = () => {
     console.log("🔄 Fetching products...");
     console.log(
       "  API URL:",
-      `${baseURL}/api/products?category=${encodeURIComponent(category)}`,
+      `${baseURL}/api/products?category=${encodeURIComponent(decodedCategory)}`,
     );
 
     setLoading(true);
@@ -116,7 +104,7 @@ const CategoryPage = () => {
 
     try {
       const response = await axios.get(
-        `${baseURL}/api/products?category=${encodeURIComponent(category)}`,
+        `${baseURL}/api/products?category=${encodeURIComponent(decodedCategory)}`,
       );
 
       console.log("✅ API Response received:");

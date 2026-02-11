@@ -5,6 +5,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Plus, Trash2, MapPin, Calendar, Send, ArrowLeft } from "lucide-react";
 import CustomerLayout from "../../layout/CustomerLayout";
+import SupplierSelector from "../../components/SupplierSelector";
 
 const baseURL = process.env.REACT_APP_API_URL;
 
@@ -35,6 +36,7 @@ const RequestQuote = () => {
   const [requiredBy, setRequiredBy] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [broadcastToAll, setBroadcastToAll] = useState(true);
+  const [selectedSuppliers, setSelectedSuppliers] = useState([]);
 
   // Product types
   const productTypes = [
@@ -125,6 +127,12 @@ const RequestQuote = () => {
       return;
     }
 
+    // Validate supplier selection if not broadcasting to all
+    if (!broadcastToAll && selectedSuppliers.length === 0) {
+      toast.error("Please select at least one supplier");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -148,15 +156,23 @@ const RequestQuote = () => {
         return cleaned;
       });
 
+      // Prepare request payload
+      const payload = {
+        items: cleanedItems, // ✅ Use cleaned items
+        deliveryLocation,
+        requiredBy,
+        additionalNotes,
+        broadcastToAll,
+      };
+
+      // Include targetSuppliers if not broadcasting to all
+      if (!broadcastToAll && selectedSuppliers.length > 0) {
+        payload.targetSuppliers = selectedSuppliers;
+      }
+
       const response = await axios.post(
         `${baseURL}/api/quotes/request`,
-        {
-          items: cleanedItems, // ✅ Use cleaned items
-          deliveryLocation,
-          requiredBy,
-          additionalNotes,
-          broadcastToAll,
-        },
+        payload,
         {
           headers: { Authorization: `Bearer ${user.token}` },
         },
@@ -494,11 +510,10 @@ const RequestQuote = () => {
             </label>
 
             {!broadcastToAll && (
-              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Feature coming soon: Select specific suppliers
-                </p>
-              </div>
+              <SupplierSelector
+                selectedSuppliers={selectedSuppliers}
+                onSelectSuppliers={setSelectedSuppliers}
+              />
             )}
           </div>
 

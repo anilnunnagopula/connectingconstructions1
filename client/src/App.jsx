@@ -83,6 +83,12 @@ import QuoteDetails from "./pages/customer/QuoteDetails";
 import OrderDetails from "./pages/customer/OrderDetails";
 import WriteReview from "./pages/customer/WriteReview";
 import Wishlist from "./pages/customer/Wishlist";
+import AddressManagement from "./pages/customer/AddressManagement";
+import QuickReorder from "./pages/customer/QuickReorder";
+import Invoices from "./pages/customer/Invoices";
+import PaymentMethods from "./pages/customer/PaymentMethods";
+
+import ErrorBoundary from "./components/ErrorBoundary";
 
 import QuoteRequests from "./pages/supplier/QuoteRequests";
 import RespondToQuote from "./pages/supplier/RespondToQuote";
@@ -131,6 +137,11 @@ import UserConsentForSmartFeatures from "./pages/legal/UserConsentForSmartFeatur
 import SubscriptionPlans from "./pages/legal/SubscriptionPolicy.jsx";
 import CommissionModelOverview from "./pages/legal/CommissionModelOverview";
 import AdPlacementFeaturedListings from "./pages/legal/AdPlacementFeaturedListings";
+// import LegalInquiries from "./pages/legal/LegalInquiries";
+
+// AI Components
+import VoiceCommand from "./ai/VoiceCommand";
+
 import AffiliateRevenueProgram from "./pages/legal/AffiliateRevenueProgram";
 // Import context providers
 import { DarkModeProvider } from "./context/DarkModeContext";
@@ -161,11 +172,13 @@ function App() {
                     <div className="flex flex-col min-h-screen">
                       <Navbar />
                       <ScrollToTop />
+                      <Chatbot />
 
                       <div className="flex-grow">
-                      <Routes>
-                        {/* Public Routes */}
-                        <Route path="/" element={<Home />} />
+                      <ErrorBoundary>
+                        <Routes>
+                          {/* Public Routes */}
+                          <Route path="/" element={<Home />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
                         <Route
@@ -237,6 +250,42 @@ function App() {
                           element={
                             <ProtectedRoute allowedRole="customer">
                               <Wishlist />
+                            </ProtectedRoute>
+                          }
+                        />
+                        {/* Address Management */}
+                        <Route
+                          path="/customer/addresses"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <AddressManagement />
+                            </ProtectedRoute>
+                          }
+                        />
+                        {/* Quick Reorder */}
+                        <Route
+                          path="/customer/reorder"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <QuickReorder />
+                            </ProtectedRoute>
+                          }
+                        />
+                        {/* Invoices */}
+                        <Route
+                          path="/customer/invoices"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <Invoices />
+                            </ProtectedRoute>
+                          }
+                        />
+                        {/* Payment Methods */}
+                        <Route
+                          path="/customer/payment-methods"
+                          element={
+                            <ProtectedRoute allowedRole="customer">
+                              <PaymentMethods />
                             </ProtectedRoute>
                           }
                         />
@@ -662,6 +711,7 @@ function App() {
                         {/* Fallback */}
                         <Route path="*" element={<NotFound />} />
                       </Routes>
+                      </ErrorBoundary>
                     </div>
 
                       <Footer />

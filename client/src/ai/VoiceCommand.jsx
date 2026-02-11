@@ -87,6 +87,11 @@ const VoiceCommand = () => {
                         navigate("/supplier/settings");
                         return;
                     }
+                    // Redirect "orders" to supplier orders
+                    if (route.includes("orders")) {
+                        navigate("/supplier/orders");
+                        return;
+                    }
                 }
 
                 if (user?.role !== "customer") {

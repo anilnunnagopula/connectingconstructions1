@@ -2,22 +2,17 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
-import axios from "axios";
 import { toast } from "react-hot-toast";
 import {
   ShoppingBag,
-  MapPin,
   Calendar,
   CreditCard,
   CheckCircle,
   ArrowLeft,
-  Plus,
-  Edit2,
-  Trash2,
 } from "lucide-react";
 import CustomerLayout from "../../layout/CustomerLayout";
-
-const baseURL = process.env.REACT_APP_API_URL;
+import AddressSelector from "../../components/AddressSelector";
+import { createOrder } from "../../services/customerApiService";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -26,20 +21,8 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1); // 1: Address, 2: Delivery, 3: Payment, 4: Review
 
-  // Address state
-  const [addresses, setAddresses] = useState([]);
+  // Address state (managed by AddressSelector component)
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [newAddress, setNewAddress] = useState({
-    fullName: "",
-    phone: "",
-    addressLine1: "",
-    addressLine2: "",
-    city: "",
-    state: "",
-    pincode: "",
-    landmark: "",
-  });
 
   // Delivery slot state
   const [deliverySlot, setDeliverySlot] = useState({
@@ -74,81 +57,16 @@ const Checkout = () => {
     return tomorrow.toISOString().split("T")[0];
   };
 
-  // Load user's saved addresses
-  useEffect(() => {
-    loadAddresses();
-  }, []);
-
-  const loadAddresses = async () => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user?.token) return;
-
-      // TODO: Fetch from backend
-      // For now, load from localStorage
-      const saved = localStorage.getItem("userAddresses");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setAddresses(parsed);
-        if (parsed.length > 0) {
-          setSelectedAddress(parsed[0]);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading addresses:", error);
-    }
+  // Handle address selection from AddressSelector component
+  const handleSelectAddress = (address) => {
+    setSelectedAddress(address);
   };
 
-  // Add new address
-  const handleAddAddress = () => {
-    if (
-      !newAddress.fullName ||
-      !newAddress.phone ||
-      !newAddress.addressLine1 ||
-      !newAddress.city ||
-      !newAddress.state ||
-      !newAddress.pincode
-    ) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-
-    const addressWithId = {
-      ...newAddress,
-      id: Date.now().toString(),
-    };
-
-    const updated = [...addresses, addressWithId];
-    setAddresses(updated);
-    setSelectedAddress(addressWithId);
-    localStorage.setItem("userAddresses", JSON.stringify(updated));
-
-    // Reset form
-    setNewAddress({
-      fullName: "",
-      phone: "",
-      addressLine1: "",
-      addressLine2: "",
-      city: "",
-      state: "",
-      pincode: "",
-      landmark: "",
-    });
-    setShowAddressForm(false);
-    toast.success("Address added!");
-  };
-
-  // Delete address
-  const handleDeleteAddress = (addressId) => {
-    const updated = addresses.filter((addr) => addr.id !== addressId);
-    setAddresses(updated);
-    localStorage.setItem("userAddresses", JSON.stringify(updated));
-
-    if (selectedAddress?.id === addressId) {
-      setSelectedAddress(updated[0] || null);
-    }
-
-    toast.success("Address deleted");
+  // Handle "Add New Address" - navigate to address management page
+  const handleAddNewAddress = () => {
+    // Save current checkout state to return later
+    sessionStorage.setItem("checkoutReturnPath", "/customer/checkout");
+    navigate("/customer/addresses");
   };
 
   // Validate and move to next step
@@ -189,8 +107,6 @@ const Checkout = () => {
     setLoading(true);
 
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-
       const orderData = {
         deliveryAddress: selectedAddress,
         deliverySlot: {
@@ -203,25 +119,22 @@ const Checkout = () => {
 
       console.log("📦 Placing order:", orderData);
 
-      const response = await axios.post(
-        `${baseURL}/api/orders/create`,
-        orderData,
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-        },
-      );
+      const response = await createOrder(orderData);
 
-      console.log("✅ Order placed:", response.data);
+      if (response.success) {
+        console.log("✅ Order placed:", response.data);
+        toast.success("Order placed successfully!");
 
-      toast.success("Order placed successfully!");
-
-      // Navigate to order success page
-      navigate(`/customer/order-success/${response.data.data.orderId}`, {
-        state: { orderData: response.data.data },
-      });
+        // Navigate to order success page
+        navigate(`/customer/order-success/${response.data.orderId}`, {
+          state: { orderData: response.data },
+        });
+      } else {
+        throw new Error(response.error);
+      }
     } catch (error) {
       console.error("❌ Order error:", error);
-      const errorMsg = error.response?.data?.message || "Failed to place order";
+      const errorMsg = error.message || "Failed to place order";
       toast.error(errorMsg);
     } finally {
       setLoading(false);
@@ -330,172 +243,12 @@ const Checkout = () => {
                   Delivery Address
                 </h2>
 
-                {/* Saved Addresses */}
-                <div className="space-y-3 mb-4">
-                  {addresses.map((addr) => (
-                    <div
-                      key={addr.id}
-                      onClick={() => setSelectedAddress(addr)}
-                      className={`border-2 rounded-xl p-4 cursor-pointer transition ${
-                        selectedAddress?.id === addr.id
-                          ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
-                          : "border-gray-200 dark:border-gray-700 hover:border-blue-300"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900 dark:text-white">
-                            {addr.fullName}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {addr.addressLine1}, {addr.addressLine2}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {addr.city}, {addr.state} - {addr.pincode}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Phone: {addr.phone}
-                          </p>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteAddress(addr.id);
-                          }}
-                          className="text-red-600 hover:text-red-700 p-2"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Add New Address */}
-                {!showAddressForm ? (
-                  <button
-                    onClick={() => setShowAddressForm(true)}
-                    className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 text-blue-600 hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition flex items-center justify-center gap-2"
-                  >
-                    <Plus size={20} />
-                    Add New Address
-                  </button>
-                ) : (
-                  <div className="border-2 border-blue-600 rounded-xl p-4 bg-blue-50 dark:bg-blue-900/20">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-                      Add New Address
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        placeholder="Full Name *"
-                        value={newAddress.fullName}
-                        onChange={(e) =>
-                          setNewAddress({
-                            ...newAddress,
-                            fullName: e.target.value,
-                          })
-                        }
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                      <input
-                        type="tel"
-                        placeholder="Phone Number *"
-                        value={newAddress.phone}
-                        onChange={(e) =>
-                          setNewAddress({
-                            ...newAddress,
-                            phone: e.target.value,
-                          })
-                        }
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Address Line 1 *"
-                        value={newAddress.addressLine1}
-                        onChange={(e) =>
-                          setNewAddress({
-                            ...newAddress,
-                            addressLine1: e.target.value,
-                          })
-                        }
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white md:col-span-2"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Address Line 2"
-                        value={newAddress.addressLine2}
-                        onChange={(e) =>
-                          setNewAddress({
-                            ...newAddress,
-                            addressLine2: e.target.value,
-                          })
-                        }
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white md:col-span-2"
-                      />
-                      <input
-                        type="text"
-                        placeholder="City *"
-                        value={newAddress.city}
-                        onChange={(e) =>
-                          setNewAddress({ ...newAddress, city: e.target.value })
-                        }
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                      <input
-                        type="text"
-                        placeholder="State *"
-                        value={newAddress.state}
-                        onChange={(e) =>
-                          setNewAddress({
-                            ...newAddress,
-                            state: e.target.value,
-                          })
-                        }
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Pincode *"
-                        value={newAddress.pincode}
-                        onChange={(e) =>
-                          setNewAddress({
-                            ...newAddress,
-                            pincode: e.target.value,
-                          })
-                        }
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Landmark"
-                        value={newAddress.landmark}
-                        onChange={(e) =>
-                          setNewAddress({
-                            ...newAddress,
-                            landmark: e.target.value,
-                          })
-                        }
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    <div className="flex gap-2 mt-4">
-                      <button
-                        onClick={handleAddAddress}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition"
-                      >
-                        Save Address
-                      </button>
-                      <button
-                        onClick={() => setShowAddressForm(false)}
-                        className="px-6 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white py-2 rounded-lg font-medium transition"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <AddressSelector
+                  selectedAddress={selectedAddress}
+                  onSelectAddress={handleSelectAddress}
+                  onAddNewAddress={handleAddNewAddress}
+                  showAddButton={true}
+                />
               </div>
             )}
 

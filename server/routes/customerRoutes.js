@@ -28,7 +28,23 @@ const {
   addPaymentMethod,
   updatePaymentMethod,
   deletePaymentMethod,
-} = require("../controllers/customerProfileController"); // NEW: Import profile controller
+} = require("../controllers/customerProfileController");
+
+// Import customer address controller functions
+const {
+  getAddresses,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
+} = require("../controllers/customerAddressController");
+
+// Import invoice controller functions
+const {
+  getInvoices,
+  downloadInvoice,
+  previewInvoice,
+} = require("../controllers/invoiceController");
 
 // --- Customer-specific Protected Routes (Require authentication and 'customer' role) ---
 
@@ -56,6 +72,41 @@ router
   .route("/payment-methods/:id")
   .put(protect, authorizeRoles("customer"), updatePaymentMethod) // PUT /api/customer/payment-methods/:id (e.g., set default)
   .delete(protect, authorizeRoles("customer"), deletePaymentMethod); // DELETE /api/customer/payment-methods/:id
+
+// Customer Address Management
+router
+  .route("/addresses")
+  .get(protect, authorizeRoles("customer"), getAddresses) // GET /api/customer/addresses
+  .post(protect, authorizeRoles("customer"), createAddress); // POST /api/customer/addresses
+
+router
+  .route("/addresses/:id")
+  .put(protect, authorizeRoles("customer"), updateAddress) // PUT /api/customer/addresses/:id
+  .delete(protect, authorizeRoles("customer"), deleteAddress); // DELETE /api/customer/addresses/:id
+
+router.put(
+  "/addresses/:id/default",
+  protect,
+  authorizeRoles("customer"),
+  setDefaultAddress
+); // PUT /api/customer/addresses/:id/default
+
+// Invoice Management
+router.get("/invoices", protect, authorizeRoles("customer"), getInvoices); // GET /api/customer/invoices
+
+router.get(
+  "/invoices/:orderId/download",
+  protect,
+  authorizeRoles("customer"),
+  downloadInvoice
+); // GET /api/customer/invoices/:orderId/download
+
+router.get(
+  "/invoices/:orderId/preview",
+  protect,
+  authorizeRoles("customer"),
+  previewInvoice
+); // GET /api/customer/invoices/:orderId/preview
 
 // Order Management
 router
