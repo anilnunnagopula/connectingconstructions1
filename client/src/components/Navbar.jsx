@@ -92,7 +92,7 @@ const Navbar = () => {
           <div className="flex-shrink-0 flex items-center">
             <button
               onClick={navigateToRoleDashboard}
-              className="px-2 py-1 -ml-2 text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent hover:opacity-90 transition-opacity"
+              className="px-2 py-1 -ml-2 text-xl md:text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent hover:opacity-90 transition-opacity"
             >
               ConnectingConstructions
             </button>
@@ -324,7 +324,7 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center gap-4">
+          <div className="flex md:hidden items-center gap-2">
             <VoiceCommand />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

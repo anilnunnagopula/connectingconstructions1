@@ -11,7 +11,7 @@ const Materials = () => {
   );
 
   return (
-    <div className="pt-4 pb-10 px-6 min-h-screen bg-gray-100 dark:bg-gray-900 transition-all duration-300">
+    <div className="pt-4 pb-10 px-4 md:px-6 min-h-screen bg-gray-100 dark:bg-gray-900 transition-all duration-300">
       <h2 className="text-xl md:text-3xl font-extrabold text-center mb-6 text-gray-800 dark:text-white tracking-wide">
         🏗️ Explore Construction Categories
       </h2>
@@ -26,7 +26,7 @@ const Materials = () => {
           placeholder="Search materials..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-12 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+          className="w-full pl-10 pr-12 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
         />
         {searchTerm && (
           <button
@@ -40,7 +40,7 @@ const Materials = () => {
 
       {/* 📦 Material Cards */}
       {filteredCategories.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
           {filteredCategories.map((item, idx) => {
             const linkPath =
               user?.role === "customer"
