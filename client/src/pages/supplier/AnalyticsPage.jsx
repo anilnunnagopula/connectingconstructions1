@@ -1,288 +1,506 @@
 // pages/supplier/AnalyticsPage.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
+} from "recharts";
+import {
+  TrendingUp,
+  ShoppingBag,
+  DollarSign,
+  Package,
+  Users,
+  RefreshCw,
+  ArrowUpRight,
+  ArrowDownRight,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 import SupplierLayout from "../../layout/SupplierLayout";
-// You might import chart components here later, e.g., import { Bar, Line } from 'react-chartjs-2';
-// And icons for stats: import { TrendingUp, ShoppingBag, Users, Star } from 'lucide-react';
-// If you want to use the SalesChart component for salesOverTime, import it:
-// import SalesChart from "../../components/SalesChart"; // Assuming it expects `labels` and `data` props
+import { fetchSalesAnalytics, fetchEnhancedDashboardData } from "../../services/dashboardService";
 
 const AnalyticsPage = () => {
   const navigate = useNavigate();
-  const [analyticsData, setAnalyticsData] = useState(null); // This will hold all fetched analytics
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("");
+  const [period, setPeriod] = useState(30);
 
-  // Helper to get token
-  const getToken = useCallback(() => {
-    try {
-      const storedUser = localStorage.getItem("user");
-      return storedUser ? JSON.parse(storedUser).token : null;
-    } catch (err) {
-      console.error("Error parsing user from localStorage:", err);
-      return null;
-    }
-  }, []);
-
-  // Fetch Analytics Data dynamically
-  const fetchAnalytics = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    setMessage("");
-    setMessageType("");
-    const token = getToken();
-
-    if (!token) {
-      setMessage("Authentication required. Please log in.");
-      setMessageType("error");
-      setLoading(false);
-      navigate("/login");
-      return;
-    }
-
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/supplier/analytics`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
+      const [analyticsRes, dashRes] = await Promise.all([
+        fetchSalesAnalytics(),
+        fetchEnhancedDashboardData(period),
+      ]);
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || data.error || "Failed to fetch analytics."
-        );
+      if (analyticsRes.success) {
+        setAnalyticsData(analyticsRes.data);
+      }
+      if (dashRes.success) {
+        setDashboardData(dashRes.data);
       }
 
-      setAnalyticsData(data); // Set the dynamically fetched data
-      setMessage("Analytics loaded successfully.");
-      setMessageType("success");
+      if (!analyticsRes.success && !dashRes.success) {
+        toast.error("Failed to load analytics data");
+      }
     } catch (err) {
       console.error("Error fetching analytics:", err);
-      setMessage(err.message || "Error loading analytics data.");
-      setMessageType("error");
+      toast.error("Error loading analytics");
     } finally {
       setLoading(false);
     }
-  }, [navigate, getToken]);
+  }, [period]);
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
+    loadData();
+  }, [loadData]);
 
-  // Handle message timeout
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => {
-        setMessage("");
-        setMessageType("");
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
+  // Skeleton card for loading state
+  const SkeletonCard = () => (
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 animate-pulse">
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-3"></div>
+      <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2"></div>
+      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+    </div>
+  );
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-        <p className="ml-4 text-lg text-gray-700 dark:text-gray-300">
-          Loading analytics...
-        </p>
-      </div>
+      <SupplierLayout>
+        <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse"></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 animate-pulse h-80"></div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 animate-pulse h-80"></div>
+          </div>
+        </div>
+      </SupplierLayout>
     );
   }
 
-  if (!analyticsData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4 transition-colors duration-300">
-        <div className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 p-8 rounded-lg shadow-xl text-center border border-red-200 dark:border-red-700">
-          <p className="font-bold text-2xl mb-4">No Analytics Data Available</p>
-          <p className="text-lg mb-6">
-            There was an issue loading your analytics or no data exists yet.
+  const stats = dashboardData?.stats || {};
+  const charts = dashboardData?.charts || {};
+  const salesChart = charts.salesChart || { labels: [], earnings: [], orders: [] };
+
+  // Format sales chart data for recharts
+  const salesChartData = salesChart.labels.map((label, i) => ({
+    day: label,
+    earnings: salesChart.earnings[i] || 0,
+    orders: salesChart.orders[i] || 0,
+  }));
+
+  // Top products from analytics
+  const topProducts = analyticsData?.topProducts || [];
+
+  // Category distribution from top products
+  const categoryMap = {};
+  topProducts.forEach((p) => {
+    const cat = p.name || "Unknown";
+    categoryMap[cat] = (categoryMap[cat] || 0) + (p.sales || p.quantity || 0);
+  });
+
+  // Order status distribution
+  const orderDist = dashboardData?.orderStatusDistribution || {};
+  const orderStatusData = [
+    { name: "Pending", value: orderDist.pending || 0, color: "#f59e0b" },
+    { name: "Confirmed", value: orderDist.confirmed || 0, color: "#3b82f6" },
+    { name: "Processing", value: orderDist.processing || 0, color: "#8b5cf6" },
+    { name: "Shipped", value: orderDist.shipped || 0, color: "#06b6d4" },
+    { name: "Delivered", value: orderDist.delivered || 0, color: "#10b981" },
+    { name: "Cancelled", value: orderDist.cancelled || 0, color: "#ef4444" },
+  ].filter((item) => item.value > 0);
+
+  const totalOrders = analyticsData?.totalOrders || stats.totalOrders || 0;
+  const totalSales = analyticsData?.totalSales || stats.totalEarnings || 0;
+  const avgOrderValue = analyticsData?.averageOrderValue || (totalOrders > 0 ? totalSales / totalOrders : 0);
+  const totalProductsSold = analyticsData?.totalProductsSold || 0;
+
+  // Period options
+  const periods = [
+    { label: "7 Days", value: 7 },
+    { label: "30 Days", value: 30 },
+    { label: "90 Days", value: 90 },
+  ];
+
+  // Custom tooltip for charts
+  const SalesTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+            {payload[0].payload.day}
           </p>
-          <button
-            onClick={fetchAnalytics}
-            className="mt-6 bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-semibold shadow-md text-lg focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50"
-          >
-            🔄 Try Again
-          </button>
+          <p className="text-sm text-blue-600">
+            Revenue: {"\u20B9"}{payload[0].value?.toLocaleString("en-IN")}
+          </p>
+          {payload[1] && (
+            <p className="text-sm text-purple-600">
+              Orders: {payload[1].value}
+            </p>
+          )}
         </div>
-      </div>
-    );
-  }
+      );
+    }
+    return null;
+  };
+
+  const StatusTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const total = orderStatusData.reduce((s, i) => s + i.value, 0);
+      const pct = total > 0 ? ((payload[0].value / total) * 100).toFixed(1) : 0;
+      return (
+        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
+          <p className="font-semibold text-gray-900 dark:text-white">{payload[0].name}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {payload[0].value} orders ({pct}%)
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <SupplierLayout>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans p-6">
-        <div className="max-w-7xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-10">
-          <h2 className="text-3xl font-bold mb-8 text-center text-gray-900 dark:text-white">
-            📊 Your Performance Analytics
-          </h2>
-
-          {message && (
-            <div
-              className={`mb-6 p-4 rounded-lg text-center font-medium shadow-md ${
-                messageType === "success"
-                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
-                  : messageType === "error"
-                  ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
-                  : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-              } transition-colors duration-300`}
-            >
-              {message}
-            </div>
-          )}
-
-          {/* Key Metrics Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <div className="bg-blue-50 dark:bg-blue-900 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-              <span className="text-4xl font-bold text-blue-800 dark:text-blue-200">
-                ₹{analyticsData.totalSales.toLocaleString("en-IN")}
-              </span>
-              <p className="text-lg text-blue-700 dark:text-blue-300">
-                Total Sales
-              </p>
-            </div>
-            <div className="bg-green-50 dark:bg-green-900 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-              <span className="text-4xl font-bold text-green-800 dark:text-green-200">
-                {analyticsData.totalOrders.toLocaleString()}
-              </span>
-              <p className="text-lg text-green-700 dark:text-green-300">
-                Total Orders
-              </p>
-            </div>
-            <div className="bg-purple-50 dark:bg-purple-900 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-              <span className="text-4xl font-bold text-purple-800 dark:text-purple-200">
-                ₹{analyticsData.averageOrderValue.toFixed(2)}
-              </span>
-              <p className="text-lg text-purple-700 dark:text-purple-300">
-                Avg. Order Value
-              </p>
-            </div>
-            <div className="bg-yellow-50 dark:bg-yellow-900 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-              <span className="text-4xl font-bold text-yellow-800 dark:text-yellow-200">
-                {analyticsData.conversionRate}%
-              </span>
-              <p className="text-lg text-yellow-700 dark:text-yellow-300">
-                Conversion Rate
-              </p>
-            </div>
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+              Performance Analytics
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Track your sales, orders, and product performance
+            </p>
           </div>
+          <div className="flex items-center gap-3">
+            {/* Period Selector */}
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              {periods.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setPeriod(p.value)}
+                  className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition ${
+                    period === p.value
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={loadData}
+              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+            >
+              <RefreshCw size={18} className="text-gray-600 dark:text-gray-400" />
+            </button>
+          </div>
+        </div>
 
-          {/* Sales Trend Chart (Can replace with a real chart component) */}
-          <div className="bg-gray-100 dark:bg-gray-700 p-6 rounded-lg shadow-md mb-10">
-            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-              Sales Trend (Last 7 Days)
-            </h3>
-            {/* Here you would integrate a real chart library like Chart.js or Recharts */}
-            {analyticsData.salesOverTime &&
-            analyticsData.salesOverTime.labels &&
-            analyticsData.salesOverTime.data ? (
-              <div className="h-64 flex items-center justify-center">
-                {/* Example of how you might pass data to a custom SalesChart component: */}
-                {/* <SalesChart labels={analyticsData.salesOverTime.labels} data={analyticsData.salesOverTime.data} /> */}
-                <pre className="text-xs p-2 bg-gray-200 dark:bg-gray-600 rounded text-gray-700 dark:text-gray-300">
-                  Chart Data Preview:
-                  {JSON.stringify(analyticsData.salesOverTime, null, 2)}
-                </pre>
-              </div>
+        {/* Key Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard
+            title="Total Sales"
+            value={`\u20B9${totalSales.toLocaleString("en-IN")}`}
+            icon={<DollarSign size={22} />}
+            color="blue"
+            trend={stats.earningsTrend}
+          />
+          <MetricCard
+            title="Total Orders"
+            value={totalOrders.toLocaleString()}
+            icon={<ShoppingBag size={22} />}
+            color="green"
+            trend={stats.ordersTrend}
+          />
+          <MetricCard
+            title="Avg. Order Value"
+            value={`\u20B9${avgOrderValue.toFixed(0).toLocaleString()}`}
+            icon={<TrendingUp size={22} />}
+            color="purple"
+          />
+          <MetricCard
+            title="Products Sold"
+            value={totalProductsSold.toLocaleString()}
+            icon={<Package size={22} />}
+            color="amber"
+          />
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Sales Trend - Takes 2 columns */}
+          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <TrendingUp className="text-blue-600" size={20} />
+              Sales Trend ({period} Days)
+            </h2>
+            {salesChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={salesChartData}>
+                  <defs>
+                    <linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="day" stroke="#6b7280" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    yAxisId="left"
+                    stroke="#6b7280"
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(v) => `\u20B9${(v / 1000).toFixed(0)}k`}
+                  />
+                  <YAxis yAxisId="right" orientation="right" stroke="#6b7280" tick={{ fontSize: 11 }} />
+                  <Tooltip content={<SalesTooltip />} />
+                  <Area yAxisId="left" type="monotone" dataKey="earnings" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorEarnings)" name="Revenue" />
+                  <Area yAxisId="right" type="monotone" dataKey="orders" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorOrders)" name="Orders" />
+                </AreaChart>
+              </ResponsiveContainer>
             ) : (
-              <p className="text-gray-500 dark:text-gray-400">
-                No sales trend data available.
-              </p>
+              <div className="h-[300px] flex items-center justify-center text-gray-400">
+                No sales data for this period
+              </div>
             )}
           </div>
 
-          {/* Top Products Section */}
-          <div className="bg-gray-100 dark:bg-gray-700 p-6 rounded-lg shadow-md mb-10">
-            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-              Top-Selling Products (by Revenue)
-            </h3>
-            {analyticsData.topProducts && analyticsData.topProducts.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                  <thead className="bg-gray-200 dark:bg-gray-600">
-                    <tr>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase tracking-wider"
-                      >
-                        Product Name
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase tracking-wider"
-                      >
-                        Sales (₹)
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase tracking-wider"
-                      >
-                        Quantity Sold
-                      </th>
+          {/* Order Distribution Pie Chart */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+              Order Distribution
+            </h2>
+            {orderStatusData.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={orderStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {orderStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<StatusTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  {orderStatusData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        {item.name}: <span className="font-semibold text-gray-900 dark:text-white">{item.value}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm">
+                No orders yet
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Top Selling Products */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Package className="text-green-600" size={20} />
+            Top Selling Products (by Revenue)
+          </h2>
+          {topProducts.length > 0 ? (
+            <>
+              {/* Bar Chart */}
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={topProducts.slice(0, 5)} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis type="number" tickFormatter={(v) => `\u20B9${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={120}
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(v) => v.length > 18 ? v.slice(0, 18) + "..." : v}
+                  />
+                  <Tooltip
+                    formatter={(value) => [`\u20B9${value.toLocaleString("en-IN")}`, "Revenue"]}
+                    contentStyle={{ borderRadius: "8px", fontSize: "12px" }}
+                  />
+                  <Bar dataKey="sales" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+
+              {/* Table */}
+              <div className="overflow-x-auto mt-4">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-700/50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Product</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Revenue</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Qty Sold</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {analyticsData.topProducts.map((product, index) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                          {product.name}
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {topProducts.map((product, index) => (
+                      <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                          <span className="inline-flex items-center gap-2">
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                              index === 0 ? "bg-yellow-500" : index === 1 ? "bg-gray-400" : index === 2 ? "bg-amber-700" : "bg-gray-300"
+                            }`}>
+                              {index + 1}
+                            </span>
+                            {product.name}
+                          </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                          ₹{product.sales.toLocaleString("en-IN")}
+                        <td className="px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300 font-medium">
+                          {"\u20B9"}{(product.sales || 0).toLocaleString("en-IN")}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                          {product.quantity.toLocaleString()}
+                        <td className="px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300">
+                          {(product.quantity || 0).toLocaleString()}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400">
-                No top-selling products data available.
-              </p>
-            )}
+            </>
+          ) : (
+            <div className="h-32 flex items-center justify-center text-gray-400">
+              No product sales data available yet
+            </div>
+          )}
+        </div>
+
+        {/* Additional Metrics Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Customer Insights */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Users className="text-indigo-600" size={20} />
+              Customer Insights
+            </h2>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Total Customers</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                  {(stats.totalCustomers || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Repeat Customers</span>
+                <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                  {(stats.repeatCustomers || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Retention Rate</span>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                  {stats.totalCustomers > 0
+                    ? ((stats.repeatCustomers / stats.totalCustomers) * 100).toFixed(1)
+                    : 0}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Average Rating</span>
+                <span className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                  {stats.averageRating || 0} / 5
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* Other Analytics Sections (Placeholders) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gray-100 dark:bg-gray-700 p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                Customer Insights
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Customer demographics, repeat buyers, location data would be
-                displayed here.
-              </p>
-              <p className="text-lg font-bold mt-2 text-blue-600 dark:text-blue-400">
-                Total Customer Reach:{" "}
-                {analyticsData.customerReach.toLocaleString()}
-              </p>
-            </div>
-            <div className="bg-gray-100 dark:bg-gray-700 p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                Inventory Performance
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Stock turnover rates, low stock alerts, product popularity by
-                views.
-              </p>
-              <p className="text-lg font-bold mt-2 text-blue-600 dark:text-blue-400">
-                Total Products Sold:{" "}
-                {analyticsData.totalProductsSold.toLocaleString()}
-              </p>
+          {/* Inventory Summary */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Package className="text-orange-600" size={20} />
+              Inventory Summary
+            </h2>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Total Products</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                  {(stats.totalProducts || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Active Products</span>
+                <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                  {(stats.activeProducts || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Low Stock Items</span>
+                <span className={`text-lg font-bold ${(stats.lowStockCount || 0) > 0 ? "text-amber-600" : "text-green-600"}`}>
+                  {(stats.lowStockCount || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Inventory Value</span>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                  {"\u20B9"}{(stats.totalInventoryValue || 0).toLocaleString("en-IN")}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </SupplierLayout>
+  );
+};
+
+// Reusable Metric Card Component
+const MetricCard = ({ title, value, icon, color, trend }) => {
+  const colorClasses = {
+    blue: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+    green: "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400",
+    purple: "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
+    amber: "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</span>
+        <div className={`p-2 rounded-lg ${colorClasses[color]}`}>{icon}</div>
+      </div>
+      <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{value}</div>
+      {trend !== undefined && trend !== null && (
+        <div className={`flex items-center gap-1 text-xs font-medium ${trend >= 0 ? "text-green-600" : "text-red-600"}`}>
+          {trend >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+          {Math.abs(trend)}% vs previous period
+        </div>
+      )}
+    </div>
   );
 };
 

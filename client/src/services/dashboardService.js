@@ -250,7 +250,7 @@ export const acceptOrder = async (orderId, deliveryInfo = {}) => {
 };
 
 /**
- * Reject order
+ * Reject order (cancels with reason + restores stock)
  * @param {string} orderId - Order ID
  * @param {string} reason - Rejection reason
  * @returns {Promise<Object>} Updated order
@@ -259,9 +259,7 @@ export const rejectOrder = async (orderId, reason) => {
   try {
     const response = await apiClient.post(
       `/api/supplier/orders/${orderId}/reject`,
-      {
-        reason,
-      },
+      { reason },
     );
     return {
       success: true,
@@ -353,24 +351,83 @@ export const updateProductStock = async (productId, stock) => {
   }
 };
 
-// ==================== ANALYTICS APIs ====================
-
 /**
- * Fetch sales analytics
- * @param {string} period - day, week, month, year
- * @returns {Promise<Object>} Sales data
+ * Bulk upload products from CSV/Excel
+ * @param {File} file - CSV or Excel file
+ * @returns {Promise<Object>} Upload results
  */
-export const fetchSalesAnalytics = async (period = "week") => {
+export const bulkUploadProducts = async (file) => {
   try {
-    const response = await apiClient.get(
-      `/api/supplier/analytics/sales?period=${period}`,
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await apiClient.post(
+      "/api/supplier/products/bulk-upload",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" }, timeout: 120000 },
     );
     return {
       success: true,
       data: response.data,
     };
   } catch (error) {
-    return handleError(error, "Failed to fetch sales analytics");
+    return handleError(error, "Failed to upload products");
+  }
+};
+
+/**
+ * Download bulk upload CSV template
+ * @returns {Promise<Object>} CSV blob
+ */
+export const downloadBulkTemplate = async () => {
+  try {
+    const response = await apiClient.get(
+      "/api/supplier/products/bulk-template",
+      { responseType: "blob" },
+    );
+    return {
+      success: true,
+      data: response.data,
+    };
+  } catch (error) {
+    return handleError(error, "Failed to download template");
+  }
+};
+
+/**
+ * Duplicate a product
+ * @param {string} productId - Product ID to duplicate
+ * @returns {Promise<Object>} New duplicated product
+ */
+export const duplicateProduct = async (productId) => {
+  try {
+    const response = await apiClient.post(
+      `/api/supplier/myproducts/${productId}/duplicate`,
+    );
+    return {
+      success: true,
+      data: response.data,
+    };
+  } catch (error) {
+    return handleError(error, "Failed to duplicate product");
+  }
+};
+
+// ==================== ANALYTICS APIs ====================
+
+/**
+ * Fetch supplier analytics data
+ * @returns {Promise<Object>} Analytics data
+ */
+export const fetchSalesAnalytics = async () => {
+  try {
+    const response = await apiClient.get("/api/supplier/analytics");
+    return {
+      success: true,
+      data: response.data,
+    };
+  } catch (error) {
+    return handleError(error, "Failed to fetch analytics");
   }
 };
 
@@ -387,5 +444,8 @@ export default {
   fetchProducts,
   fetchLowStockProducts,
   updateProductStock,
+  duplicateProduct,
+  bulkUploadProducts,
+  downloadBulkTemplate,
   fetchSalesAnalytics,
 };

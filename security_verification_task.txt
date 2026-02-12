@@ -1,0 +1,4 @@
+Verifying SecurityTab logic.
+Checking if payload keys match authController expectation:
+- currentPassword
+- newPassword

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import CustomerLayout from "../../layout/CustomerLayout";
 import AddressSelector from "../../components/AddressSelector";
+import RazorpayPayment from "../../components/RazorpayPayment";
 import { createOrder } from "../../services/customerApiService";
 
 const Checkout = () => {
@@ -21,7 +22,8 @@ const Checkout = () => {
   const { cartItems, totalPrice, clearCart } = useCart();
 
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1); // 1: Address, 2: Delivery, 3: Payment, 4: Review
+  const [step, setStep] = useState(1); // 1: Address, 2: Delivery, 3: Payment, 4: Review, 5: Processing Payment
+  const [pendingOrderId, setPendingOrderId] = useState(null); // For Razorpay flow
 
   // Address state (managed by AddressSelector component)
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -109,38 +111,62 @@ const Checkout = () => {
     setLoading(true);
 
     try {
+      // Map payment method: upi/card → razorpay for backend
+      const effectivePaymentMethod =
+        paymentMethod === "cod" ? "cod" : "razorpay";
+
       const orderData = {
         deliveryAddress: selectedAddress,
         deliverySlot: {
           date: new Date(deliverySlot.date),
           timeSlot: deliverySlot.timeSlot,
         },
-        paymentMethod,
+        paymentMethod: effectivePaymentMethod,
         customerNotes,
       };
 
-      console.log("📦 Placing order:", orderData);
+      console.log("Creating order:", orderData);
 
       const response = await createOrder(orderData);
 
-      if (response.success) {
-        console.log("✅ Order placed:", response.data);
-        toast.success("Order placed successfully!");
+      if (!response.success) {
+        throw new Error(response.error);
+      }
 
-        // Navigate to order success page
+      console.log("Order created:", response.data);
+
+      if (effectivePaymentMethod === "cod") {
+        // COD: order is ready, go to success
+        toast.success("Order placed successfully!");
         navigate(`/customer/order-success/${response.data.orderId}`, {
           state: { orderData: response.data },
         });
       } else {
-        throw new Error(response.error);
+        // Online payment: show Razorpay payment step
+        setPendingOrderId(response.data.orderId);
+        setStep(5); // Go to payment processing step
+        setLoading(false);
       }
     } catch (error) {
-      console.error("❌ Order error:", error);
-      const errorMsg = error.message || "Failed to place order";
-      toast.error(errorMsg);
-    } finally {
+      console.error("Order error:", error);
+      toast.error(error.message || "Failed to place order");
       setLoading(false);
     }
+  };
+
+  // Handle Razorpay payment success
+  const handlePaymentSuccess = (paymentData) => {
+    console.log("Payment verified:", paymentData);
+    navigate(`/customer/order-success/${pendingOrderId}`, {
+      state: { orderData: paymentData, paymentMethod: "razorpay" },
+    });
+  };
+
+  // Handle Razorpay payment failure
+  const handlePaymentFailure = (error) => {
+    console.error("Payment failed:", error);
+    // Stay on payment page, user can retry
+    toast.error("Payment failed. You can retry or switch to Cash on Delivery.");
   };
 
   // Check if cart is empty
@@ -435,8 +461,8 @@ const Checkout = () => {
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {paymentMethod === "cod" && "Cash on Delivery"}
-                    {paymentMethod === "upi" && "UPI"}
-                    {paymentMethod === "card" && "Credit/Debit Card"}
+                    {paymentMethod === "upi" && "UPI (via Razorpay)"}
+                    {paymentMethod === "card" && "Credit/Debit Card (via Razorpay)"}
                   </p>
                 </div>
 
@@ -502,7 +528,43 @@ const Checkout = () => {
               </div>
             )}
 
+            {/* Step 5: Razorpay Payment Processing */}
+            {step === 5 && pendingOrderId && (
+              <div className="space-y-4">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 text-center">
+                  <p className="text-yellow-800 dark:text-yellow-200 font-medium">
+                    Your order has been created. Please complete the payment to confirm it.
+                  </p>
+                </div>
+
+                <RazorpayPayment
+                  orderId={pendingOrderId}
+                  amount={total}
+                  onSuccess={handlePaymentSuccess}
+                  onFailure={handlePaymentFailure}
+                />
+
+                <div className="text-center">
+                  <button
+                    onClick={() => {
+                      // Allow switching to COD if payment fails
+                      navigate(`/customer/order-success/${pendingOrderId}`, {
+                        state: {
+                          orderData: { orderId: pendingOrderId },
+                          paymentPending: true,
+                        },
+                      });
+                    }}
+                    className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline"
+                  >
+                    Skip payment (pay later / contact support)
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Navigation Buttons */}
+            {step <= 4 && (
             <div className="flex gap-3">
               {step > 1 && (
                 <button
@@ -525,10 +587,15 @@ const Checkout = () => {
                   disabled={loading}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? "Placing Order..." : "Place Order"}
+                  {loading
+                    ? "Placing Order..."
+                    : paymentMethod === "cod"
+                    ? "Place Order (COD)"
+                    : "Place Order & Pay"}
                 </button>
               )}
             </div>
+            )}
           </div>
 
           {/* Right: Order Summary (Sticky) */}

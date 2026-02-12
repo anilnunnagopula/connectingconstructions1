@@ -22,10 +22,24 @@ const Footer = () => {
     // "cart",
     // "orders",
   ];
-  if (hiddenRoutes.includes(pathname)) return null;
+
+  // Hide on dashboard routes (Supplier & Customer) as they have their own layout-integrated footer
+  if (hiddenRoutes.includes(pathname)) {
+    return null;
+  }
+
+  // Add margin for dashboard routes where sidebar is present
+  const isDashboard =
+    pathname.startsWith("/supplier") ||
+    pathname.startsWith("/customer") ||
+    pathname === "/customer-dashboard";
 
   return (
-    <footer className="bg-blue-950 text-gray-300 pt-3 pb-3 px-4 border-t border-blue-800 mt-10">
+    <footer
+      className={`bg-blue-950 text-gray-300 pt-3 pb-3 px-4 border-t border-blue-800 mt-auto ${
+        isDashboard ? "md:ml-64" : ""
+      }`}
+    >
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-15">
         {/* 🧱 Brand Overview */}
         <div>
@@ -65,13 +79,13 @@ const Footer = () => {
               </Link>
             </li>
             <li>
-              <Link to="/customer-dashboard/cart" className="hover:text-white">
+              <Link to="/customer/cart" className="hover:text-white">
                 🛒 Cart
               </Link>
             </li>
             <li>
               <Link
-                to="/customer-dashboard/orders"
+                to="/customer/orders"
                 className="hover:text-white"
               >
                 📜 Orders

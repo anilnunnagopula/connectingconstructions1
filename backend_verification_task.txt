@@ -1,0 +1,6 @@
+Verifying backend routes for Supplier Profile Optimization.
+Checking:
+1.  /api/auth/profile (PUT)
+2.  /api/supplier/business-status (PUT)
+3.  /api/supplier/license-and-certificates (GET, POST, DELETE)
+4.  /api/supplier/payout-methods (GET, POST, DELETE, PUT)

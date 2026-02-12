@@ -87,15 +87,9 @@ const SupplierSidebar = ({
       badge: null,
     },
     {
-      icon: Settings,
-      label: "Settings",
-      path: "/supplier/settings",
-      badge: null,
-    },
-     {
-      icon: User,
-      label: "Profile",
-      path: "/profile",
+      icon: User, 
+      label: "Business Profile",
+      path: "/supplier/profile",
       badge: null,
     },
   ];

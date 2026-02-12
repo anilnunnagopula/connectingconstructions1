@@ -93,7 +93,8 @@ exports.createOrder = async (req, res) => {
       deliveryAddress,
       deliverySlot,
       paymentMethod: paymentMethod || "cod",
-      paymentStatus: paymentMethod === "cod" ? "pending" : "pending",
+      paymentStatus: "pending",
+      orderStatus: paymentMethod === "cod" ? "pending" : "pending",
       customerNotes,
     });
     await NotificationService.notifyOrderCreated(order);
@@ -117,6 +118,8 @@ exports.createOrder = async (req, res) => {
         orderNumber: order.orderNumber,
         totalAmount: order.totalAmount,
         orderStatus: order.orderStatus,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
       },
     });
   } catch (error) {
@@ -367,7 +370,7 @@ exports.updateOrderStatus = async (req, res) => {
 
     // Capture old status before update
     const oldStatus = order.orderStatus;
-    
+
     // Update order
     order.orderStatus = status;
 
@@ -393,7 +396,7 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     await order.save();
-    
+
     await NotificationService.notifyOrderStatusUpdate(order, oldStatus, status);
     if (status === "delivered") {
       await NotificationService.notifyReviewRequest(order);
@@ -412,5 +415,142 @@ exports.updateOrderStatus = async (req, res) => {
       success: false,
       message: "Failed to update order status",
     });
+  }
+};
+
+/**
+ * @desc    Reject order (supplier cancels with reason + restores stock)
+ * @route   POST /api/supplier/orders/:id/reject
+ * @access  Private (Supplier)
+ */
+exports.rejectOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const supplierId = req.user._id;
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const hasSupplierProducts = order.items.some(
+      (item) => item.productSnapshot.supplier?.toString() === supplierId.toString(),
+    );
+
+    if (!hasSupplierProducts) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (!["pending", "confirmed"].includes(order.orderStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot reject order with status: ${order.orderStatus}`,
+      });
+    }
+
+    const oldStatus = order.orderStatus;
+
+    // Restore stock for supplier's items
+    for (const item of order.items) {
+      if (item.productSnapshot.supplier?.toString() === supplierId.toString()) {
+        const product = await Product.findById(item.product);
+        if (product) {
+          await product.increaseStock(item.quantity);
+        }
+      }
+    }
+
+    order.orderStatus = "cancelled";
+    order.cancellationReason = reason || "Rejected by supplier";
+    order.cancelledAt = new Date();
+    await order.save();
+
+    await NotificationService.notifyOrderStatusUpdate(order, oldStatus, "cancelled");
+
+    console.log(`✅ Order ${order.orderNumber} rejected by supplier`);
+
+    res.status(200).json({
+      success: true,
+      message: "Order rejected successfully",
+      data: order,
+    });
+  } catch (error) {
+    console.error("❌ Reject order error:", error);
+    res.status(500).json({ success: false, message: "Failed to reject order" });
+  }
+};
+
+/**
+ * @desc    Get low stock products for supplier
+ * @route   GET /api/supplier/products/low-stock
+ * @access  Private (Supplier)
+ */
+exports.getLowStockProducts = async (req, res) => {
+  try {
+    const supplierId = req.user._id;
+    const threshold = parseInt(req.query.threshold) || 10;
+
+    const products = await Product.find({
+      supplier: supplierId,
+      quantity: { $lte: threshold },
+      isDeleted: false,
+    })
+      .select("name quantity unit imageUrls price category availability")
+      .sort({ quantity: 1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      threshold,
+      data: products,
+    });
+  } catch (error) {
+    console.error("❌ Low stock products error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch low stock products" });
+  }
+};
+
+/**
+ * @desc    Quick stock update for a product
+ * @route   PATCH /api/supplier/products/:id/stock
+ * @access  Private (Supplier)
+ */
+exports.updateProductStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stock } = req.body;
+    const supplierId = req.user._id;
+
+    if (stock === undefined || stock === null || isNaN(stock) || stock < 0) {
+      return res.status(400).json({ success: false, message: "Valid stock quantity is required" });
+    }
+
+    const product = await Product.findOne({
+      _id: id,
+      supplier: supplierId,
+      isDeleted: false,
+    });
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    product.quantity = parseInt(stock);
+    product.availability = parseInt(stock) > 0;
+    await product.save();
+
+    console.log(`✅ Stock updated for ${product.name}: ${stock}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Stock updated successfully",
+      data: { _id: product._id, name: product.name, quantity: product.quantity, availability: product.availability },
+    });
+  } catch (error) {
+    console.error("❌ Update stock error:", error);
+    res.status(500).json({ success: false, message: "Failed to update stock" });
   }
 };

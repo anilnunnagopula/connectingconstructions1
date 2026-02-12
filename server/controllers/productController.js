@@ -63,6 +63,24 @@ const addProduct = async (req, res) => {
       contact,
       imageUrls,
       description,
+      // Construction-specific fields
+      productType,
+      unit,
+      minOrderQuantity,
+      stepSize,
+      brand,
+      grade,
+      packaging,
+      specifications,
+      bulkPricing,
+      variants,
+      certifications,
+      manufacturingDate,
+      batchNumber,
+      warranty,
+      countryOfOrigin,
+      hsnCode,
+      gstRate,
     } = req.body;
 
     // Validate input
@@ -72,7 +90,7 @@ const addProduct = async (req, res) => {
     const existingProduct = await Product.findOne({
       name,
       supplier: supplierId,
-      isDeleted: false, // ✨ Only check active products
+      isDeleted: false,
     });
 
     if (existingProduct) {
@@ -93,6 +111,24 @@ const addProduct = async (req, res) => {
       contact,
       imageUrls: imageUrls || [],
       description,
+      // Construction-specific fields
+      productType: productType || "product",
+      unit: unit || undefined,
+      minOrderQuantity: minOrderQuantity || 1,
+      stepSize: stepSize || 1,
+      brand: brand || undefined,
+      grade: grade || undefined,
+      packaging: packaging || undefined,
+      specifications: specifications || {},
+      bulkPricing: bulkPricing || [],
+      variants: variants || [],
+      certifications: certifications || [],
+      manufacturingDate: manufacturingDate || undefined,
+      batchNumber: batchNumber || undefined,
+      warranty: warranty || undefined,
+      countryOfOrigin: countryOfOrigin || "India",
+      hsnCode: hsnCode || undefined,
+      gstRate: gstRate !== undefined ? parseFloat(gstRate) : 18,
     });
 
     await newProduct.save();
@@ -218,6 +254,24 @@ const updateProduct = async (req, res) => {
       contact,
       imageUrls,
       description,
+      // Construction-specific fields
+      productType,
+      unit,
+      minOrderQuantity,
+      stepSize,
+      brand,
+      grade,
+      packaging,
+      specifications,
+      bulkPricing,
+      variants,
+      certifications,
+      manufacturingDate,
+      batchNumber,
+      warranty,
+      countryOfOrigin,
+      hsnCode,
+      gstRate,
     } = req.body;
 
     if (name !== undefined) product.name = name;
@@ -229,6 +283,24 @@ const updateProduct = async (req, res) => {
     if (contact !== undefined) product.contact = contact;
     if (imageUrls !== undefined) product.imageUrls = imageUrls;
     if (description !== undefined) product.description = description;
+    // Construction-specific fields
+    if (productType !== undefined) product.productType = productType;
+    if (unit !== undefined) product.unit = unit;
+    if (minOrderQuantity !== undefined) product.minOrderQuantity = minOrderQuantity;
+    if (stepSize !== undefined) product.stepSize = stepSize;
+    if (brand !== undefined) product.brand = brand;
+    if (grade !== undefined) product.grade = grade;
+    if (packaging !== undefined) product.packaging = packaging;
+    if (specifications !== undefined) product.specifications = specifications;
+    if (bulkPricing !== undefined) product.bulkPricing = bulkPricing;
+    if (variants !== undefined) product.variants = variants;
+    if (certifications !== undefined) product.certifications = certifications;
+    if (manufacturingDate !== undefined) product.manufacturingDate = manufacturingDate;
+    if (batchNumber !== undefined) product.batchNumber = batchNumber;
+    if (warranty !== undefined) product.warranty = warranty;
+    if (countryOfOrigin !== undefined) product.countryOfOrigin = countryOfOrigin;
+    if (hsnCode !== undefined) product.hsnCode = hsnCode;
+    if (gstRate !== undefined) product.gstRate = parseFloat(gstRate);
 
     await product.save();
 
@@ -544,6 +616,53 @@ const getProductByIdPublic = async (req, res) => {
   }
 };
 
+// Duplicate a product (creates a copy with "(Copy)" appended to name)
+const duplicateProduct = async (req, res) => {
+  try {
+    const original = await Product.findOne({
+      _id: req.params.id,
+      supplier: req.user._id,
+      isDeleted: { $ne: true },
+    });
+
+    if (!original) {
+      return res.status(404).json({ success: false, error: "Product not found" });
+    }
+
+    const productData = original.toObject();
+
+    // Remove fields that should not be copied
+    delete productData._id;
+    delete productData.__v;
+    delete productData.createdAt;
+    delete productData.updatedAt;
+    delete productData.averageRating;
+    delete productData.numReviews;
+    delete productData.isDeleted;
+    delete productData.deletedAt;
+
+    // Modify name and reset stock
+    productData.name = `${original.name} (Copy)`;
+    productData.availability = false; // Start as unavailable so supplier can review
+
+    const newProduct = new Product(productData);
+    await newProduct.save();
+
+    res.status(201).json({
+      success: true,
+      data: newProduct,
+      message: "Product duplicated successfully",
+    });
+  } catch (error) {
+    console.error("Error duplicating product:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to duplicate product",
+      details: error.message,
+    });
+  }
+};
+
 module.exports = {
   addProduct,
   getProductById,
@@ -553,4 +672,5 @@ module.exports = {
   getAllProductsPublic,
   getProductByIdPublic,
   exportProductsToCSV,
+  duplicateProduct,
 };

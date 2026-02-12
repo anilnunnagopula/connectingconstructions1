@@ -177,6 +177,19 @@ const userSchema = new mongoose.Schema(
         enum: ["standard", "silver", "gold", "platinum"],
         default: "standard"
     },
+    // ✨ NEW: Business Profile Fields
+    businessName: {
+      type: String,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    businessStatus: {
+      isOpen: { type: Boolean, default: true },
+      businessHours: { type: String, default: "9:00 AM - 6:00 PM" },
+    },
     verifiedAt: {
       type: Date,
     },

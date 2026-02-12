@@ -22,6 +22,7 @@ const {
   getAllProductsPublic,
   getProductByIdPublic,
   exportProductsToCSV,
+  duplicateProduct,
 } = require("../controllers/productController");
 
 // Category Controllers
@@ -57,6 +58,9 @@ const {
 const {
   getSupplierOrders,
   updateOrderStatus,
+  rejectOrder,
+  getLowStockProducts,
+  updateProductStock,
 } = require("../controllers/orderController"); // Import order controller functions
 
 const {
@@ -78,6 +82,7 @@ const {
 } = require("../controllers/paymentController"); // Import payment controller functions
 
 const { syncInventory } = require("../controllers/syncInventoryController");
+const { bulkUploadProducts, downloadBulkTemplate } = require("../controllers/bulkProductController");
 
 const {
   createOffer,
@@ -87,12 +92,20 @@ const {
   deleteOffer,
 } = require("../controllers/offerController"); // Import offer controller functions
 
-// Export Products to CSV
+// Export Products to CSV (must be before /products/:id)
 router.get(
-    "/products/export-csv", // <--- NEW ROUTE
+    "/products/export-csv",
     protect,
     authorizeRoles("supplier"),
     exportProductsToCSV
+);
+
+// Low Stock Products (must be before /products/:id)
+router.get(
+  "/products/low-stock",
+  protect,
+  authorizeRoles("supplier"),
+  getLowStockProducts
 );
 
 // --- Public Routes (Accessible by anyone) ---
@@ -114,6 +127,29 @@ router
   .route("/myproducts")
   .post(protect, authorizeRoles("supplier"), addProduct)
   .get(protect, authorizeRoles("supplier"), getMyProducts);
+
+// Duplicate product (must be before :id route to avoid conflict)
+router.post(
+  "/myproducts/:id/duplicate",
+  protect,
+  authorizeRoles("supplier"),
+  duplicateProduct
+);
+
+// Bulk product upload
+router.post(
+  "/products/bulk-upload",
+  protect,
+  authorizeRoles("supplier"),
+  upload.single("file"),
+  bulkUploadProducts
+);
+router.get(
+  "/products/bulk-template",
+  protect,
+  authorizeRoles("supplier"),
+  downloadBulkTemplate
+);
 
 router
   .route("/myproducts/:id")
@@ -176,18 +212,32 @@ router.get(
   getAllNotifications
 );
 
+// Quick Stock Update
+router.patch(
+  "/products/:id/stock",
+  protect,
+  authorizeRoles("supplier"),
+  updateProductStock
+);
+
 // Order Management
 router.get(
   "/orders",
   protect,
   authorizeRoles("supplier"),
-  getSupplierOrders // Used here
+  getSupplierOrders
 );
 router.put(
   "/orders/:id/status",
   protect,
   authorizeRoles("supplier"),
-  updateOrderStatus // Used here
+  updateOrderStatus
+);
+router.post(
+  "/orders/:id/reject",
+  protect,
+  authorizeRoles("supplier"),
+  rejectOrder
 );
 
 router.get(
@@ -303,7 +353,11 @@ router.put(
         return res.status(404).json({ success: false, error: "Supplier not found" });
       }
 
-      supplier.businessStatus = { isOpen };
+      // Merge with existing status to preserve businessHours
+      supplier.businessStatus = {
+        ...supplier.businessStatus,
+        isOpen
+      };
       await supplier.save();
 
       res.status(200).json({

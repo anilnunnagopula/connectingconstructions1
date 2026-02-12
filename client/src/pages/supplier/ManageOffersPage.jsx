@@ -1,15 +1,17 @@
-// pages/supplier/ManageOffersPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { 
+  Plus, Edit, Trash2, Copy, Tag, Calendar, 
+  CheckCircle, Clock, XCircle, AlertTriangle 
+} from 'lucide-react';
 import SupplierLayout from '../../layout/SupplierLayout';
 
 const ManageOffersPage = () => {
   const navigate = useNavigate();
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deletingOfferId, setDeletingOfferId] = useState(null); // To track which offer is being deleted
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   // Helper to get token
   const getToken = useCallback(() => {
@@ -17,52 +19,33 @@ const ManageOffersPage = () => {
       const storedUser = localStorage.getItem("user");
       return storedUser ? JSON.parse(storedUser).token : null;
     } catch (err) {
-      console.error("Error parsing user from localStorage:", err);
       return null;
     }
   }, []);
 
-  // Fetch Offers for the supplier
+  // Fetch Offers
   const fetchOffers = useCallback(async () => {
     setLoading(true);
-    setMessage("");
-    setMessageType("");
     const token = getToken();
 
     if (!token) {
-      setMessage("Authentication required. Please log in.");
-      setMessageType("error");
-      setLoading(false);
+      toast.error("Authentication required");
       navigate("/login");
       return;
     }
 
     try {
-      // Using the existing /api/supplier/offers endpoint
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/supplier/offers`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/supplier/offers`, {
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      });
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || data.error || "Failed to fetch offers."
-        );
-      }
+      if (!response.ok) throw new Error(data.message || "Failed to fetch offers");
 
-      setOffers(data); // Assuming data is an array of offer objects
-      setMessage("Offers loaded successfully.");
-      setMessageType("success");
+      setOffers(data);
     } catch (err) {
-      console.error("Error fetching offers:", err);
-      setMessage(err.message || "Error loading offers.");
-      setMessageType("error");
+      console.error(err);
+      toast.error(err.message || "Error loading offers");
     } finally {
       setLoading(false);
     }
@@ -72,248 +55,159 @@ const ManageOffersPage = () => {
     fetchOffers();
   }, [fetchOffers]);
 
-  // Handle message timeout
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => {
-        setMessage("");
-        setMessageType("");
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
-
-  // Handle Delete Offer
+  // Actions
   const handleDelete = async (offerId, offerName) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete the offer "${offerName}"? This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
+    if (!window.confirm(`Delete offer "${offerName}"? This cannot be undone.`)) return;
 
-    setDeletingOfferId(offerId); // Indicate which offer is being deleted
-    setMessage("");
-    setMessageType("");
+    setDeletingId(offerId);
     const token = getToken();
 
-    if (!token) {
-      setMessage("Authentication required. Please log in.");
-      setMessageType("error");
-      setDeletingOfferId(null);
-      navigate("/login");
-      return;
-    }
-
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/supplier/offers/${offerId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || data.error || "Failed to delete offer."
-        );
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/supplier/offers/${offerId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message || "Failed to delete");
       }
 
-      setMessage(`Offer "${offerName}" deleted successfully!`);
-      setMessageType("success");
-      fetchOffers(); // Re-fetch offers to update list
+      toast.success("Offer deleted successfully");
+      fetchOffers();
     } catch (err) {
-      console.error("Error deleting offer:", err);
-      setMessage(err.message || "Failed to delete offer.");
-      setMessageType("error");
+      toast.error(err.message);
     } finally {
-      setDeletingOfferId(null);
+      setDeletingId(null);
     }
   };
 
-  // Handle Edit Offer
-  const handleEdit = (offerId) => {
-    navigate(`/supplier/offers/${offerId}/edit`); // <--- NAVIGATE TO THE EDIT FORM
+  const copyToClipboard = (code) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    toast.success("Code copied to clipboard!");
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
+  const getStatusBadge = (offer) => {
+    let status = offer.status;
+    const now = new Date();
+    const start = new Date(offer.startDate);
+    const end = new Date(offer.endDate);
+
+    // Client-side status logic override for immediate feedback
+    if (now > end) status = "Expired";
+    else if (now < start) status = "Scheduled";
+    else if (status === "Active" && offer.usageLimit && offer.usedCount >= offer.usageLimit) status = "Depleted";
+
+    switch (status) {
+      case "Active":
+        return <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium"><CheckCircle size={12}/> Active</span>;
+      case "Scheduled":
+        return <span className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium"><Clock size={12}/> Scheduled</span>;
+      case "Expired":
+        return <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium"><XCircle size={12}/> Expired</span>;
+      case "Depleted":
+        return <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium"><AlertTriangle size={12}/> Depleted</span>;
+      default:
+        return <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">{status}</span>;
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-        <p className="ml-4 text-lg text-gray-700 dark:text-gray-300">
-          Loading offers...
-        </p>
-      </div>
-    );
-  }
+  const formatDate = (date) => new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  if (loading) return <div className="p-10 text-center">Loading offers...</div>;
 
   return (
     <SupplierLayout>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 font-sans p-6">
-        <div className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-10">
-          <h2 className="text-3xl font-bold mb-8 text-center text-gray-900 dark:text-white">
-            📈 Manage My Offers
-          </h2>
-
-          {message && (
-            <div
-              className={`mb-6 p-4 rounded-lg text-center font-medium shadow-md ${
-                messageType === "success"
-                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
-                  : messageType === "error"
-                  ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
-                  : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-              } transition-colors duration-300`}
-            >
-              {message}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-inter p-6">
+        <div className="max-w-6xl mx-auto">
+          
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Manage Offers</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">Create and manage your verified discounts</p>
             </div>
-          )}
+            <button onClick={() => navigate("/supplier/create-offer")} 
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-sm font-medium">
+              <Plus size={18}/> Create Offer
+            </button>
+          </div>
 
           {offers.length === 0 ? (
-            <div className="text-center py-20 text-gray-600 dark:text-gray-300">
-              <p className="text-lg mb-4">
-                No offers created yet. Start by creating a new one!
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center border border-dashed border-gray-300 dark:border-gray-700">
+              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Tag size={32}/>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Offers Yet</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                Create your first offer to attract more customers and boost sales.
               </p>
-              <button
-                onClick={() => navigate("/supplier/create-offer")}
-                className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors duration-200 font-semibold"
-              >
-                ➕ Create First Offer
+              <button onClick={() => navigate("/supplier/create-offer")} className="text-blue-600 font-medium hover:underline">
+                Create First Offer
               </button>
             </div>
           ) : (
-            <div className="space-y-6">
-              {offers.map((offer) => (
-                <div
-                  key={offer._id}
-                  className="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-4 border-gray-300 dark:border-gray-600">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {offers.map(offer => (
+                <div key={offer._id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
+                  {/* Card Header */}
+                  <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                        {offer.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        {offer.description}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                        <span className="font-semibold">Type:</span>{" "}
-                        {offer.type === "PERCENTAGE"
-                          ? `${offer.value}% OFF`
-                          : `₹${offer.value} OFF`}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <span className="font-semibold">Validity:</span>{" "}
-                        {formatDate(offer.startDate)} -{" "}
-                        {formatDate(offer.endDate)}
-                      </p>
-                      {offer.code && (
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          <span className="font-semibold">Code:</span>{" "}
-                          <span className="font-mono bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-xs">
-                            {offer.code}
-                          </span>
-                        </p>
-                      )}
+                        <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-1" title={offer.name}>{offer.name}</h3>
+                        <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{offer.description || "No description"}</p>
                     </div>
-                    <div className="mt-3 md:mt-0 text-right">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          offer.status === "Active"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                            : offer.status === "Scheduled"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                            : offer.status === "Expired" ||
-                              offer.status === "Inactive"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                            : "bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-300"
-                        }`}
-                      >
-                        {offer.status}
-                      </span>
-                      {offer.usageLimit && (
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                          Used: {offer.usedCount} / {offer.usageLimit}
-                        </p>
-                      )}
+                    {getStatusBadge(offer)}
+                  </div>
+                  
+                  {/* Card Body */}
+                  <div className="p-5 flex-1">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                {offer.type === "PERCENTAGE" ? `${offer.value}%` : `₹${offer.value}`}
+                            </span>
+                            <span className="text-xs text-gray-500 uppercase font-semibold bg-gray-100 px-1.5 py-0.5 rounded">OFF</span>
+                        </div>
+                        {offer.code ? (
+                            <button onClick={() => copyToClipboard(offer.code)} 
+                                className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-xs font-mono font-medium transition text-gray-700 dark:text-gray-300" title="Copy Code">
+                                {offer.code} <Copy size={12}/>
+                            </button>
+                        ) : (
+                            <span className="text-xs text-gray-400 italic">No Code</span>
+                        )}
+                    </div>
+
+                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                        <div className="flex items-center gap-2">
+                            <Calendar size={14} className="text-gray-400"/>
+                            <span>{formatDate(offer.startDate)} - {formatDate(offer.endDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                             <Tag size={14} className="text-gray-400"/>
+                             <span className="capitalize">{offer.applyTo.replace('_', ' ').toLowerCase()}</span>
+                        </div>
+                        {offer.usageLimit && (
+                             <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <span className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
+                                    <span className="bg-blue-500 h-1.5 rounded-full block" style={{width: `${Math.min((offer.usedCount/offer.usageLimit)*100, 100)}%`}}></span>
+                                </span>
+                                <span>{offer.usedCount}/{offer.usageLimit} Used</span>
+                             </div>
+                        )}
                     </div>
                   </div>
 
-                  {/* Offer Applicability Summary */}
-                  <div className="mb-4">
-                    <h4 className="text-md font-semibold text-gray-800 dark:text-white mb-2">
-                      Applies To:
-                    </h4>
-                    <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 text-sm">
-                      <li>
-                        {offer.applyTo === "ALL_PRODUCTS"
-                          ? "All Products"
-                          : offer.applyTo === "SPECIFIC_PRODUCTS"
-                          ? "Specific Products"
-                          : "Specific Categories"}
-                      </li>
-                      <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 text-sm">
-                        <li>
-                          {offer.applyTo === "ALL_PRODUCTS"
-                            ? "All Products"
-                            : offer.applyTo === "SPECIFIC_PRODUCTS"
-                            ? "Specific Products"
-                            : "Specific Categories"}
-                        </li>
-                        {/* Corrected Block 1 (for selectedProducts): */}
-                        {offer.applyTo === "SPECIFIC_PRODUCTS" &&
-                          offer.selectedProducts.length > 0 && (
-                            <li>
-                              Products:{" "}
-                              {offer.selectedProducts
-                                .map((p) =>
-                                  p && p._id ? p.name || p._id.slice(0, 8) : "N/A"
-                                )
-                                .join(", ")}
-                            </li>
-                          )}
-                        {/* Corrected Block 2 (for selectedCategories): */}
-                        {offer.applyTo === "SPECIFIC_CATEGORIES" &&
-                          offer.selectedCategories.length > 0 && (
-                            <li>
-                              Categories:{" "}
-                              {offer.selectedCategories
-                                .map((c) =>
-                                  c && c._id ? c.name || c._id.slice(0, 8) : "N/A"
-                                )
-                                .join(", ")}
-                            </li>
-                          )}
-                      </ul>
-                    </ul>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex justify-end items-center gap-4 pt-4 border-t border-gray-300 dark:border-gray-600">
-                    <button
-                      onClick={() => handleEdit(offer._id)} // Pass offer ID
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
-                      disabled={deletingOfferId === offer._id}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(offer._id, offer.name)}
-                      className="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700 transition-colors duration-200 disabled:opacity-50"
-                      disabled={deletingOfferId === offer._id} // Disable during deletion
-                    >
-                      {deletingOfferId === offer._id ? "Deleting..." : "Delete"}
-                    </button>
+                  {/* Card Footer */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-750 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+                     <button onClick={() => navigate(`/supplier/offers/${offer._id}/edit`)} 
+                        className="p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded transition" title="Edit">
+                        <Edit size={18}/>
+                     </button>
+                     <button onClick={() => handleDelete(offer._id, offer.name)} disabled={deletingId === offer._id}
+                        className="p-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700 rounded transition disabled:opacity-50" title="Delete">
+                        <Trash2 size={18}/>
+                     </button>
                   </div>
                 </div>
               ))}

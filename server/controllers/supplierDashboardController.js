@@ -90,7 +90,7 @@ exports.getSupplierDashboardData = async (req, res) => {
         },
       ]),
 
-      // 2. Current Period Orders
+      // 2. Current Period Orders (earnings only from paid or delivered-COD orders)
       Order.aggregate([
         {
           $match: {
@@ -98,6 +98,10 @@ exports.getSupplierDashboardData = async (req, res) => {
             orderStatus: {
               $in: ["delivered", "shipped", "processing", "confirmed"],
             },
+            $or: [
+              { paymentStatus: "paid" },
+              { paymentMethod: "cod", orderStatus: "delivered" },
+            ],
             createdAt: { $gte: periodStart },
           },
         },
@@ -127,6 +131,10 @@ exports.getSupplierDashboardData = async (req, res) => {
             orderStatus: {
               $in: ["delivered", "shipped", "processing", "confirmed"],
             },
+            $or: [
+              { paymentStatus: "paid" },
+              { paymentMethod: "cod", orderStatus: "delivered" },
+            ],
             createdAt: { $gte: previousPeriodStart, $lt: periodStart },
           },
         },
@@ -154,7 +162,7 @@ exports.getSupplierDashboardData = async (req, res) => {
         { $group: { _id: "$orderStatus", count: { $sum: 1 } } },
       ]),
 
-      // 5. Period Sales Data
+      // 5. Period Sales Data (only confirmed revenue)
       Order.aggregate([
         {
           $match: {
@@ -162,6 +170,10 @@ exports.getSupplierDashboardData = async (req, res) => {
             orderStatus: {
               $in: ["delivered", "shipped", "processing", "confirmed"],
             },
+            $or: [
+              { paymentStatus: "paid" },
+              { paymentMethod: "cod", orderStatus: { $in: ["confirmed", "processing", "shipped", "delivered"] } },
+            ],
             createdAt: { $gte: periodStart },
           },
         },
@@ -184,7 +196,7 @@ exports.getSupplierDashboardData = async (req, res) => {
         { $sort: { _id: 1 } },
       ]),
 
-      // 6. Top Products
+      // 6. Top Products (from confirmed/paid orders)
       Order.aggregate([
         {
           $match: {
@@ -192,6 +204,10 @@ exports.getSupplierDashboardData = async (req, res) => {
             orderStatus: {
               $in: ["delivered", "shipped", "processing", "confirmed"],
             },
+            $or: [
+              { paymentStatus: "paid" },
+              { paymentMethod: "cod" },
+            ],
           },
         },
         { $unwind: "$items" },

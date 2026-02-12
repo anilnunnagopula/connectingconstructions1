@@ -563,13 +563,13 @@ const SupplierDashboard = () => {
                   emoji: "📍",
                   title: "Location",
                   desc: "Set location",
-                  path: "/supplier/location",
+                  path: "/supplier/profile?tab=contact",
                 },
                 {
                   emoji: "⚙️",
-                  title: "Settings",
+                  title: "Business Profile",
                   desc: "Manage profile",
-                  path: "/supplier/settings",
+                  path: "/supplier/profile",
                 },
                 {
                   emoji: "📊",
@@ -581,7 +581,7 @@ const SupplierDashboard = () => {
                   emoji: "💹",
                   title: "Payments",
                   desc: "Payment details",
-                  path: "/supplier/payments",
+                  path: "/supplier/profile?tab=payments",
                 },
                 {
                   emoji: "⭐",
@@ -599,7 +599,7 @@ const SupplierDashboard = () => {
                   emoji: "📃",
                   title: "Licenses",
                   desc: "Certificates",
-                  path: "/supplier/license-and-certificates",
+                  path: "/supplier/profile?tab=licenses",
                 },
                 {
                   emoji: "💰",

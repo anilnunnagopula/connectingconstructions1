@@ -603,6 +603,9 @@ const getUserProfile = async (req, res) => {
       address: user.address,
       profilePictureUrl: user.profilePictureUrl,
       createdAt: user.createdAt,
+      businessName: user.businessName,
+      description: user.description,
+      businessStatus: user.businessStatus,
     });
   } catch (error) {
     console.error("❌ Get profile error:", error);
@@ -635,6 +638,17 @@ const updateUserProfile = async (req, res) => {
     user.email = req.body.email || user.email;
     user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
     user.address = req.body.address || user.address;
+    
+    // Update business fields
+    user.businessName = req.body.businessName || user.businessName;
+    user.description = req.body.description || user.description;
+    if (req.body.businessStatus) {
+      // Merge with existing status to preserve other fields if any
+      user.businessStatus = { 
+        ...user.businessStatus, 
+        ...req.body.businessStatus 
+      };
+    }
 
     // Handle password change
     if (req.body.currentPassword && req.body.newPassword) {

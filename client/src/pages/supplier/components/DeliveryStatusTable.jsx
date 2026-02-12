@@ -59,35 +59,30 @@ const DeliveryStatusTable = ({ orders }) => {
                 {order.orderId.slice(-6)}
               </td>
               <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 text-sm dark:text-white">
-                {order.products.map((p) => `${p.name} (x${p.qty})`).join(", ")}
+                {(order.products || []).map((p) => `${p.name} (x${p.quantity || p.qty || 0})`).join(", ")}
               </td>
               <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 text-sm dark:text-white">
                 {order.buyerName}
               </td>
               <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 text-sm">
-                <span
-                  className={`relative inline-block px-3 py-1 font-semibold leading-tight ${
-                    order.status === "Delivered"
-                      ? "text-green-900"
-                      : order.status.includes("Processing")
-                      ? "text-blue-900"
-                      : "text-orange-900"
-                  }`}
-                >
-                  <span
-                    aria-hidden
-                    className={`absolute inset-0 opacity-50 rounded-full ${
-                      order.status === "Delivered"
-                        ? "bg-green-200"
-                        : order.status.includes("Processing")
-                        ? "bg-blue-200"
-                        : "bg-orange-200"
-                    }`}
-                  ></span>
-                  <span className="relative dark:text-white">
-                    {order.status}
-                  </span>
-                </span>
+                {(() => {
+                  const status = order.orderStatus || order.status || "pending";
+                  const colorMap = {
+                    delivered: { text: "text-green-900", bg: "bg-green-200" },
+                    shipped: { text: "text-blue-900", bg: "bg-blue-200" },
+                    processing: { text: "text-purple-900", bg: "bg-purple-200" },
+                    confirmed: { text: "text-cyan-900", bg: "bg-cyan-200" },
+                    cancelled: { text: "text-red-900", bg: "bg-red-200" },
+                    pending: { text: "text-orange-900", bg: "bg-orange-200" },
+                  };
+                  const colors = colorMap[status] || colorMap.pending;
+                  return (
+                    <span className={`relative inline-block px-3 py-1 font-semibold leading-tight ${colors.text}`}>
+                      <span aria-hidden className={`absolute inset-0 opacity-50 rounded-full ${colors.bg}`}></span>
+                      <span className="relative dark:text-white capitalize">{status}</span>
+                    </span>
+                  );
+                })()}
               </td>
               <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 text-sm dark:text-white">
                 {order.createdAt

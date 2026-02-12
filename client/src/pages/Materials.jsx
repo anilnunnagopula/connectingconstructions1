@@ -7,7 +7,7 @@ const Materials = () => {
   const user = JSON.parse(localStorage.getItem("user"));
 
   const filteredCategories = categories.filter((item) =>
-    item.toLowerCase().includes(searchTerm.toLowerCase())
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -44,8 +44,8 @@ const Materials = () => {
           {filteredCategories.map((item, idx) => {
             const linkPath =
               user?.role === "customer"
-                ? `/customer/category/${encodeURIComponent(item)}`
-                : `/category/${encodeURIComponent(item)}`;
+                ? `/customer/category/${encodeURIComponent(item.name)}`
+                : `/category/${encodeURIComponent(item.name)}`;
 
             return (
               <Link
@@ -61,8 +61,8 @@ const Materials = () => {
                 <img
                   src={`${
                     process.env.PUBLIC_URL
-                  }/categories/${item.toLowerCase()}.jpg`}
-                  alt={item}
+                  }/categories/${item.name.toLowerCase()}.jpg`}
+                  alt={item.name}
                   onError={(e) =>
                     (e.target.src = `${process.env.PUBLIC_URL}/categories/default.jpg`)
                   }
@@ -74,12 +74,12 @@ const Materials = () => {
                   user ? "mb-0" : "mb-0"
                 }`}
               >
-                {item}
+                {item.name}
               </h3>
 
               {user && (
                 <p className=" text-xs text-gray-500 dark:text-gray-400 italic mb-2 truncate">
-                  Tap to explore products under {item}
+                  Tap to explore products under {item.name}
                 </p>
               )}
             </Link>

@@ -44,15 +44,15 @@ import CustomerLayout from "./layout/CustomerLayout";
 import Materials from "./pages/Materials";
 
 import MyProducts from "./pages/supplier/MyProducts";
-import AddProduct from "./pages/supplier/AddProduct";
+import AddProduct from "./pages/supplier/AddProductEnhanced";
 import EditProduct from "./pages/supplier/EditProduct";
 import ProductDetail from "./pages/supplier/ProductDetail.jsx";
 import ProductDetails from "./pages/ProductDetails.jsx";
 import LocationPage from "./pages/supplier/LocationPage.jsx";
-import SettingsPage from "./pages/supplier/SettingsPage.jsx";
+import BusinessProfilePage from "./pages/supplier/BusinessProfilePage.jsx";
 import CategoriesPage from "./pages/supplier/CategoriesPage.jsx";
 import OrdersPage from "./pages/supplier/OrdersPage.jsx";
-import LicenseAndCertificatesPage from "./pages/supplier/LicenseAndCertificatesPage";
+import BulkUpload from "./pages/supplier/BulkUpload.jsx";
 import PaymentsPage from "./pages/supplier/PaymentsPage.jsx";
 import AnalyticsPage from "./pages/supplier/AnalyticsPage.jsx";
 import SyncInventoryPage from "./pages/supplier/SyncInventoryPage.jsx";
@@ -675,12 +675,20 @@ function App() {
                           element={<AddProduct />}
                         />
                         <Route
+                          path="/supplier/bulk-upload"
+                          element={<BulkUpload />}
+                        />
+                        <Route
                           path="/supplier/location"
                           element={<LocationPage />}
                         />
                         <Route
                           path="/supplier/settings"
-                          element={<SettingsPage />}
+                          element={<BusinessProfilePage />}
+                        />
+                        <Route
+                          path="/supplier/profile"
+                          element={<BusinessProfilePage />}
                         />
                         <Route
                           path="/supplier/activity-logs"
@@ -710,14 +718,7 @@ function App() {
                             </ProtectedRoute>
                           }
                         />
-                        <Route
-                          path="/supplier/license-and-certificates"
-                          element={
-                            <ProtectedRoute allowedRole="supplier">
-                              <LicenseAndCertificatesPage />
-                            </ProtectedRoute>
-                          }
-                        />
+                        {/* License Route Removed - Validated as sub-component of Profile */}
                         <Route
                           path="/supplier/edit-product/:id"
                           element={<EditProduct />}

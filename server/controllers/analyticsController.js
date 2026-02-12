@@ -15,33 +15,29 @@ exports.getSupplierAnalytics = async (req, res) => {
     });
 
     // --- 2. Total Earnings, Total Orders, Average Order Value, Total Products Sold ---
-    // Aggregate on Order model to sum up earnings and count orders for this supplier
     const orderAnalytics = await Order.aggregate([
       {
-        // Match orders that contain products from this specific supplier
         $match: {
-          "products.supplier": supplierId,
-          orderStatus: "Delivered", // Consider only delivered orders for earnings
+          "items.productSnapshot.supplier": new mongoose.Types.ObjectId(supplierId),
+          orderStatus: { $in: ["delivered", "shipped", "processing", "confirmed"] },
+          $or: [
+            { paymentStatus: "paid" },
+            { paymentMethod: "cod", orderStatus: "delivered" },
+          ],
         },
       },
+      { $unwind: "$items" },
       {
-        // Deconstruct the 'products' array to work with each item individually
-        $unwind: "$products",
-      },
-      {
-        // Match only the products that belong to the current supplier
         $match: {
-          "products.supplier": supplierId,
+          "items.productSnapshot.supplier": new mongoose.Types.ObjectId(supplierId),
         },
       },
       {
         $group: {
-          _id: null, // Group all matching items together
-          totalEarnings: {
-            $sum: { $multiply: ["$products.price", "$products.quantity"] },
-          },
-          totalProductsSold: { $sum: "$products.quantity" },
-          orderIds: { $addToSet: "$_id" }, // Get unique order IDs
+          _id: null,
+          totalEarnings: { $sum: "$items.totalPrice" },
+          totalProductsSold: { $sum: "$items.quantity" },
+          orderIds: { $addToSet: "$_id" },
         },
       },
       {
@@ -49,7 +45,7 @@ exports.getSupplierAnalytics = async (req, res) => {
           _id: 0,
           totalEarnings: 1,
           totalProductsSold: 1,
-          totalOrders: { $size: "$orderIds" }, // Count unique order IDs
+          totalOrders: { $size: "$orderIds" },
         },
       },
     ]);
@@ -66,75 +62,59 @@ exports.getSupplierAnalytics = async (req, res) => {
     const topProducts = await Order.aggregate([
       {
         $match: {
-          "products.supplier": supplierId,
-          orderStatus: "Delivered",
+          "items.productSnapshot.supplier": new mongoose.Types.ObjectId(supplierId),
+          orderStatus: { $in: ["delivered", "shipped", "processing", "confirmed"] },
         },
       },
-      {
-        $unwind: "$products",
-      },
+      { $unwind: "$items" },
       {
         $match: {
-          "products.supplier": supplierId, // Match only products from this supplier after unwind
+          "items.productSnapshot.supplier": new mongoose.Types.ObjectId(supplierId),
         },
       },
       {
         $group: {
-          _id: "$products.productId", // Group by individual product ID
-          name: { $first: "$products.name" },
-          totalSales: {
-            $sum: { $multiply: ["$products.price", "$products.quantity"] },
-          },
-          totalQuantitySold: { $sum: "$products.quantity" },
+          _id: "$items.product",
+          name: { $first: "$items.productSnapshot.name" },
+          totalSales: { $sum: "$items.totalPrice" },
+          totalQuantitySold: { $sum: "$items.quantity" },
         },
       },
-      {
-        $sort: { totalSales: -1 }, // Sort by highest sales
-      },
-      {
-        $limit: 5, // Top 5 products
-      },
+      { $sort: { totalSales: -1 } },
+      { $limit: 5 },
       {
         $project: {
           _id: 0,
           name: 1,
-          sales: "$totalSales", // Rename for frontend clarity
-          quantity: "$totalQuantitySold", // Rename for frontend clarity
+          sales: "$totalSales",
+          quantity: "$totalQuantitySold",
         },
       },
     ]);
 
-    // --- 4. Sales Over Time (e.g., last 7 days) ---
+    // --- 4. Sales Over Time (last 7 days) ---
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const salesOverTime = await Order.aggregate([
       {
         $match: {
-          "products.supplier": supplierId,
-          orderStatus: "Delivered",
+          "items.productSnapshot.supplier": new mongoose.Types.ObjectId(supplierId),
+          orderStatus: { $in: ["delivered", "shipped", "processing", "confirmed"] },
           createdAt: { $gte: sevenDaysAgo },
         },
       },
-      {
-        $unwind: "$products",
-      },
+      { $unwind: "$items" },
       {
         $match: {
-          "products.supplier": supplierId,
+          "items.productSnapshot.supplier": new mongoose.Types.ObjectId(supplierId),
         },
       },
       {
         $group: {
-          _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }, // Group by date
-          },
-          dailySales: {
-            $sum: { $multiply: ["$products.price", "$products.quantity"] },
-          },
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          dailySales: { $sum: "$items.totalPrice" },
         },
       },
-      {
-        $sort: { _id: 1 }, // Sort by date ascending
-      },
+      { $sort: { _id: 1 } },
     ]);
 
     // Format salesOverTime for chart (e.g., fill in missing days)

@@ -1,929 +1,662 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import categories from "../../utils/Categories";
+import { toast } from "react-hot-toast";
+import {
+  Package, DollarSign, Award, FileText, Tag, MapPin,
+  Image as ImageIcon, Plus, Trash2, Info, ChevronDown, ChevronUp, Sparkles // Sparkles for AI
+} from "lucide-react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
-import SupplierLayout from "../../layout/SupplierLayout"; // Import SupplierLayout
+import SupplierLayout from "../../layout/SupplierLayout";
+import categories, { getCategoryByName } from "../../utils/Categories";
 
-const containerStyle = { width: "100%", height: "300px", borderRadius: "8px" };
-const defaultCenter = { lat: 17.385044, lng: 78.486671 };
-
-// Define constants for image limits (copied from AddProduct for consistency)
-const MAX_IMAGES = 6; // Allow up to 6 images
-const MAX_IMAGE_SIZE_MB = 5; // Max 5MB per image
-const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024; // Convert MB to bytes
+// Constants
+const MAX_IMAGES = 6;
+const MAX_IMAGE_SIZE_MB = 5;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const BRANDS = {
+  Cement: ["UltraTech", "ACC", "Ambuja", "Birla", "Dalmia", "JK Cement", "Shree", "Ramco"],
+  "Steel & TMT": ["Tata Tiscon", "JSW", "SAIL", "Jindal", "Kamdhenu", "Vizag", "RINL"],
+  Tiles: ["Kajaria", "Somany", "Nitco", "Johnson", "RAK", "Cera", "Orient Bell"],
+  Paint: ["Asian Paints", "Berger", "Nerolac", "Dulux", "Indigo", "Shalimar"],
+  Sanitary: ["Hindware", "Cera", "Jaquar", "Parryware", "Kohler", "Roca"],
+};
+const CERTIFICATIONS = [
+  "ISI Marked", "BIS Certified", "ISO 9001:2015", "ISO 14001",
+  "ASTM Standards", "CRS Certified", "BIS IS 1786:2008", "BIS IS 269:2015",
+  "Eco-Friendly", "Green Pro Certified",
+];
 
 const EditProduct = () => {
-  const { id } = useParams(); // get productId from route
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true); // Initial loading for fetching product
-  const [formSubmitting, setFormSubmitting] = useState(false); // For form submit
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("");
-  const [aiLoading, setAiLoading] = useState(false); // For AI description generation
-  const [showKeywordsInput, setShowKeywordsInput] = useState(false); // State for conditional rendering of keywords input
-
-  // New states for image management
-  const [newImageFiles, setNewImageFiles] = useState([]); // To hold new File objects
-  const [currentImageUrls, setCurrentImageUrls] = useState([]); // To hold existing Cloudinary URLs
-
-  const { isLoaded, loadError } = useJsApiLoader({
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  
+  // Map Loader
+  const { isLoaded: isMapLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.REACT_APP_Maps_API_KEY,
     libraries: ["places", "maps"],
   });
 
-  // Fetch product on component mount or ID change
+  const [expandedSections, setExpandedSections] = useState({
+    basic: true,
+    pricing: true,
+    brand: false,
+    specs: false,
+    variants: false,
+    certs: false,
+    images: false,
+  });
+
+  const [product, setProduct] = useState({
+    // Basic Info
+    name: "",
+    category: "",
+    description: "",
+    productType: "material",
+    userKeywords: "", // For AI
+
+    // Pricing & Inventory
+    price: "",
+    unit: "units",
+    quantity: "",
+    minOrderQuantity: 1,
+    stepSize: 1,
+    bulkPricing: [],
+
+    // Brand & Quality
+    brand: "",
+    grade: "",
+    packaging: "",
+
+    // Technical Specifications
+    specifications: {},
+
+    // Product Variants
+    variants: [],
+
+    // Certifications & Compliance
+    certifications: [],
+    manufacturingDate: "",
+    batchNumber: "",
+    warranty: "",
+    countryOfOrigin: "India",
+    hsnCode: "",
+    gstRate: 18,
+
+    // Images & Location
+    imageFiles: [], // New files to upload
+    imageUrls: [], // Existing URLs
+    location: { text: "", lat: null, lng: null },
+    contact: { mobile: "", email: "", address: "" },
+    availability: true,
+  });
+
+  // Categories State
+  const [allCategories, setAllCategories] = useState([]);
+
+  // Fetch Custom Categories & Merge
+  useEffect(() => {
+    const fetchCustomCategories = async () => {
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (!user?.token) return;
+
+      try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/supplier/categories`, {
+           headers: { Authorization: `Bearer ${user.token}` }
+        });
+        if (res.ok) {
+           const customCats = await res.json();
+           
+           // Merge Global (utils) + Custom (API)
+           // Avoid duplicates by name
+           const globalNames = new Set(categories.map(c => c.name));
+           const uniqueCustom = customCats.filter(c => !globalNames.has(c.name));
+           
+           // Create standardized objects for custom categories
+           const customCatObjects = uniqueCustom.map(c => ({
+               name: c.name,
+               type: "material", // Default
+               units: ["units", "pieces", "kg"], // Default options
+               hsn: "",
+               gst: 18
+           }));
+
+           setAllCategories([...categories, ...customCatObjects].sort((a,b) => a.name.localeCompare(b.name)));
+        } else {
+           setAllCategories(categories); // Fallback to global only
+        }
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+        setAllCategories(categories);
+      }
+    };
+    
+    fetchCustomCategories();
+  }, []);
+
+  // Builders State
+  const [newBulkTier, setNewBulkTier] = useState({ minQuantity: "", maxQuantity: "", pricePerUnit: "" });
+  const [newSpec, setNewSpec] = useState({ key: "", value: "" });
+  const [newVariant, setNewVariant] = useState({
+    name: "",
+    options: [{ value: "", priceAdjustment: 0, stockQuantity: 0, sku: "" }]
+  });
+
+  // === FETCH PRODUCT ===
   useEffect(() => {
     const fetchProduct = async () => {
-      setLoading(true);
-      setMessage("");
-      setMessageType("");
-
-      let token = null;
       try {
         const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          token = user.token;
+        if (!storedUser) {
+           navigate("/login");
+           return;
         }
-      } catch (err) {
-        console.error("Error parsing user from localStorage:", err);
-        setMessage("Authentication error. Please log in again.");
-        setMessageType("error");
-        setLoading(false);
-        navigate("/login");
-        return;
-      }
+        const user = JSON.parse(storedUser);
 
-      if (!token) {
-        setMessage("You are not authorized. Please log in.");
-        setMessageType("error");
-        setLoading(false);
-        navigate("/login");
-        return;
-      }
-
-      try {
-        const res = await fetch(
-          `${process.env.REACT_APP_API_URL}/api/supplier/myproducts/${id}`, // Fetching using protected route
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/supplier/myproducts/${id}`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        
+        if (!res.ok) throw new Error("Failed to fetch product");
+        
         const data = await res.json();
-        if (res.ok) {
-          // Set product state, and separate image URLs
-          setProduct({
-            ...data,
-            // Ensure location and contact objects exist for the form
-            location: data.location || { text: "", lat: null, lng: null },
-            contact: data.contact || { mobile: "", email: "", address: "" },
-          });
-          setCurrentImageUrls(data.imageUrls || []); // Initialize current images
-        } else {
-          setMessage(data.error || "Failed to fetch product.");
-          setMessageType("error");
-        }
+        
+        // Merge fetched data with default structure
+        setProduct(prev => ({
+          ...prev,
+          ...data,
+          // Ensure arrays/objects are initialized
+          bulkPricing: data.bulkPricing || [],
+          specifications: data.specifications || {},
+          variants: data.variants || [],
+          certifications: data.certifications || [],
+          imageUrls: data.imageUrls || [],
+          location: data.location || { text: "", lat: null, lng: null },
+          contact: data.contact || { mobile: "", email: "", address: "" },
+          userKeywords: data.userKeywords || "", // Retrieve keywords if stored
+        }));
       } catch (err) {
-        setMessage("Error fetching product. Please check network.");
-        setMessageType("error");
-        console.error("Fetch product error:", err);
+        toast.error(err.message);
+        navigate("/supplier/myproducts");
       } finally {
         setLoading(false);
       }
     };
     fetchProduct();
-  }, [id, navigate]); // Added navigate to dependencies
+  }, [id, navigate]);
 
-  // Generic input change handler
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProduct((prev) => ({ ...prev, [name]: value }));
+
+  // === HANDLERS ===
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Contact info change handler
-  const handleContactChange = (e) => {
-    const { name, value } = e.target;
-    setProduct((prev) => ({
+  const handleChange = (field, value) => {
+    setProduct(prev => ({ ...prev, [field]: value }));
+  };
+  
+  const handleContactChange = (field, value) => {
+    setProduct(prev => ({
       ...prev,
-      contact: { ...prev.contact, [name]: value },
+      contact: { ...prev.contact, [field]: value }
     }));
   };
 
-  // Google Map click handler
-  const handleMapClick = (e) => {
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-    setProduct((prev) => ({
-      ...prev,
-      location: {
-        ...prev.location,
-        lat,
-        lng,
-        text: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
-      },
-    }));
-    setMessage("Location updated from map click!");
-    setMessageType("info");
-  };
-
-  // Use Current Location handler
-  const handleUseCurrentLocation = () => {
-    if (navigator.geolocation) {
-      setMessage("Fetching current location...");
-      setMessageType("info");
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const { latitude, longitude } = pos.coords;
-          if (latitude && longitude) {
-            setProduct((prev) => ({
-              ...prev,
-              location: {
-                ...prev.location,
-                lat: latitude,
-                lng: longitude,
-                text: `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(
-                  4
-                )}`,
-              },
-            }));
-            setMessage("Location fetched successfully!");
-            setMessageType("success");
-          } else {
-            setMessage("Could not fetch valid coordinates.");
-            setMessageType("error");
-          }
-        },
-        (error) => {
-          setMessage(
-            "Failed to get location. Please allow location access in your browser settings."
-          );
-          setMessageType("error");
-          console.error("Geolocation error:", error);
-        }
-      );
-    } else {
-      setMessage("Geolocation is not supported by this browser.");
-      setMessageType("error");
-    }
-  };
-
-  // --- Image Management Functions ---
-  const handleNewImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    const validFiles = [];
-    const newMessages = [];
-
-    // Check total images (current + new)
-    if (currentImageUrls.length + files.length > MAX_IMAGES) {
-      newMessages.push(
-        `You can only have a total of ${MAX_IMAGES} images (existing + new). Too many new files selected.`
-      );
-      setMessageType("error");
-      setMessage(newMessages.join(" "));
-      e.target.value = null; // Clear input field
+  // --- Bulk Pricing ---
+  const addBulkPricingTier = () => {
+    if (!newBulkTier.minQuantity || !newBulkTier.pricePerUnit) {
+      toast.error("Please fill min quantity and price per unit");
       return;
     }
-
-    files.forEach((file) => {
-      if (file.size > MAX_IMAGE_SIZE_BYTES) {
-        newMessages.push(
-          `Image "${file.name}" is too large (max ${MAX_IMAGE_SIZE_MB}MB).`
-        );
-        setMessageType("error");
-      } else {
-        validFiles.push(file);
-      }
-    });
-
-    if (validFiles.length > 0) {
-      setNewImageFiles(validFiles); // Store valid File objects
-      if (newMessages.length === 0) {
-        setMessage("New images selected for upload. Save changes to upload.");
-        setMessageType("info");
-      } else {
-        setMessage(newMessages.join(" ") + " Some new images were too large.");
-      }
-    } else if (newMessages.length > 0) {
-      setMessage(newMessages.join(" "));
-    } else {
-      setMessage("");
-      setMessageType("");
-    }
+    setProduct(prev => ({
+      ...prev,
+      bulkPricing: [...prev.bulkPricing, { ...newBulkTier, maxQuantity: newBulkTier.maxQuantity || null }]
+        .sort((a, b) => a.minQuantity - b.minQuantity)
+    }));
+    setNewBulkTier({ minQuantity: "", maxQuantity: "", pricePerUnit: "" });
+  };
+  const removeBulkPricingTier = (index) => {
+    setProduct(prev => ({
+      ...prev,
+      bulkPricing: prev.bulkPricing.filter((_, i) => i !== index)
+    }));
   };
 
-  const handleRemoveImage = (indexToRemove) => {
-    setCurrentImageUrls((prevUrls) =>
-      prevUrls.filter((_, index) => index !== indexToRemove)
-    );
-    setMessage("Image removed. Save changes to apply.");
-    setMessageType("info");
+  // --- Specs ---
+  const addSpecification = () => {
+    if (!newSpec.key || !newSpec.value) {
+      toast.error("Required fields missing");
+      return;
+    }
+    setProduct(prev => ({
+      ...prev,
+      specifications: { ...prev.specifications, [newSpec.key]: newSpec.value }
+    }));
+    setNewSpec({ key: "", value: "" });
+  };
+  const removeSpecification = (key) => {
+    setProduct(prev => {
+      const specs = { ...prev.specifications };
+      delete specs[key];
+      return { ...prev, specifications: specs };
+    });
+  };
+
+  // --- Variants ---
+  const addVariant = () => {
+    if (!newVariant.name || newVariant.options.length === 0) {
+      toast.error("Required fields missing");
+      return;
+    }
+    setProduct(prev => ({
+      ...prev,
+      variants: [...prev.variants, { ...newVariant }]
+    }));
+    setNewVariant({ name: "", options: [{ value: "", priceAdjustment: 0, stockQuantity: 0, sku: "" }] });
+  };
+  const removeVariant = (index) => {
+    setProduct(prev => ({ ...prev, variants: prev.variants.filter((_, i) => i !== index) }));
+  };
+  const updateVariantOption = (idx, field, val) => {
+    setNewVariant(prev => ({
+      ...prev,
+      options: prev.options.map((opt, i) => i === idx ? { ...opt, [field]: val } : opt)
+    }));
+  };
+  const addVariantOption = () => {
+    setNewVariant(prev => ({
+      ...prev,
+      options: [...prev.options, { value: "", priceAdjustment: 0, stockQuantity: 0, sku: "" }]
+    }));
+  };
+  const removeVariantOption = (idx) => {
+    setNewVariant(prev => ({ ...prev, options: prev.options.filter((_, i) => i !== idx) }));
+  };
+
+  // --- Certs ---
+  const toggleCertification = (cert) => {
+    setProduct(prev => ({
+      ...prev,
+      certifications: prev.certifications.includes(cert)
+        ? prev.certifications.filter(c => c !== cert)
+        : [...prev.certifications, cert]
+    }));
+  };
+
+  // --- Images ---
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    // Validate count
+    if (product.imageUrls.length + product.imageFiles.length + files.length > MAX_IMAGES) {
+      toast.error(`Max ${MAX_IMAGES} images allowed in total.`);
+      return;
+    }
+    // Validate size
+    for (const file of files) {
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        toast.error(`Image ${file.name} is too large (>${MAX_IMAGE_SIZE_MB}MB)`);
+        return;
+      }
+    }
+    setProduct(prev => ({ ...prev, imageFiles: [...prev.imageFiles, ...files] }));
+  };
+  
+  const removeExistingImage = (index) => {
+    setProduct(prev => ({
+      ...prev,
+      imageUrls: prev.imageUrls.filter((_, i) => i !== index)
+    }));
+  };
+  
+  const removeNewImage = (index) => {
+    setProduct(prev => ({
+      ...prev,
+      imageFiles: prev.imageFiles.filter((_, i) => i !== index)
+    }));
   };
 
   const uploadImagesToCloudinary = async (files) => {
-    if (!files || files.length === 0) return [];
-
     const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
+    if (!cloudName || !uploadPreset) return [];
 
-    if (!cloudName || !uploadPreset) {
-      console.error("Cloudinary credentials not set in environment variables.");
-      setMessage("Image upload failed: Cloudinary not configured.");
-      setMessageType("error");
-      return [];
-    }
-
-    const uploadedUrls = [];
-    let uploadSuccess = true;
-
+    const urls = [];
     for (const file of files) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("upload_preset", uploadPreset);
-
       try {
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
-
-        const data = await response.json();
-        if (response.ok && data.secure_url) {
-          uploadedUrls.push(data.secure_url);
-        } else {
-          uploadSuccess = false;
-          setMessage(
-            `Image "${file.name}" upload failed: ${
-              data.error ? data.error.message : "Unknown Cloudinary error."
-            }`
-          );
-          setMessageType("error");
-          console.error("Cloudinary upload error for", file.name, ":", data);
-        }
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: "POST", body: formData
+        });
+        const data = await res.json();
+        if (data.secure_url) urls.push(data.secure_url);
       } catch (err) {
-        uploadSuccess = false;
-        setMessage(`Image "${file.name}" upload failed due to network error.`);
-        setMessageType("error");
-        console.error("Cloudinary fetch error for", file.name, ":", err);
+        console.error("Upload failed", err);
       }
     }
-
-    if (uploadSuccess && uploadedUrls.length === files.length) {
-      setMessage("All new images uploaded to Cloudinary successfully!");
-      setMessageType("success");
-    } else if (uploadedUrls.length > 0) {
-      setMessage("Some new images uploaded, but others failed.");
-      setMessageType("warning");
-    }
-    return uploadedUrls;
+    return urls;
   };
-  // --- End Image Management Functions ---
 
-  // AI Description Generation
+  // --- AI Gen ---
   const handleGenerateDescription = async () => {
-    setShowKeywordsInput(true);
-    setAiLoading(true);
-    setMessage("");
-    setMessageType("");
-
-    if (!product.name && !product.category && !product.userKeywords) {
-      setMessage(
-        "Please enter a Product Name, select a Category, or provide Keywords to generate a description."
-      );
-      setMessageType("error");
-      setAiLoading(false);
+    if (!product.name && !product.category) {
+      toast.error("Enter Name and Category first");
       return;
     }
-
-    let prompt = `Generate a concise and appealing product description for a construction material.`;
-
-    if (product.name) {
-      prompt += `\nProduct Name: ${product.name}`;
-    }
-    if (product.category) {
-      prompt += `\nCategory: ${product.category}`;
-    }
-    // Add product.userKeywords (if you have this field for editing)
-    if (product.userKeywords) {
-      // Assuming you might add this to the product state for editing
-      prompt += `\nKey Features/Keywords: ${product.userKeywords}`;
-    }
-
-    prompt += `\n\nEnsure the description is engaging, highlights benefits, and directly incorporates the provided keywords/features. Keep it under 100 words.`;
-
+    setAiLoading(true);
     try {
-      let chatHistory = [];
-      chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-      const payload = { contents: chatHistory };
-
       const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-      const response = await fetch(apiUrl, {
+      const prompt = `Generate a concise (under 100 words), engaging product description for a construction material.\nProduct: ${product.name}\nCategory: ${product.category}\nKeywords: ${product.userKeywords || ''}`;
+      
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        if (
-          result.candidates &&
-          result.candidates.length > 0 &&
-          result.candidates[0].content &&
-          result.candidates[0].content.parts &&
-          result.candidates[0].content.parts.length > 0
-        ) {
-          const generatedText = result.candidates[0].content.parts[0].text;
-          setProduct((prev) => ({ ...prev, description: generatedText }));
-          setMessage("Description generated successfully!");
-          setMessageType("success");
-        } else {
-          setMessage(
-            "AI could not generate a suitable description. Try again."
-          );
-          setMessageType("error");
-        }
-      } else {
-        const errorMessage =
-          result.error && result.error.message
-            ? result.error.message
-            : "Unknown error from AI API.";
-        setMessage(`Failed to generate description: ${errorMessage}`);
-        setMessageType("error");
+      const data = await res.json();
+      if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        handleChange("description", data.candidates[0].content.parts[0].text);
+        toast.success("Description generated!");
       }
     } catch (err) {
-      console.error("AI generation network/fetch error:", err);
-      setMessage(
-        "Error connecting to AI service. Check network or try again later."
-      );
-      setMessageType("error");
+      toast.error("AI generation failed");
     } finally {
       setAiLoading(false);
     }
   };
 
-  // Handle form submission (Update Product)
+  // --- Map ---
+  const handleMapClick = (e) => {
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    setProduct(prev => ({
+      ...prev,
+      location: { ...prev.location, lat, lng, text: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}` }
+    }));
+  };
+
+  // === SUBMIT ===
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormSubmitting(true);
-    setMessage("");
-    setMessageType("");
-
-    if (
-      !product.name ||
-      !product.category ||
-      !product.description ||
-      !product.price ||
-      !product.quantity ||
-      !product.location?.text ||
-      !product.contact?.mobile ||
-      !product.contact?.email ||
-      !product.contact?.address
-    ) {
-      setMessage("Please fill in all required fields.");
-      setMessageType("error");
-      setFormSubmitting(false);
-      return;
-    }
-
-    let token = null;
+    setSubmitting(true);
+    
     try {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        token = user.token;
+      const user = JSON.parse(localStorage.getItem("user"));
+      
+      // Upload new images
+      let newUrls = [];
+      if (product.imageFiles.length > 0) {
+        toast.loading("Uploading new images...");
+        newUrls = await uploadImagesToCloudinary(product.imageFiles);
+        toast.dismiss();
       }
-    } catch (err) {
-      console.error("Error parsing user from localStorage for submit:", err);
-      setMessage("Authentication error. Please log in again.");
-      setMessageType("error");
-      setFormSubmitting(false);
-      navigate("/login");
-      return;
-    }
-
-    if (!token) {
-      setMessage("You are not authorized. Please log in.");
-      setMessageType("error");
-      setFormSubmitting(false);
-      navigate("/login");
-      return;
-    }
-
-    let finalImageUrls = [...currentImageUrls]; // Start with existing images
-
-    // Upload new images if any are selected
-    if (newImageFiles.length > 0) {
-      setMessage("Uploading new images to Cloudinary...");
-      setMessageType("info");
-      const uploadedUrls = await uploadImagesToCloudinary(newImageFiles);
-      if (uploadedUrls.length === 0 && newImageFiles.length > 0) {
-        setMessage("All new image uploads failed. Product not updated.");
-        setMessageType("error");
-        setFormSubmitting(false);
+      
+      const finalImageUrls = [...product.imageUrls, ...newUrls];
+      
+      if (finalImageUrls.length === 0) {
+        toast.error("At least one image is required");
+        setSubmitting(false);
         return;
       }
-      finalImageUrls = [...currentImageUrls, ...uploadedUrls]; // Combine existing with newly uploaded
-    }
+      
+      const payload = {
+        ...product,
+        price: parseFloat(product.price),
+        quantity: parseInt(product.quantity),
+        gstRate: parseFloat(product.gstRate),
+        imageUrls: finalImageUrls,
+        // Exclude imageFiles from payload
+        imageFiles: undefined 
+      };
 
-    // Ensure at least one image if required (same logic as AddProduct)
-    if (finalImageUrls.length === 0) {
-      setMessage("Please upload at least one image for the product.");
-      setMessageType("error");
-      setFormSubmitting(false);
-      return;
-    }
-
-    const productData = {
-      name: product.name,
-      category: product.category,
-      description: product.description,
-      price: parseFloat(product.price),
-      quantity: parseInt(product.quantity, 10),
-      availability: product.availability,
-      location: {
-        text: product.location.text,
-        lat: product.location.lat,
-        lng: product.location.lng,
-      },
-      contact: product.contact,
-      imageUrls: finalImageUrls, // Send the combined array of URLs
-      // Add userKeywords if you want to store them in the product
-      userKeywords: product.userKeywords || "", // Include userKeywords if present
-    };
-
-    try {
-      const res = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/supplier/myproducts/${id}`, // Ensure this is a PUT endpoint in backend
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // Include the token
-          },
-          body: JSON.stringify(productData),
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(
-          data.message || data.error || "Failed to update product."
-        );
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/supplier/myproducts/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        toast.success("Product updated successfully!");
+        navigate("/supplier/myproducts");
+      } else {
+        const data = await res.json();
+        throw new Error(data.message || "Update failed");
       }
-      setMessage("✅ Product updated successfully!");
-      setMessageType("success");
-      setNewImageFiles([]); // Clear new image files after successful upload
-      setCurrentImageUrls(data.imageUrls || []); // Update with the latest URLs from the backend
-
-      setTimeout(() => navigate("/supplier/myproducts"), 1500); // Navigate back to My Products
     } catch (err) {
-      setMessage(err.message);
-      setMessageType("error");
-      console.error("Error updating product:", err);
+      toast.error(err.message);
     } finally {
-      setFormSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  if (loading || !product) {
-    // Show loading until product data is fetched
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 dark:border-400"></div>
-        <p className="mt-4 text-lg font-medium">Loading product details...</p>
-      </div>
-    );
-  }
-
-  // If there's a loadError from Google Maps API
-  if (loadError) {
-    return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4 font-sans">
-        <div className="bg-red-100 text-red-700 p-4 rounded-md shadow-md">
-          Error loading Google Maps: {loadError.message}
-          <p>
-            Please ensure your `REACT_APP_Maps_API_KEY` is correct and has the
-            necessary APIs enabled (Maps JavaScript API, Geocoding API).
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-10 text-center">Loading product...</div>;
 
   return (
     <SupplierLayout>
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 py-12 px-4 sm:px-6 lg:px-8 font-inter">
-      <div className="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 md:p-12 transform transition-all duration-300 ease-in-out hover:shadow-3xl hover:-translate-y-1">
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white">
-          ✏️ Edit Product: {product.name}
-        </h2>
+      <div className="max-w-5xl mx-auto p-6 font-inter">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Edit Product</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Update product details, pricing, and specifications</p>
+        </div>
 
-        {message && (
-          <div
-            className={`mb-6 p-4 rounded-lg text-center font-medium shadow-md ${
-              messageType === "success"
-                ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
-                : messageType === "info"
-                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-                : messageType === "warning"
-                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200"
-                : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
-            } transition-colors duration-300`}
-          >
-            {message}
-          </div>
-        )}
-
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
-        >
-          {/* Product Details Section */}
-          <div className="md:col-span-2">
-            <h3 className="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
-              Product Details
-            </h3>
-          </div>
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Product Name
-            </label>
-            <input
-              name="name"
-              value={product.name || ""}
-              onChange={handleChange}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Category
-            </label>
-            <select
-              name="category"
-              value={product.category || ""}
-              onChange={handleChange}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              required
-            >
-              <option value="">-- Select Category --</option>
-              {categories.map((cat, idx) => (
-                <option key={idx} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="md:col-span-2">
-            <div className="flex justify-between items-center mb-2">
-              <label className="block font-semibold text-gray-700 dark:text-gray-300">
-                Product Description
-              </label>
-              <button
-                type="button"
-                onClick={handleGenerateDescription}
-                className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium flex items-center gap-1"
-                title="Auto-Generate with AI"
-                disabled={aiLoading}
-              >
-                {aiLoading ? (
-                  <svg
-                    className="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                ) : (
-                  <>
-                    <span className="text-lg">⚙️</span> Use AI to Generate{" "}
-                  </>
-                )}
-              </button>
-            </div>
-            <textarea
-              name="description"
-              value={product.description || ""}
-              onChange={handleChange}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              rows="4"
-              placeholder="Leave empty and let AI generate if needed 🤖"
-              required
-            />
-          </div>
-
-          {showKeywordsInput && ( // Keywords input for AI generation
-            <div className="md:col-span-2 mt-2">
-              <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                Key Features / Keywords (for AI generation)
-              </label>
-              <input
-                type="text"
-                name="userKeywords"
-                value={product.userKeywords || ""}
-                onChange={handleChange}
-                className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-                placeholder="e.g., 'high strength, fast setting, waterproof'"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Separate keywords with commas for best results.
-              </p>
-            </div>
-          )}
-
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Price (₹)
-            </label>
-            <input
-              type="text"
-              name="price"
-              value={product.price || ""}
-              onChange={handleChange}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Quantity
-            </label>
-            <input
-              type="text"
-              name="quantity"
-              value={product.quantity || ""}
-              onChange={handleChange}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Availability
-            </label>
-            <select
-              name="availability"
-              value={product.availability ? "Available" : "Not Available"}
-              onChange={(e) =>
-                setProduct((prev) => ({
-                  ...prev,
-                  availability: e.target.value === "Available",
-                }))
-              }
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              required
-            >
-              <option>Available</option>
-              <option>Not Available</option>
-            </select>
-          </div>
-
-          {/* Location Details Section */}
-          <div className="md:col-span-2 mt-4">
-            <h3 className="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
-              Location Details
-            </h3>
-          </div>
-          <div className="md:col-span-2">
-            <div className="flex justify-between items-center mb-2">
-              <label className="block font-semibold text-gray-700 dark:text-gray-300">
-                Location Text
-              </label>
-              <button
-                type="button"
-                onClick={handleUseCurrentLocation}
-                className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium flex items-center gap-1"
-                title="Use Current Location"
-              >
-                <span className="text-lg">📍</span> Use Current Location
-              </button>
-            </div>
-            <input
-              name="locationText"
-              value={product.location?.text || ""}
-              onChange={(e) =>
-                setProduct((prev) => ({
-                  ...prev,
-                  location: { ...prev.location, text: e.target.value },
-                }))
-              }
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g. Mangalpally, Hyderabad"
-              required
-            />
-          </div>
-
-          {isLoaded && (
-            <div className="md:col-span-2">
-              <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                📌 Mark Location on Map (Click to set)
-              </label>
-              <GoogleMap
-                mapContainerStyle={containerStyle}
-                center={
-                  product.location?.lat && product.location?.lng
-                    ? { lat: product.location.lat, lng: product.location.lng }
-                    : defaultCenter
-                }
-                zoom={product.location?.lat ? 15 : 12}
-                onClick={handleMapClick}
-                options={{
-                  streetViewControl: false,
-                  mapTypeControl: false,
-                  fullscreenControl: false,
-                }}
-              >
-                {product.location?.lat && product.location?.lng && (
-                  <Marker
-                    position={{
-                      lat: product.location.lat,
-                      lng: product.location.lng,
-                    }}
-                  />
-                )}
-              </GoogleMap>
-              {product.location?.lat && product.location?.lng && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                  Selected Coordinates: Lat: {product.location.lat.toFixed(4)},
-                  Lng: {product.location.lng.toFixed(4)}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Contact Details Section */}
-          <div className="md:col-span-2 mt-4">
-            <h3 className="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
-              Contact Details
-            </h3>
-          </div>
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Mobile
-            </label>
-            <input
-              name="mobile"
-              type="tel"
-              value={product.contact?.mobile || ""}
-              onChange={handleContactChange}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Email
-            </label>
-            <input
-              name="email"
-              type="email"
-              value={product.contact?.email || ""}
-              onChange={handleContactChange}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Address
-            </label>
-            <textarea
-              name="address"
-              value={product.contact?.address || ""}
-              onChange={handleContactChange}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              rows="3"
-              required
-            />
-          </div>
-
-          {/* Product Image Section (for multiple images) - Copied from AddProduct */}
-          <div className="md:col-span-2 mt-4">
-            <h3 className="text-xl font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
-              Product Images
-            </h3>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Manage Images (Max {MAX_IMAGES} images total)
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple // Allow multiple file selection
-              onChange={handleNewImageChange}
-              className="w-full text-gray-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-
-            {/* Display previews for all images (existing + new) */}
-            {(currentImageUrls.length > 0 || newImageFiles.length > 0) && (
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {/* Display existing uploaded images */}
-                {currentImageUrls.map((url, index) => (
-                  <div
-                    key={`existing-${index}`}
-                    className="relative border border-gray-300 dark:border-gray-700 rounded-md p-1 flex justify-center items-center h-32 overflow-hidden group"
-                  >
-                    <img
-                      src={url}
-                      alt={`Product Image ${index + 1}`}
-                      className="max-w-full h-auto max-h-full object-contain"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(index)}
-                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                      title="Remove Image"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-                {/* Display newly selected local files */}
-                {newImageFiles.map((file, index) => (
-                  <div
-                    key={`new-${index}`}
-                    className="relative border border-blue-300 dark:border-blue-700 rounded-md p-1 flex justify-center items-center h-32 overflow-hidden"
-                  >
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={`New Image ${index + 1}`}
-                      className="max-w-full h-auto max-h-full object-contain"
-                      onLoad={() => URL.revokeObjectURL(file)}
-                    />
-                    <span className="absolute top-1 left-1 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
-                      New
-                    </span>
-                  </div>
-                ))}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* SECTION 1: BASIC INFO */}
+          <SectionCard icon={Package} title="Basic Information" expanded={expandedSections.basic} onToggle={() => toggleSection("basic")}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Product Name *</label>
+                <input required type="text" value={product.name} onChange={(e) => handleChange("name", e.target.value)} 
+                   className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
               </div>
-            )}
-            {currentImageUrls.length + newImageFiles.length > MAX_IMAGES && (
-              <p className="text-red-500 text-sm mt-2">
-                You have selected too many images. Max {MAX_IMAGES} total.
-              </p>
-            )}
-          </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Category *</label>
+                <select required value={product.category} onChange={(e) => handleChange("category", e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <option value="">Select Category</option>
+                  {allCategories.map((c) => (
+                    <option key={c.name} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
 
-          {/* Submit Button */}
-          <div className="md:col-span-2 text-center mt-6">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition-colors duration-200 font-semibold shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={formSubmitting}
-            >
-              {formSubmitting ? "Saving Changes..." : "💾 Save Changes"}
-            </button>
+               <div>
+                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Product Type</label>
+                <select value={product.productType} onChange={(e) => handleChange("productType", e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                   <option value="material">Material</option>
+                   <option value="product">Product</option>
+                   <option value="service">Service</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-1">
+                   <label className="block text-sm font-medium dark:text-gray-300">Description *</label>
+                   <button type="button" onClick={handleGenerateDescription} disabled={aiLoading} 
+                     className="text-sm text-blue-600 flex items-center gap-1 hover:underline">
+                     <Sparkles size={14} /> {aiLoading ? "Generating..." : "Generate with AI"}
+                   </button>
+                </div>
+                <input type="text" placeholder="Keywords (optional)" value={product.userKeywords} onChange={(e) => handleChange("userKeywords", e.target.value)}
+                   className="w-full mb-2 px-3 py-1 text-sm border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                <textarea required rows={4} value={product.description} onChange={(e) => handleChange("description", e.target.value)} 
+                   className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* SECTION 2: PRICING */}
+          <SectionCard icon={DollarSign} title="Pricing & Inventory" expanded={expandedSections.pricing} onToggle={() => toggleSection("pricing")}>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Price (₹) *</label>
+                  <input required type="number" step="0.01" value={product.price} onChange={(e) => handleChange("price", e.target.value)} 
+                     className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+               </div>
+               <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Unit *</label>
+                  <select value={product.unit} onChange={(e) => handleChange("unit", e.target.value)} 
+                     className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                     {["bags", "kg", "tonnes", "liters", "cubic_ft", "sq_ft", "pieces", "units"].map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+               </div>
+               <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Stock Qty *</label>
+                  <input required type="number" value={product.quantity} onChange={(e) => handleChange("quantity", e.target.value)} 
+                     className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+               </div>
+             </div>
+             
+             {/* Bulk Pricing UI */}
+             <div className="mt-4 pt-4 border-t dark:border-gray-700">
+               <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 dark:text-white"><Tag size={16}/> Bulk Pricing</h4>
+               <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+                 <input placeholder="Min Qty" type="number" value={newBulkTier.minQuantity} onChange={e => setNewBulkTier({...newBulkTier, minQuantity: e.target.value})} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"/>
+                 <input placeholder="Max Qty" type="number" value={newBulkTier.maxQuantity} onChange={e => setNewBulkTier({...newBulkTier, maxQuantity: e.target.value})} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"/>
+                 <input placeholder="Price" type="number" value={newBulkTier.pricePerUnit} onChange={e => setNewBulkTier({...newBulkTier, pricePerUnit: e.target.value})} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"/>
+                 <button type="button" onClick={addBulkPricingTier} className="bg-blue-600 text-white rounded-lg flex items-center justify-center"><Plus size={18}/></button>
+               </div>
+               {product.bulkPricing.map((tier, i) => (
+                 <div key={i} className="flex justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded mb-1">
+                   <span className="text-sm dark:text-white">{tier.minQuantity} - {tier.maxQuantity || "+"} : ₹{tier.pricePerUnit}</span>
+                   <button type="button" onClick={() => removeBulkPricingTier(i)} className="text-red-500"><Trash2 size={14}/></button>
+                 </div>
+               ))}
+             </div>
+          </SectionCard>
+
+          {/* SECTION 3: BRAND */}
+          <SectionCard icon={Award} title="Brand & Quality" expanded={expandedSections.brand} onToggle={() => toggleSection("brand")}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Brand</label>
+                <input type="text" value={product.brand} onChange={(e) => handleChange("brand", e.target.value)} 
+                   className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Grade/Quality</label>
+                <input type="text" value={product.grade} onChange={(e) => handleChange("grade", e.target.value)} 
+                   className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* SECTION 4: SPECS */}
+          <SectionCard icon={FileText} title="Specifications" expanded={expandedSections.specs} onToggle={() => toggleSection("specs")}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
+               <input placeholder="Spec Key" value={newSpec.key} onChange={e => setNewSpec({...newSpec, key: e.target.value})} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"/>
+               <input placeholder="Value" value={newSpec.value} onChange={e => setNewSpec({...newSpec, value: e.target.value})} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"/>
+               <button type="button" onClick={addSpecification} className="bg-blue-600 text-white rounded-lg">Add</button>
+            </div>
+            {Object.entries(product.specifications).map(([k, v]) => (
+               <div key={k} className="flex justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded mb-1">
+                 <span className="text-sm dark:text-white font-medium">{k}: {v}</span>
+                 <button type="button" onClick={() => removeSpecification(k)} className="text-red-500"><Trash2 size={14}/></button>
+               </div>
+            ))}
+          </SectionCard>
+
+           {/* SECTION 5: VARIANTS */}
+          <SectionCard icon={Package} title="Variants" expanded={expandedSections.variants} onToggle={() => toggleSection("variants")}>
+             <input placeholder="Variant Name" value={newVariant.name} onChange={e => setNewVariant({...newVariant, name: e.target.value})} className="w-full mb-2 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"/>
+             {/* Simplified Variant Adder for Brevity - User can expand if needed */}
+             <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded mb-3">
+                {newVariant.options.map((opt, i) => (
+                   <div key={i} className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                      <input placeholder="Value" value={opt.value} onChange={e => updateVariantOption(i, 'value', e.target.value)} className="px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"/>
+                      <input placeholder="Price +/-" type="number" value={opt.priceAdjustment} onChange={e => updateVariantOption(i, 'priceAdjustment', e.target.value)} className="px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"/>
+                      <input placeholder="Stock" type="number" value={opt.stockQuantity} onChange={e => updateVariantOption(i, 'stockQuantity', e.target.value)} className="px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"/>
+                      {i > 0 && <button type="button" onClick={() => removeVariantOption(i)} className="text-red-500 text-xs">Remove Icon</button>}
+                   </div>
+                ))}
+                <div className="flex gap-2">
+                   <button type="button" onClick={addVariantOption} className="text-xs text-blue-600 underline">Add Option</button>
+                   <button type="button" onClick={addVariant} className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Save Variant</button>
+                </div>
+             </div>
+             {product.variants.map((v, i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 border p-2 rounded mb-2 flex justify-between">
+                   <span className="font-semibold dark:text-white">{v.name} ({v.options.length} options)</span>
+                   <button type="button" onClick={() => removeVariant(i)} className="text-red-600"><Trash2 size={14}/></button>
+                </div>
+             ))}
+          </SectionCard>
+
+          {/* SECTION 6: IMAGES & LOCATION */}
+          <SectionCard icon={ImageIcon} title="Images & Location" expanded={expandedSections.images} onToggle={() => toggleSection("images")}>
+            <div className="mb-4">
+               <label className="block text-sm font-medium mb-2 dark:text-gray-300">Images</label>
+               <input type="file" multiple accept="image/*" onChange={handleImageChange} className="w-full mb-2 dark:text-white"/>
+               <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                  {product.imageUrls.map((url, i) => (
+                    <div key={`url-${i}`} className="relative h-20 w-20 border rounded overflow-hidden">
+                       <img src={url} alt="product" className="h-full w-full object-cover"/>
+                       <button type="button" onClick={() => removeExistingImage(i)} className="absolute top-0 right-0 bg-red-600 text-white p-0.5 rounded-bl"><Trash2 size={12}/></button>
+                    </div>
+                  ))}
+                  {product.imageFiles.map((file, i) => (
+                    <div key={`file-${i}`} className="relative h-20 w-20 border rounded overflow-hidden opacity-70">
+                       <div className="h-full w-full flex items-center justify-center bg-gray-100 text-xs text-center p-1">{file.name}</div>
+                       <button type="button" onClick={() => removeNewImage(i)} className="absolute top-0 right-0 bg-red-600 text-white p-0.5 rounded-bl"><Trash2 size={12}/></button>
+                    </div>
+                  ))}
+               </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                 <label className="block text-sm font-medium mb-1 dark:text-gray-300">Location Text *</label>
+                 <input required type="text" value={product.location.text} onChange={(e) => handleChange("location", {...product.location, text: e.target.value})} 
+                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+              </div>
+              <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Map Pin (Optional)</label>
+                  {isMapLoaded && (
+                    <GoogleMap mapContainerStyle={{ width: "100%", height: "200px", borderRadius: "8px" }}
+                      center={product.location.lat ? { lat: product.location.lat, lng: product.location.lng } : { lat: 17.385, lng: 78.486 }}
+                      zoom={13} onClick={handleMapClick}>
+                      {product.location.lat && <Marker position={{ lat: product.location.lat, lng: product.location.lng }} />}
+                    </GoogleMap>
+                  )}
+              </div>
+            </div>
+          </SectionCard>
+
+          <div className="flex justify-end gap-3 pt-6 border-t dark:border-gray-700">
+             <button type="button" onClick={() => navigate("/supplier/myproducts")} className="px-6 py-2 border rounded-lg hover:bg-gray-50 dark:text-white dark:border-gray-600 dark:hover:bg-gray-800">Cancel</button>
+             <button type="submit" disabled={submitting} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                {submitting ? "Updating..." : "Update Product"}
+             </button>
           </div>
+          
         </form>
       </div>
-    </div>
     </SupplierLayout>
   );
 };
+
+// SectionCard Component
+const SectionCard = ({ icon: Icon, title, children, expanded, onToggle }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-100 dark:border-gray-700">
+    <button type="button" onClick={onToggle}
+      className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-700 dark:to-gray-800 hover:from-blue-100 dark:hover:from-gray-600 transition">
+      <div className="flex items-center gap-3">
+        <Icon className="text-blue-600 dark:text-blue-400" size={24} />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+      </div>
+      {expanded ? <ChevronUp size={20} className="dark:text-gray-300"/> : <ChevronDown size={20} className="dark:text-gray-300"/>}
+    </button>
+    {expanded && <div className="p-6 transition-all duration-300 ease-in-out">{children}</div>}
+  </div>
+);
 
 export default EditProduct;

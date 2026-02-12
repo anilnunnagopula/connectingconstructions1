@@ -15,6 +15,8 @@ import {
   Heart,
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import ReportIssueModal from "../components/ReportIssueModal";
 
 const baseURL = process.env.REACT_APP_API_URL;
 
@@ -22,10 +24,12 @@ const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { user } = useAuth();
+  const [isInWishlist, setIsInWishlist] = useState(false);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(null); // Will be set after product loads
   const [activeImage, setActiveImage] = useState(0);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
@@ -39,10 +43,12 @@ const ProductDetails = () => {
       const response = await axios.get(`${baseURL}/api/products/${id}`);
       
       if (response.data.success) {
-        setProduct(response.data.data);
+        const p = response.data.data;
+        setProduct(p);
+        setQuantity(p.minOrderQuantity || 1);
       } else {
-        // Fallback if structure is different
         setProduct(response.data);
+        setQuantity(response.data?.minOrderQuantity || 1);
       }
     } catch (error) {
       console.error("Error fetching product:", error);
@@ -52,11 +58,66 @@ const ProductDetails = () => {
     }
   };
 
+  // Check if product is in wishlist
+  useEffect(() => {
+    const checkWishlist = async () => {
+      if (!user) return;
+      try {
+        const response = await axios.get(`${baseURL}/api/wishlist`, {
+           headers: { Authorization: `Bearer ${user.token}` },
+        });
+        
+        // Handle different response formats as seen in CategoryPage
+        let wishlist = [];
+        if (response.data.data?.wishlist) wishlist = response.data.data.wishlist;
+        else if (response.data.data?.items) wishlist = response.data.data.items;
+        else if (Array.isArray(response.data.data)) wishlist = response.data.data;
+        else if (Array.isArray(response.data)) wishlist = response.data;
+
+        const found = wishlist.some(item => 
+            (item.product?._id === id) || (item.product === id) || (item._id === id)
+        );
+        setIsInWishlist(found);
+      } catch (error) {
+        console.error("Error checking wishlist:", error);
+      }
+    };
+    checkWishlist();
+  }, [id, user]);
+
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      toast.error("Please login to manage wishlist");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      if (isInWishlist) {
+        await axios.delete(`${baseURL}/api/wishlist/remove/${id}`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        setIsInWishlist(false);
+        toast.success("Removed from wishlist");
+      } else {
+         await axios.post(
+          `${baseURL}/api/wishlist/add`,
+          { productId: id },
+          { headers: { Authorization: `Bearer ${user.token}` } }
+        );
+        setIsInWishlist(true);
+        toast.success("Added to wishlist");
+      }
+    } catch (error) {
+       console.error("Wishlist error:", error);
+       toast.error("Failed to update wishlist");
+    }
+  };
+
   const handleAddToCart = async () => {
     if (!product) return;
     
     // Check if user is logged in
-    const user = JSON.parse(localStorage.getItem("user"));
     if (!user) {
       toast.error("Please login to add items to cart");
       navigate("/login");
@@ -68,8 +129,7 @@ const ProductDetails = () => {
       // Assuming addToCart takes (productId, quantity)
       const success = await addToCart(product._id, quantity);
       if (success) {
-        // Success is handled by the context (toast usually)
-        toast.success(`Added ${product.name} to cart via Voice!`);
+         // Success handled by CartContext
       }
     } catch (error) {
        console.error("Detailed Add to Cart Error:", error);
@@ -127,8 +187,10 @@ const ProductDetails = () => {
   };
 
   const handleQuantityChange = (change) => {
-    const newQty = quantity + change;
-    if (newQty >= 1 && newQty <= (product.quantity || 999)) {
+    const step = product.stepSize || 1;
+    const min = product.minOrderQuantity || 1;
+    const newQty = quantity + (change * step);
+    if (newQty >= min && newQty <= (product.quantity || 999)) {
       setQuantity(newQty);
     }
   };
@@ -222,10 +284,11 @@ const ProductDetails = () => {
                 {product.name}
               </h1>
               <button 
-                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition"
-                title="Add to Wishlist"
+                onClick={handleToggleWishlist}
+                className={`p-2 rounded-full transition ${isInWishlist ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
+                title={isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
               >
-                <Heart size={24} />
+                <Heart size={24} className={isInWishlist ? "fill-current" : ""} />
               </button>
             </div>
             
@@ -275,17 +338,109 @@ const ProductDetails = () => {
             <p>{product.description}</p>
           </div>
 
-          {/* Specifications / Attributes if any */}
-          {product.category && (
-            <div className="flex flex-wrap gap-2">
-               <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm">
-                 Category: {product.category}
-               </span>
-               {product.brand && (
-                 <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm">
-                   Brand: {product.brand}
-                 </span>
-               )}
+          {/* Product Attributes */}
+          <div className="flex flex-wrap gap-2">
+            {product.category && (
+              <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+                {product.category}
+              </span>
+            )}
+            {product.brand && (
+              <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm">
+                {product.brand}
+              </span>
+            )}
+            {product.grade && (
+              <span className="px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded-full text-sm">
+                {product.grade}
+              </span>
+            )}
+            {product.packaging && (
+              <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm">
+                {product.packaging}
+              </span>
+            )}
+            {product.warranty && (
+              <span className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-sm">
+                Warranty: {product.warranty}
+              </span>
+            )}
+            {product.countryOfOrigin && (
+              <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm">
+                Made in {product.countryOfOrigin}
+              </span>
+            )}
+          </div>
+
+          {/* Bulk Pricing Tiers */}
+          {product.bulkPricing && product.bulkPricing.length > 0 && (
+            <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl p-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
+                Bulk Pricing (Save more on larger orders)
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {product.bulkPricing.map((tier, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-200 dark:border-green-800 text-center"
+                  >
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {tier.minQuantity}{tier.maxQuantity ? `-${tier.maxQuantity}` : "+"} {product.unit || "units"}
+                    </p>
+                    <p className="text-lg font-bold text-green-600">
+                      ₹{tier.pricePerUnit?.toLocaleString("en-IN")}
+                    </p>
+                    <p className="text-xs text-gray-500">per {product.unit || "unit"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Technical Specifications */}
+          {product.specifications && Object.keys(product.specifications).length > 0 && (
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+              <h3 className="font-semibold text-gray-900 dark:text-white px-4 py-3 bg-gray-50 dark:bg-gray-800 text-sm">
+                Technical Specifications
+              </h3>
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                {Object.entries(product.specifications).map(([key, value]) => (
+                  <div key={key} className="flex px-4 py-2.5 text-sm">
+                    <span className="w-1/3 text-gray-500 dark:text-gray-400 font-medium">{key}</span>
+                    <span className="w-2/3 text-gray-900 dark:text-white">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Certifications */}
+          {product.certifications && product.certifications.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-2">
+                Certifications
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {product.certifications.map((cert, idx) => (
+                  <span
+                    key={idx}
+                    className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium border border-blue-200 dark:border-blue-800"
+                  >
+                    {cert}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* HSN & GST Info */}
+          {(product.hsnCode || product.gstRate != null) && (
+            <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
+              {product.hsnCode && <span>HSN: {product.hsnCode}</span>}
+              {product.gstRate != null && <span>GST: {product.gstRate}%</span>}
+              {product.minOrderQuantity > 1 && (
+                <span>Min. Order: {product.minOrderQuantity} {product.unit || "units"}</span>
+              )}
             </div>
           )}
 

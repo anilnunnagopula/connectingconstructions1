@@ -196,17 +196,34 @@ exports.handlePaymentFailure = async (req, res) => {
 
     // Update order with failure details
     order.paymentStatus = "failed";
+    order.orderStatus = "cancelled";
     order.paymentError = error || "Payment failed";
+    order.cancellationReason = "Payment failed";
+    order.cancelledAt = new Date();
     await order.save();
 
-    console.log(`⚠️ Payment failed for order: ${orderId}`);
+    // Restore stock for each item since payment failed
+    const Product = require("../models/Product");
+    for (const item of order.items) {
+      try {
+        const product = await Product.findById(item.product);
+        if (product && typeof product.increaseStock === "function") {
+          await product.increaseStock(item.quantity);
+        }
+      } catch (stockErr) {
+        console.error(`Failed to restore stock for product ${item.product}:`, stockErr.message);
+      }
+    }
+
+    console.log(`Payment failed for order: ${orderId} - stock restored`);
 
     res.status(200).json({
       success: true,
-      message: "Payment failure recorded",
+      message: "Payment failure recorded, stock restored",
       data: {
         orderId: order._id,
         paymentStatus: order.paymentStatus,
+        orderStatus: order.orderStatus,
       },
     });
   } catch (error) {

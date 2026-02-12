@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Download,
   MessageSquare,
+  AlertTriangle,
   FileText,
 } from "lucide-react";
 import CustomerLayout from "../../layout/CustomerLayout";
@@ -551,13 +552,18 @@ const OrderDetails = () => {
                 </button>
               )}
 
-              <button
-                  onClick={() => setIsReportModalOpen(true)}
-                  className="w-full border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20 px-6 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
+              {/* Payment retry for pending online payments */}
+              {order.paymentMethod === "razorpay" && order.paymentStatus === "pending" && order.orderStatus !== "cancelled" && (
+                <button
+                  onClick={() => navigate(`/customer/checkout`, {
+                    state: { retryPaymentOrderId: order._id, retryAmount: order.totalAmount },
+                  })}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition flex items-center justify-center gap-2"
                 >
-                  <AlertTriangle size={20} />
-                  Report Issue
-              </button>
+                  <DollarSign size={20} />
+                  Complete Payment
+                </button>
+              )}
 
               <button
                   onClick={() => setIsReportModalOpen(true)}
